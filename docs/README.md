@@ -13,42 +13,40 @@ AGiXT Interactive is both an embeddable React component and standalone NextJS ap
 
 ![Interactive Screenshot](https://github.com/user-attachments/assets/82da8608-33e7-411a-9f82-4093c5eef2ec)
 
-### Run with Docker Compose
+## Getting Started
 
 If you don't already have AGiXT, [follow this link for instructions to set it up.](https://github.com/Josh-XT/AGiXT#quick-start-guide)
+
+```bash
+git clone https://github.com/agixt/interactive
+cd interactive
+```
+
+Create a `.env` file and set the `API_URI` to your AGiXT server and `AGIXT_AGENT` for the default agent to use, then save and run the development server locally.
+
+```bash
+API_URI=https://localhost:7437
+AGIXT_AGENT=XT
+```
+
+### Local Development
+
+Install dependencies and run the development server.
+
+```bash
+npm install
+npm run dev
+```
+
+Access at <http://localhost:3437>
+
+### Run with Docker Compose
 
 ```bash
 docker-compose pull && docker-compose up
 ```
 
 Access at <http://localhost:3437>
-
-## React Component
-
-Generally speaking, the preferred method of configuration is through the `uiConfig`, `serverConfig`, and `overrides` props. Your target agent is specified through the `agent` prop.
-
-```javascript
-import AGiXTInteractive from '@agixt/interactive';
-
-<AGiXTInteractive
-  agent='XT'
-  uiConfig={{
-    showAppBar: false,
-    showConversationSelector: false,
-    showChatThemeToggles: false,
-    showRLHF: false,
-    footerMessage: '',
-    alternateBackground: 'primary',
-  }}
-  serverConfig={{
-    agixtServer: process.env.AGIXT_SERVER || '',
-    apiKey: getCookie('jwt') || '',
-  }}
-  overrides={{
-    conversation: 'MyConversation',
-  }}
-/>;
-```
 
 ## Standalone NextJS Application
 
@@ -58,12 +56,10 @@ The preferred method of configuration for standalone NextJS applications is usin
 | --------------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | `APP_NAME`                        | 'AGiXT'                 | The name of the AGiXT application.                                                                                   |
 | `APP_DESCRIPTION`                 | 'An AGiXT application.' | Description of the AGiXT application.                                                                                |
-| `APP_URI`                         | 'http://localhost:3100' | The URI of the AGiXT application.                                                                                    |
+| `APP_URI`                         | 'http://localhost:3437' | The URI of the AGiXT application.                                                                                    |
 | `THEME_DEFAULT_MODE`              | 'dark'                  | The default theme mode for AGiXT.                                                                                    |
-| `ADSENSE_ACCOUNT`                 | ''                      | The AdSense account associated with AGiXT.                                                                           |
 | `AGIXT_CONVERSATION_NAME`         | 'Default'               | The name of the conversation in AGiXT.                                                                               |
 | `AGIXT_CONVERSATION_MODE`         | 'static'                | The mode of conversation in AGiXT, can be 'static', 'select', or 'uuid'.                                             |
-| `AGIXT_API_KEY`                   | ''                      | The API key for AGiXT.                                                                                               |
 | `AGIXT_SERVER`                    | 'http://localhost:7437' | The server address for AGiXT.                                                                                        |
 | `INTERACTIVE_UI`                  | 'chat'                  | The interactive UI mode for AGiXT.                                                                                   |
 | `AGIXT_SHOW_APP_BAR`              | 'true'                  | Determines if the app bar is shown in AGiXT.                                                                         |
@@ -74,16 +70,7 @@ The preferred method of configuration for standalone NextJS applications is usin
 | `AGIXT_FILE_UPLOAD_ENABLED`       | ''                      | Indicates if file upload is enabled in AGiXT.                                                                        |
 | `AGIXT_VOICE_INPUT_ENABLED`       | ''                      | Indicates if voice input is enabled in AGiXT.                                                                        |
 | `AGIXT_ENABLE_SEARCHPARAM_CONFIG` | 'true'                  | Determines if search parameter configuration is enabled in AGiXT.                                                    |
-| `AGIXT_MODE`                      | 'prompt'                | The operational mode of AGiXT, typically 'prompt'.                                                                   |
 | `AGIXT_AGENT`                     | ''                      | The agent used in AGiXT.                                                                                             |
 | `AGIXT_INSIGHT_AGENT`             | ''                      | The insight agent used in AGiXT.                                                                                     |
-| `AGIXT_USE_SELECTED_AGENT`        | ''                      | Determines if the selected agent is used in AGiXT.                                                                   |
-| `AGIXT_PROMPT_NAME`               | ''                      | The name of the prompt in AGiXT.                                                                                     |
-| `AGIXT_PROMPT_CATEGORY`           | ''                      | The category of the prompt in AGiXT.                                                                                 |
-| `AGIXT_COMMAND`                   | ''                      | The command in AGiXT.                                                                                                |
-| `AGIXT_COMMAND_MESSAGE_ARG`       | ''                      | The command message argument in AGiXT.                                                                               |
-| `AGIXT_CHAIN`                     | ''                      | The chain used in AGiXT.                                                                                             |
-| `AGIXT_CHAIN_ARGS`                | '{}'                    | The arguments for the chain in AGiXT.                                                                                |
-| `ENV`                             | 'development'           | The environment mode, if not provided, this will use 'production' in `npm start` and 'development' in `npm run dev`. |
 
 Configuration can also be set via search params / query params, if enabled.
