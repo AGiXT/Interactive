@@ -59,27 +59,35 @@ export const RendererXSV = ({
       } else {
         setError('');
 
+        // Process headers
+        const headers = rawData[0];
+        const hasIdColumn = headers[0].toLowerCase().includes('id');
+        const dataColumns = hasIdColumn ? headers.slice(1) : headers;
+
         setColumns(
-          (rawData[0][0].toLowerCase().includes('id') ? rawData[0].slice(1) : rawData[0]).map((header) => ({
+          dataColumns.map((header) => ({
             field: header,
             width: Math.max(160, header.length * 10),
             flex: 1,
             headerName: header,
-          })),
+          }))
         );
 
+        // Process data rows
+        const dataRows = rawData.slice(1);
         setRows(
-          rawData.slice(1).map((row, index) =>
-            rawData[0][0].toLowerCase().includes('id')
+          dataRows.map((row, index) => {
+            const rowData = hasIdColumn
               ? {
                   id: row[0],
-                  ...Object.fromEntries(row.slice(1).map((cell, index) => [rawData[0][index + 1], cell])),
+                  ...Object.fromEntries(dataColumns.map((header, i) => [header, row[i + 1] || '']))
                 }
               : {
                   id: index,
-                  ...Object.fromEntries(row.map((cell, index) => [rawData[0][index], cell])),
-                },
-          ),
+                  ...Object.fromEntries(dataColumns.map((header, i) => [header, row[i] || '']))
+                };
+            return rowData;
+          })
         );
       }
     }
@@ -197,27 +205,17 @@ export const RendererXSV = ({
           <div className='overflow-x-auto'>
             <table className='w-full border-collapse text-sm'>
               <thead>
-                <tr>
+                <tr className='border-b'>
                   {filteredColumns.map((column) => (
-                    <th
-                      key={column.field}
-                      scope='col'
-                      className='border p-2 font-medium text-left bg-muted/50'
-                    >
+                    <th key={column.field} scope='col' className='p-2 font-medium text-left bg-muted/50'>
                       <div className='flex flex-col gap-2'>
                         <button
                           onClick={() => handleSort(column.field)}
                           className='flex items-center gap-1 hover:text-foreground/70 focus:outline-none group w-full'
                         >
                           <span>{column.headerName}</span>
-                          <span className={`ml-1 transition-colors ${
-                            sortConfig?.column === column.field
-                              ? 'text-foreground'
-                              : 'text-foreground/50 group-hover:text-foreground/70'
-                          }`}>
-                            {sortConfig?.column === column.field
-                              ? (sortConfig.direction === 'asc' ? '↑' : '↓')
-                              : '↕'}
+                          <span className={`ml-1 transition-colors ${sortConfig?.column === column.field ? 'text-foreground' : 'text-foreground/50 group-hover:text-foreground/70'}`}>
+                            {sortConfig?.column === column.field ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '↕'}
                           </span>
                         </button>
                         <div className="relative">
@@ -231,10 +229,7 @@ export const RendererXSV = ({
                           {filters[column.field] && (
                             <button
                               className="absolute right-2 top-1/2 -translate-y-1/2 text-foreground/50 hover:text-foreground/70"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleFilterChange(column.field, '');
-                              }}
+                              onClick={() => handleFilterChange(column.field, '')}
                               aria-label="Clear filter"
                             >
                               ×
