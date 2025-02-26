@@ -15,7 +15,7 @@ import Mermaid from './Code/Mermaid';
 import { parseXSVData } from './Code/ParseXSVData';
 import TabPanel from './TabPanel';
 
-const fileExtensions = {
+const fileExtensions: Record<string, string> = {
   '': 'txt',
   text: 'txt',
   python: 'py',
@@ -80,22 +80,27 @@ const fileExtensions = {
   latex: 'latex',
 };
 
-const languageRenders = {
-  markdown: (content) => <MarkdownBlock content={content} />,
-  html: (content) => <div dangerouslySetInnerHTML={{ __html: content }} />,
-  csv: (content, setLoading) => {
+type LanguageRendererProps = {
+  content: string;
+  setLoading?: (loading: boolean) => void;
+};
+
+const languageRenders: Record<string, (content: string, setLoading?: (loading: boolean) => void) => ReactNode> = {
+  markdown: (content: string) => <MarkdownBlock content={content} />,
+  html: (content: string) => <div dangerouslySetInnerHTML={{ __html: content }} />,
+  csv: (content: string, setLoading?: (loading: boolean) => void) => {
     const csvData = (
-      content.constructor === Array
+      Array.isArray(content)
         ? content.length > 1
           ? content
           : content[0]
         : content
             .split('\n')
-            .filter((row) => row.trim())
-            .map((row) => row.trim())
+            .filter((row: string) => row.trim())
+            .map((row: string) => row.trim())
     )
-      .filter((row) => row.trim())
-      .map((row) => row.trim());
+      .filter((row: string) => row.trim())
+      .map((row: string) => row.trim());
 
     const result = parseXSVData(csvData, ',');
 
@@ -105,10 +110,10 @@ const languageRenders = {
 
     return <DataTable columns={createColumns(result.columns)} data={result.rows} />;
   },
-  tsv: (content, setLoading) => {
-    const tsvData = (content.constructor === Array ? (content.length > 1 ? content : content[0]) : content.split('\n'))
-      .filter((row) => row.trim())
-      .map((row) => row.trim());
+  tsv: (content: string, setLoading?: (loading: boolean) => void) => {
+    const tsvData = (Array.isArray(content) ? (content.length > 1 ? content : content[0]) : content.split('\n'))
+      .filter((row: string) => row.trim())
+      .map((row: string) => row.trim());
 
     const result = parseXSVData(tsvData, '\t');
 
@@ -118,11 +123,11 @@ const languageRenders = {
 
     return <DataTable columns={createColumns(result.columns)} data={result.rows} />;
   },
-  gantt: (content) => <Mermaid chart={'gantt\n' + content} />,
-  sequence: (content) => <Mermaid chart={'sequenceDiagram\n' + content} />,
-  flow: (content) => <Mermaid chart={'flowchart TD\n' + content} />,
-  mermaid: (content) => <Mermaid chart={content} />,
-  latex: (content) => <Latex>{content[0]}</Latex>,
+  gantt: (content: string) => <Mermaid chart={`gantt\n${content}`} />,
+  sequence: (content: string) => <Mermaid chart={`sequenceDiagram\n${content}`} />,
+  flow: (content: string) => <Mermaid chart={`flowchart TD\n${content}`} />,
+  mermaid: (content: string) => <Mermaid chart={content} />,
+  latex: (content: string) => <Latex>{content}</Latex>,
 };
 
 export type CodeBlockProps = {
@@ -135,7 +140,7 @@ export type CodeBlockProps = {
 
 export default function CodeBlock({
   inline = false,
-  children,
+  children = '',
   language = 'Text',
   fileName,
   setLoading,
@@ -150,15 +155,26 @@ export default function CodeBlock({
   }
 
   if (!language || language === 'Text') {
-    const languages = Object.entries(fileExtensions).flat();
-    const potentialLanguage = children.split('\n')[0].trim();
-    if (languages.includes(potentialLanguage)) {
+    const languages = Object.keys(fileExtensions);
+    const contentLines = children.split('\n');
+    const potentialLanguage = contentLines[0].trim().toLowerCase();
+    
+    // Handle Mermaid specific syntax
+    if (contentLines[0].trim() === 'graph TD' || contentLines[0].trim() === 'graph TB') {
+      language = 'mermaid';
+    } else if (contentLines[0].trim() === 'sequenceDiagram') {
+      language = 'sequence';
+    } else if (contentLines[0].trim() === 'gantt') {
+      language = 'gantt';
+    } else if (contentLines[0].trim().startsWith('flowchart')) {
+      language = 'flow';
+    } else if (languages.includes(potentialLanguage)) {
       language = potentialLanguage;
       children = children.substring(children.indexOf('\n') + 1);
     }
   }
 
-  const fileNameWithExtension = `${fileName || 'code'}.${fileExtensions[String(language.toLowerCase())] || 'txt'}`;
+  const fileNameWithExtension = `${fileName || 'code'}.${fileExtensions[language.toLowerCase()] || 'txt'}`;
 
   const copyCode = () => {
     if (codeBlockRef.current) {
@@ -182,6 +198,9 @@ export default function CodeBlock({
     }
   };
 
+  const languageKey = language.toLowerCase();
+  const hasCustomRenderer = languageKey in languageRenders;
+
   return (
     <Collapsible
       open={isOpen}
@@ -193,7 +212,7 @@ export default function CodeBlock({
           <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'transform rotate-180' : ''}`} />
         </CollapsibleTrigger>
 
-        {Object.keys(languageRenders).includes(language) && (
+        {hasCustomRenderer && (
           <div className='flex'>
             <button className={`px-4 py-2 ${tab === 0 ? 'bg-muted' : ''}`} onClick={() => setTab(0)}>
               Rendered
@@ -217,18 +236,18 @@ export default function CodeBlock({
       </div>
 
       <CollapsibleContent className='transition-all duration-300 ease-in-out'>
-        {Object.keys(languageRenders).includes(language) && (
+        {hasCustomRenderer && (
           <TabPanel value={tab} index={0}>
-            <div className='code-container'>{languageRenders[language.toString()](children, setLoading)}</div>
+            <div className='code-container'>{(languageRenders[languageKey] as (content: string, setLoading?: (loading: boolean) => void) => ReactNode)(children, setLoading)}</div>
           </TabPanel>
         )}
 
-        <TabPanel value={tab} index={Object.keys(languageRenders).includes(language) ? 1 : 0}>
+        <TabPanel value={tab} index={hasCustomRenderer ? 1 : 0}>
           <div className='code-container' ref={codeBlockRef}>
-            {language.toLowerCase() in fileExtensions ? (
+            {languageKey in fileExtensions ? (
               <SyntaxHighlighter
                 {...props}
-                language={language.toLowerCase()}
+                language={languageKey}
                 style={getCookie('theme')?.includes('dark') ? a11yDark : a11yLight}
                 showLineNumbers
                 wrapLongLines
@@ -236,9 +255,7 @@ export default function CodeBlock({
                 {children}
               </SyntaxHighlighter>
             ) : (
-              <code className='code-block' {...props}>
-                {children}
-              </code>
+              <code className='code-block'>{children}</code>
             )}
           </div>
         </TabPanel>
