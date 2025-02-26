@@ -7,7 +7,8 @@
 [![Discord](https://img.shields.io/discord/1097720481970397356?label=Discord&logo=discord&logoColor=white&style=plastic&color=5865f2)](https://discord.gg/d3TkHRZcjD)
 [![Twitter](https://img.shields.io/badge/Twitter-Follow_@Josh_XT-blue?logo=twitter&style=plastic)](https://twitter.com/Josh_XT)
 
-<img width="540" alt="417306251-654747dd-9f3f-49f8-bc6f-26794a39f18b" src="https://github.com/user-attachments/assets/3dbc38fb-ba8e-4219-acb6-9c5c7f81aaa0" />
+![AGiXT_New](https://github.com/user-attachments/assets/14a5c1ae-6af8-4de8-a82e-f24ea52da23f)
+
 
 
 AGiXT Interactive is both an embeddable React component and standalone NextJS application allowing interaction with agents with extensive administration options.
@@ -18,7 +19,6 @@ Videos
 https://github.com/user-attachments/assets/5dceb1b2-dfbc-4c2d-b648-974882eff08d
 
 https://github.com/user-attachments/assets/2111009a-17e0-42e5-bcbc-843d127495e0
-
 
 
 ## Getting Started
