@@ -58,7 +58,6 @@ jobs:
     outputs:
       digest: ${{ steps.dockerBuild.outputs.digest }}
     services:
-      # [Previous services configuration remains the same]
       agixt:
         image: ghcr.io/josh-xt/agixt:main
         credentials:
