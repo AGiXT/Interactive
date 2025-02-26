@@ -6,8 +6,6 @@ import MarkdownHeading from './Markdown/Heading';
 import MarkdownLink from './Markdown/Link';
 import MarkdownImage from './Markdown/Image';
 import textToMarkdown from './Markdown/Preprocessor';
-import { DataTable } from './data-table';
-import { createColumns } from './data-table/data-table-columns';
 
 export type MarkdownBlockProps = {
   content: string;
@@ -15,12 +13,12 @@ export type MarkdownBlockProps = {
   setLoading?: (loading: boolean) => void;
 };
 export default function MarkdownBlock({ content, chatItem, setLoading }: MarkdownBlockProps): ReactNode {
-  const renderMessage = (message): string => {
+  const renderMessage = (message: string): string => {
     return message
       ? message
           .replace(/\n/g, ' \n') // Add a space before each newline character
           .split('\n') // Split the message into lines.
-          .map((line) => (line.trim() ? line : '\\')) // Replace empty lines (containing only \n)  with backslash.
+          .map((line: string) => (line.trim() ? line : '\\')) // Replace empty lines (containing only \n)  with backslash.
           .join('\n') // Recombine the split lines with newlines.
           .replaceAll(/[^\\\n]\n\\\n/g, '\n\n') // Change the first slash following a line into a double linebreak.
           .replace(/[\n\\]+$/, '') // Remove any newlines or backslashes at the end of the message.
@@ -35,31 +33,21 @@ export default function MarkdownBlock({ content, chatItem, setLoading }: Markdow
 
   function parseMarkdownTable(markdown: string) {
     const tableLines = markdown.split('\n').filter((line) => line.includes('|'));
-    if (tableLines.length === 0) return { columns: [], rows: [] };
+    if (tableLines.length === 0) return null;
 
     const headers = tableLines[0]
       .split('|')
       .map((header) => header.trim())
       .filter(Boolean);
 
-    const rows = tableLines.slice(2).map((rowLine, rowIndex) => ({
-      id: rowIndex + 1,
-      ...Object.fromEntries(
-        rowLine
-          .split('|')
-          .map((cell) => cell.trim())
-          .filter(Boolean)
-          .map((cell, cellIndex) => [`col${cellIndex}`, cell]),
-      ),
-    }));
+    const rows = tableLines.slice(2).map((rowLine) =>
+      rowLine
+        .split('|')
+        .map((cell) => cell.trim())
+        .filter(Boolean)
+    );
 
-    const columns = headers.map((header, index) => ({
-      field: `col${index}`,
-      headerName: header,
-      width: 150,
-    }));
-
-    return { columns, rows };
+    return { headers, rows };
   }
   try {
     return (
@@ -106,10 +94,33 @@ export default function MarkdownBlock({ content, chatItem, setLoading }: Markdow
                 return <li className='my-1'>{children}</li>;
               },
               table() {
-                const { columns, rows } = parseMarkdownTable(segment.content);
+                const tableData = parseMarkdownTable(segment.content);
+                if (!tableData) return null;
+                
                 return (
-                  <div className='w-full'>
-                    <DataTable columns={createColumns(columns)} data={rows} />
+                  <div className="overflow-x-auto w-full my-4">
+                    <table className="w-full border-collapse text-sm">
+                      <thead>
+                        <tr className="bg-muted/50">
+                          {tableData.headers.map((header, i) => (
+                            <th key={i} className="border p-2 font-medium text-left">
+                              {header}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {tableData.rows.map((row, i) => (
+                          <tr key={i} className="border-b hover:bg-muted/50">
+                            {row.map((cell, j) => (
+                              <td key={j} className="border p-2">
+                                {cell}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 );
               },
