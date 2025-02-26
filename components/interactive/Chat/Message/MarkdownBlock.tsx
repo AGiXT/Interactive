@@ -5,6 +5,7 @@ import CodeBlock from './Markdown/CodeBlock';
 import MarkdownHeading from './Markdown/Heading';
 import MarkdownLink from './Markdown/Link';
 import MarkdownImage from './Markdown/Image';
+import { RendererXSV } from './Markdown/Code/XSV';
 import textToMarkdown from './Markdown/Preprocessor';
 
 export type MarkdownBlockProps = {
@@ -96,31 +97,22 @@ export default function MarkdownBlock({ content, chatItem, setLoading }: Markdow
               table() {
                 const tableData = parseMarkdownTable(segment.content);
                 if (!tableData) return null;
-                
+
+                // Convert table data to XSV format
+                const xsvData = [
+                  // Headers row
+                  tableData.headers.join(','),
+                  // Data rows
+                  ...tableData.rows.map(row => row.join(','))
+                ];
+
                 return (
-                  <div className="overflow-x-auto w-full my-4">
-                    <table className="w-full border-collapse text-sm">
-                      <thead>
-                        <tr className="bg-muted/50">
-                          {tableData.headers.map((header, i) => (
-                            <th key={i} className="border p-2 font-medium text-left">
-                              {header}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {tableData.rows.map((row, i) => (
-                          <tr key={i} className="border-b hover:bg-muted/50">
-                            {row.map((cell, j) => (
-                              <td key={j} className="border p-2">
-                                {cell}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="my-4">
+                    <RendererXSV
+                      xsvData={xsvData}
+                      separator=","
+                      setLoading={setLoading}
+                    />
                   </div>
                 );
               },
