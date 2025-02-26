@@ -365,10 +365,9 @@ class FrontEndTest:
         match = re.search(r"secret=([\w\d]+)", otp_uri)
         if match:
             secret_key = match.group(1)
-            logging.info(f"Successfully extracted secret key: {secret_key}")
+            logging.info("Successfully extracted secret key")
             totp = pyotp.TOTP(secret_key)
             otp_token = totp.now()
-            logging.info(f"Generated OTP token: {otp_token}")
             await self.page.fill("#token", otp_token)
             logging.info("Entering OTP token")
             await self.take_screenshot(
