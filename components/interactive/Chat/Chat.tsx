@@ -9,6 +9,7 @@ import { toast } from '@/hooks/useToast';
 import axios from 'axios';
 import { getCookie } from 'cookies-next';
 import { Badge, Check, Download, Paperclip, Pencil, Plus, Trash2, Upload } from 'lucide-react';
+import { ImportDialog } from './Message/Dialog/ImportDialog';
 import { useRouter } from 'next/navigation';
 import { useContext, useEffect, useState } from 'react';
 import useSWR, { mutate } from 'swr';
@@ -227,6 +228,7 @@ export default function Chat({
     }
   }, [loading, state.overrides.conversation]);
   const [renaming, setRenaming] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   useEffect(() => {
     if (renaming) {
       setNewName(currentConversation?.name || '');
@@ -282,10 +284,9 @@ export default function Chat({
                 title: 'Import Conversation',
                 icon: Upload,
                 func: () => {
-                  // setImportMode(true);
-                  // setIsDialogOpen(true);
+                  setIsImportDialogOpen(true);
                 },
-                disabled: true,
+                disabled: false,
               },
               {
                 title: 'Export Conversation',
@@ -335,6 +336,10 @@ export default function Chat({
           process.env.NEXT_PUBLIC_AGIXT_SHOW_CONVERSATION_BAR !== 'true' &&
           process.env.NEXT_PUBLIC_AGIXT_CONVERSATION_MODE === 'uuid'
         }
+      />
+      <ImportDialog
+        isOpen={isImportDialogOpen}
+        onClose={() => setIsImportDialogOpen(false)}
       />
     </>
   );
