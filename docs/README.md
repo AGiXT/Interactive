@@ -22,10 +22,10 @@ git clone https://github.com/agixt/interactive
 cd interactive
 ```
 
-Create a `.env` file and set the `API_URI` to your AGiXT server and `AGIXT_AGENT` for the default agent to use, then save and run the development server locally.
+Create a `.env` file and set the `AGIXT_SERVER` to your AGiXT server and `AGIXT_AGENT` for the default agent to use, then save and run the development server locally.
 
 ```bash
-API_URI=https://localhost:7437
+AGIXT_SERVER=https://localhost:7437
 AGIXT_AGENT=XT
 ```
 
@@ -40,7 +40,7 @@ npm run dev
 
 Access at <http://localhost:3437>
 
-### Run with Docker Compose
+#### Alternatively: Run with Docker Compose
 
 ```bash
 docker-compose pull && docker-compose up
