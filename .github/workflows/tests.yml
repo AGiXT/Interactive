@@ -14,7 +14,7 @@ on:
       front-end-image:
         type: string
         description: 'Front end image to run'
-        default: 'ghcr.io/jamesonrgrieve/interactive:main'
+        default: 'ghcr.io/AGiXT/interactive:main'
         required: true
       front-end-port:
         type: string
@@ -178,7 +178,7 @@ jobs:
           BRANCH_NAME=$(echo ${{ github.ref }} | awk -F'/' '{print $NF}')
           if [ "${{ github.actor }}" == "Josh-XT" ]; then
             DISCORD_NAME="<@381837595522367488>"
-          elif [ "${{ github.actor }}" == "JamesonRGrieve" ]; then
+          elif [ "${{ github.actor }}" == "AGiXT" ]; then
             DISCORD_NAME="<@329145730725838858>"
           elif [ "${{ github.actor }}" == "waiscodes" ]; then
             DISCORD_NAME="<@670762167037067304>"
