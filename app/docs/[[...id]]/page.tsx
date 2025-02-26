@@ -88,8 +88,7 @@ const NAVIGATION_STRUCTURE: Array<{
       { title: 'Amazon', path: ['4-Authentication', 'amazon'] },
       { title: 'GitHub', path: ['4-Authentication', 'github'] },
       { title: 'Google', path: ['4-Authentication', 'google'] },
-      { title: 'Microsoft', path: ['4-Authentication', 'microsoft'] },
-      { title: 'Oracle', path: ['4-Authentication', 'oracle'] }
+      { title: 'Microsoft', path: ['4-Authentication', 'microsoft'] }
     ]
   }
 ]
