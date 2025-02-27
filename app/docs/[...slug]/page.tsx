@@ -11,8 +11,7 @@ export default function DocPage({
 }: {
   params: { slug: string[] }
 }) {
-  const slug = params.slug.join('/');
-  const filePath = path.join(process.cwd(), 'app/docs', `${slug}.md`);
+  const filePath = path.join(process.cwd(), 'docs', params.slug.join('/')).replace(/%20/g, ' ') + '.md';
   let content = '';
 
   try {
@@ -23,7 +22,7 @@ export default function DocPage({
   }
 
   return (
-    <SidebarPage title="Documentation" className="p-4">
+    <div className="container mx-auto p-4">
       <div className="mb-4">
         <Link href="/docs">
           <Button variant="ghost" className="gap-2">
@@ -32,7 +31,9 @@ export default function DocPage({
           </Button>
         </Link>
       </div>
-      <MarkdownBlock content={content} />
-    </SidebarPage>
+      <div className="prose dark:prose-invert max-w-none">
+        <MarkdownBlock content={content} />
+      </div>
+    </div>
   );
 }
