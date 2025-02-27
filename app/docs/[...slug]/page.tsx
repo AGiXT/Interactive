@@ -11,7 +11,7 @@ export default function DocPage({
 }: {
   params: { slug: string[] }
 }) {
-  const filePath = path.join(process.cwd(), 'docs', params.slug.join('/')).replace(/%20/g, ' ') + '.md';
+  const filePath = path.join(process.cwd(), 'docs-agixt', params.slug.join('/')).replace(/%20/g, ' ') + '.md';
   let content = '';
 
   try {
