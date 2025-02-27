@@ -62,6 +62,13 @@ type Item = {
 // Base documentation items without URL modification
 const docItems = [
   {
+    title: 'Introduction',
+    icon: BookOpen,
+    items: [
+      { title: 'Introduction', slug: '0-Introduction' }
+    ],
+  },
+  {
     title: 'Getting Started',
     icon: Rocket,
     items: [
@@ -245,7 +252,6 @@ export function NavMain() {
     isActive: isActive(item, pathname, queryParams),
   }));
 
-  // Add logic to determine if team management should be shown
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Pages</SidebarGroupLabel>
