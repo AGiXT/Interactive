@@ -13,7 +13,7 @@ const SidebarContentManager = createContext<SidebarContentType | undefined>(unde
 
 export function SidebarContentProvider({ children }: { children: ReactNode }) {
   const [content, setContent] = React.useState<ReactNode | null>(null);
-  const [title, setTitle] = React.useState<string | null>('Context Sidebar'); // Default title
+  const [title, setTitle] = React.useState<string | null>(''); // Empty default title
 
   return (
     <SidebarContentManager.Provider value={{ content, title, setContent, setTitle }}>
@@ -36,7 +36,7 @@ interface SidebarContentProps {
 }
 
 // Component to set sidebar content
-export function SidebarContent({ children, title = 'Context Sidebar' }: SidebarContentProps) {
+export function SidebarContent({ children, title = '' }: SidebarContentProps) {
   const { setContent, setTitle } = useSidebarContent();
 
   React.useEffect(() => {
@@ -44,7 +44,7 @@ export function SidebarContent({ children, title = 'Context Sidebar' }: SidebarC
     setTitle(title);
     return () => {
       setContent(null);
-      setTitle('Context Sidebar');
+      setTitle('');
     };
   }, [children, title, setContent, setTitle]);
 
