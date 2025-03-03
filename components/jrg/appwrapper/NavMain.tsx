@@ -122,6 +122,14 @@ const docItems = [
       { title: 'Microsoft', slug: '4-Authentication/microsoft' },
     ],
   },
+  {
+    title: 'Reference',
+    icon: BookOpen,
+    items: [
+      { title: 'API Reference', slug: '5-Reference/0-API Reference' },
+      { title: 'Privacy Policy', slug: '5-Reference/1-Privacy Policy' },
+    ],
+  },
 ];
 
 // Convert doc items to nav items with proper URLs
