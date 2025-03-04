@@ -27,6 +27,11 @@ export default function Home() {
           </Link>
         </div>
         <div className='flex items-center gap-2'>
+          <Link href='/docs'>
+            <Button variant="ghost" size='lg' className='px-4'>
+              Documentation
+            </Button>
+          </Link>
           <ThemeToggle initialTheme={cookies().get('theme')?.value} />
           <Link href='/user'>
             <Button size='lg' className='px-4 rounded-full'>
@@ -47,7 +52,7 @@ export default function Home() {
         </div>
         <Contact />
         <div className='flex flex-col items-center justify-center'>
-          <a href='/privacy'>Privacy Policy</a>
+          <Link href='/docs/5-Reference/1-Privacy Policy'>Privacy Policy</Link>
         </div>
       </main>
     </div>

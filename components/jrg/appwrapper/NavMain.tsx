@@ -301,7 +301,9 @@ export function NavMain() {
                                     <SidebarMenuButton
                                       side='left'
                                       tooltip={subItem.title}
-                                      className={cn(pathname.startsWith(subItem.url) && 'bg-muted')}
+                                      className={cn(
+                                        'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                                      )}
                                     >
                                       {subItem.icon && <subItem.icon className="h-4 w-4" />}
                                       <span>{subItem.title}</span>
@@ -315,7 +317,7 @@ export function NavMain() {
                                           <SidebarMenuSubButton asChild>
                                             <Link
                                               href={nestedItem.url}
-                                              className={cn('w-full', pathname === nestedItem.url && 'bg-muted')}
+                                              className={cn('w-full', decodeURIComponent(pathname).replace(/\.md$/, '') === nestedItem.url && 'bg-muted')}
                                             >
                                               <span className='flex items-center gap-2'>
                                                 {nestedItem.title}
