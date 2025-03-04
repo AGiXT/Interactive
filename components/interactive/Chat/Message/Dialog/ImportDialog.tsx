@@ -41,18 +41,31 @@ export function ImportDialog({ isOpen, onClose }: ImportDialogProps) {
 
     try {
       const fileContent = await file.text();
-      const conversationData = JSON.parse(fileContent);
+      let conversationData = JSON.parse(fileContent);
+      
+      // Handle different formats of conversation exports
+      if (!conversationData.messages && conversationData.interactions) {
+        // Convert from the export format used by the backend
+        conversationData = {
+          name: conversationData.conversation_name || file.name.replace('.json', ''),
+          messages: conversationData.interactions.map((interaction: any) => ({
+            role: interaction.role,
+            content: interaction.message,
+            timestamp: interaction.timestamp
+          }))
+        };
+      }
 
       // Create new conversation with imported messages
+      const conversationName = conversationData.name || "Imported Conversation";
       const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/chat/completions`,
+        `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/conversation`,
         {
-          messages: conversationData.messages.map((msg: any) => ({
+          conversation_name: conversationName,
+          conversation_content: conversationData.messages.map((msg: any) => ({
             role: msg.role,
-            content: [{ type: 'text', text: msg.content }],
-          })),
-          model: getCookie('agixt-agent'),
-          import: true, // Signal this is an import
+            message: typeof msg.content === 'string' ? msg.content : msg.content.text || msg.content,
+          }))
         },
         {
           headers: {
@@ -62,21 +75,34 @@ export function ImportDialog({ isOpen, onClose }: ImportDialogProps) {
       );
 
       if (response.status === 200) {
-        const chatCompletion = response.data;
+        // Refresh conversations list to get the newly created conversation
+        await mutate('/conversations');
         
-        // Update state with new conversation
-        if (state.mutate) {
-          state.mutate((oldState: InteractiveConfig) => ({
-            ...oldState,
-            overrides: {
-              ...oldState.overrides,
-              conversation: chatCompletion.id,
-            },
-          }));
-        }
+        // Use the useConversations hook data through mutate
+        const { data: conversationsData } = await import('../../../hooks/useConversation').then(
+          module => module.useConversations()
+        );
+        
+        // Find the conversation with the imported name
+        const newConversation = conversationsData?.find(
+          (conv: any) => conv.name === conversationName
+        );
+        
+        if (newConversation) {
+          // Update state with new conversation
+          if (state.mutate) {
+            state.mutate((oldState: InteractiveConfig) => ({
+              ...oldState,
+              overrides: {
+                ...oldState.overrides,
+                conversation: newConversation.id,
+              },
+            }));
+          }
 
-        // Redirect to new conversation
-        router.push(`/chat/${chatCompletion.id}`);
+          // Redirect to new conversation
+          router.push(`/chat/${newConversation.id}`);
+        }
 
         // Refresh conversations list
         mutate('/conversation');
