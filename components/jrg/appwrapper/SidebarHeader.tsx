@@ -6,7 +6,7 @@ import { ReactNode } from 'react';
 export function SidebarHeader({ children }: { children: ReactNode }) {
   return (
     <header
-      className='flex shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 w-full sticky top-0 z-20 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60'
+      className='flex shrink-0 items-center gap-2 px-6 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 w-full sticky top-0 z-20 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60'
       style={{ paddingTop: 'env(safe-area-inset-top)', height: 'calc(3rem + env(safe-area-inset-top))' }}
     >
       <div className='flex items-center h-full md:hidden'>
@@ -25,7 +25,7 @@ export function SidebarHeaderTitle({ className, children }: React.HTMLAttributes
 export function SidebarMain({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <main
-      className={cn('flex flex-col flex-1 gap-4', className)}
+      className={cn('flex flex-col flex-1 gap-6 px-6 py-4', className)}
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       {...props}
     >
