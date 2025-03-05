@@ -48,6 +48,7 @@ export default function ChatBar({
     handleBlur,
     value: message,
     setValue: setMessage,
+    setIsActive,
   } = useDynamicInput('', uploadedFiles);
 
   const handleUploadFiles = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
@@ -134,7 +135,7 @@ export default function ChatBar({
             )}
             <div className='flex-grow' />
             <TooltipBasic title='Collapse Input' side='top'>
-              <Button size='icon' variant='ghost' className='rounded-full' onClick={() => handleBlur()}>
+              <Button size='icon' variant='ghost' className='rounded-full' onClick={() => setIsActive(false)}>
                 <BiCollapseVertical className='w-4 h-4' />
               </Button>
             </TooltipBasic>
@@ -219,8 +220,12 @@ export function useDynamicInput(initialValue = '', uploadedFiles: { [x: string]:
   };
 
   const handleBlur = () => {
-    setIsActive(false);
+    setValue('');
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'unset';
+    }
   };
 
-  return { textareaRef, isActive, handleFocus, handleBlur, value, setValue };
+  return { textareaRef, isActive, setIsActive, handleFocus, handleBlur, value, setValue };
 }
