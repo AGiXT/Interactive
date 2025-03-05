@@ -40,11 +40,24 @@ export const useSocketIOBypass: MiddlewareHook = async (req) => {
   };
 };
 
+export const useDocsPublicAccess: MiddlewareHook = async (req) => {
+  if (req.nextUrl.pathname === '/docs') {
+    return {
+      activated: true,
+      response: NextResponse.redirect(new URL('/docs/0-Introduction', req.url)),
+    };
+  }
+  return {
+    activated: req.nextUrl.pathname.startsWith('/docs'),
+    response: NextResponse.next(),
+  };
+};
+
 export default async function Middleware(req: NextRequest): Promise<NextResponse> {
   log([`MIDDLEWARE INVOKED AT ${req.nextUrl.pathname}`], {
     server: 1,
   });
-  const hooks = [useNextAPIBypass, useOAuth2, useJWTQueryParam, useAuth];
+  const hooks = [useNextAPIBypass, useDocsPublicAccess, useOAuth2, useJWTQueryParam, useAuth];
   for (const hook of hooks) {
     const hookResult = await hook(req);
     if (hookResult.activated) {

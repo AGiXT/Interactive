@@ -64,7 +64,7 @@ const SidebarProvider = React.forwardRef<
   (
     {
       defaultLeftOpen = true,
-      defaultRightOpen = true,
+      defaultRightOpen = false,
       onLeftOpenChange,
       onRightOpenChange,
       className,

@@ -239,7 +239,7 @@ export default function Chat({
   }, []);
   return (
     <>
-      <SidebarContent title='Conversation Management'>
+      <SidebarContent>
         <SidebarGroup>
           {
             <div className='w-full group-data-[collapsible=icon]:hidden'>
