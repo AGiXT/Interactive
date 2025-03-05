@@ -33,7 +33,7 @@ export default function RootLayout({ children }: { children: ReactNode }): React
           <SolanaWalletProvider>
             <CommandMenuProvider>
               <SidebarContentProvider>
-                <SidebarProvider className='flex-1'>
+                <SidebarProvider className='flex-1' defaultRightOpen={false}>
                   <SidebarMain side='left' />
                   {children}
                   <Toaster />
