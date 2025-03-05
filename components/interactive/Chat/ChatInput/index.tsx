@@ -133,7 +133,6 @@ export default function ChatBar({
               <ListUploadedFiles uploadedFiles={uploadedFiles} setUploadedFiles={setUploadedFiles} />
             )}
             <div className='flex-grow' />
-            {timer > -1 && <Timer loading={loading} timer={timer} />}
             <TooltipBasic title='Collapse Input' side='top'>
               <Button size='icon' variant='ghost' className='rounded-full' onClick={() => handleBlur()}>
                 <BiCollapseVertical className='w-4 h-4' />
@@ -179,9 +178,7 @@ export default function ChatBar({
             className='justify-start w-full px-4 hover:bg-transparent'
             onClick={handleFocus}
           >
-            <span className='font-light text-muted-foreground'>
-              {loading ? 'Sending...' : 'Enter your message here...'}
-            </span>
+            <span className='font-light text-muted-foreground'>{loading ? 'Sending...' : 'Enter your message here...'}</span>
           </Button>
           {enableVoiceInput && <VoiceRecorder onSend={onSend} disabled={disabled} />}
         </>
