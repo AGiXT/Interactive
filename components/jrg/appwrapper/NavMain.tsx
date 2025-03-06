@@ -34,6 +34,7 @@ import {
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { useCompany } from '../auth/hooks/useUser';
+import { getCookie } from 'cookies-next';
 
 type NestedItem = {
   title: string;
@@ -255,10 +256,19 @@ export function NavMain() {
   const { data: company } = useCompany();
   const { toggleSidebar, open } = useSidebar('left');
 
+  // Check if user is authenticated
+  const isAuthenticated = !!getCookie('jwt');
+
   const itemsWithActiveState = items.map((item) => ({
     ...item,
     isActive: isActive(item, pathname, queryParams),
-  }));
+  })).filter(item => {
+    // Only show documentation when not authenticated
+    if (!isAuthenticated) {
+      return item.title === 'Documentation';
+    }
+    return true;
+  });
 
   return (
     <SidebarGroup>
