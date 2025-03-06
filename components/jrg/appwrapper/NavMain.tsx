@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { ChevronRightIcon } from '@radix-ui/react-icons';
 import {
   BookOpen,
@@ -34,6 +35,7 @@ import {
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { useCompany } from '../auth/hooks/useUser';
+import { getCookie } from 'cookies-next';
 
 type NestedItem = {
   title: string;
@@ -252,13 +254,27 @@ export function NavMain() {
   const router = useRouter();
   const pathname = usePathname();
   const queryParams = useSearchParams();
-  const { data: company } = useCompany();
+  const { data: company, error: companyError } = useCompany();
   const { toggleSidebar, open } = useSidebar('left');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  useEffect(() => {
+    const hasAuth = !!getCookie('jwt') && !!company && !companyError;
+    setIsAuthenticated(hasAuth);
+  }, [company, companyError]);
+
+  // Check if user is authenticated
+  
   const itemsWithActiveState = items.map((item) => ({
     ...item,
     isActive: isActive(item, pathname, queryParams),
-  }));
+  })).filter(item => {
+    // Only show documentation when not authenticated
+    if (!isAuthenticated) {
+      return item.title === 'Documentation';
+    }
+    return true;
+  });
 
   return (
     <SidebarGroup>
@@ -301,7 +317,9 @@ export function NavMain() {
                                     <SidebarMenuButton
                                       side='left'
                                       tooltip={subItem.title}
-                                      className={cn(pathname.startsWith(subItem.url) && 'bg-muted')}
+                                      className={cn(
+                                        'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                                      )}
                                     >
                                       {subItem.icon && <subItem.icon className="h-4 w-4" />}
                                       <span>{subItem.title}</span>
@@ -315,7 +333,7 @@ export function NavMain() {
                                           <SidebarMenuSubButton asChild>
                                             <Link
                                               href={nestedItem.url}
-                                              className={cn('w-full', pathname === nestedItem.url && 'bg-muted')}
+                                              className={cn('w-full', decodeURIComponent(pathname).replace(/\.md$/, '') === nestedItem.url && 'bg-muted')}
                                             >
                                               <span className='flex items-center gap-2'>
                                                 {nestedItem.title}
