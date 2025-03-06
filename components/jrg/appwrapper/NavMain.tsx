@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { ChevronRightIcon } from '@radix-ui/react-icons';
 import {
   BookOpen,
@@ -255,10 +256,15 @@ export function NavMain() {
   const queryParams = useSearchParams();
   const { data: company } = useCompany();
   const { toggleSidebar, open } = useSidebar('left');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    // Check authentication status
+    setIsAuthenticated(!!getCookie('jwt'));
+  }, []);
 
   // Check if user is authenticated
-  const isAuthenticated = !!getCookie('jwt');
-
+  
   const itemsWithActiveState = items.map((item) => ({
     ...item,
     isActive: isActive(item, pathname, queryParams),

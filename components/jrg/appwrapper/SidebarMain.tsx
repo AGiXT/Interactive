@@ -14,8 +14,13 @@ import { NotificationsNavItem } from '@/interactive/Notifications/popup';
 
 export function SidebarMain({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [hasStarted, setHasStarted] = useState(false);
-  const isAuthenticated = !!getCookie('jwt');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const pathname = usePathname();
+
+  useEffect(() => {
+    // Check authentication status
+    setIsAuthenticated(!!getCookie('jwt'));
+  }, []);
 
   useEffect(() => {
     if (getCookie('agixt-has-started') === 'true') {
