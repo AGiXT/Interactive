@@ -254,14 +254,14 @@ export function NavMain() {
   const router = useRouter();
   const pathname = usePathname();
   const queryParams = useSearchParams();
-  const { data: company } = useCompany();
+  const { data: company, error: companyError } = useCompany();
   const { toggleSidebar, open } = useSidebar('left');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Check authentication status
-    setIsAuthenticated(!!getCookie('jwt'));
-  }, []);
+    const hasAuth = !!getCookie('jwt') && !!company && !companyError;
+    setIsAuthenticated(hasAuth);
+  }, [company, companyError]);
 
   // Check if user is authenticated
   

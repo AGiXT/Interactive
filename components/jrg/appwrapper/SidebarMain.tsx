@@ -10,17 +10,14 @@ import { NavMain } from '@/components/jrg/appwrapper/NavMain';
 import { NavUser } from '@/components/jrg/appwrapper/NavUser';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } from '@/components/ui/sidebar';
 import { ToggleSidebar } from './ToggleSidebar';
+import { useUser } from '../auth/hooks/useUser';
 import { NotificationsNavItem } from '@/interactive/Notifications/popup';
 
 export function SidebarMain({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [hasStarted, setHasStarted] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const pathname = usePathname();
-
-  useEffect(() => {
-    // Check authentication status
-    setIsAuthenticated(!!getCookie('jwt'));
-  }, []);
+  const { data: user } = useUser();
+  const isAuthenticated = !!user?.email;
 
   useEffect(() => {
     if (getCookie('agixt-has-started') === 'true') {
