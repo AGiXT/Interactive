@@ -14,6 +14,7 @@ import { NotificationsNavItem } from '@/interactive/Notifications/popup';
 
 export function SidebarMain({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [hasStarted, setHasStarted] = useState(false);
+  const isAuthenticated = !!getCookie('jwt');
   const pathname = usePathname();
 
   useEffect(() => {
@@ -27,16 +28,16 @@ export function SidebarMain({ ...props }: React.ComponentProps<typeof Sidebar>) 
   return (
     <Sidebar collapsible='icon' {...props} className='hide-scrollbar'>
       <SidebarHeader>
-        <AgentSelector />
+        {isAuthenticated && <AgentSelector />}
       </SidebarHeader>
       <SidebarContent>
         <NavMain />
-        <ChatHistory />
+        {isAuthenticated && <ChatHistory />}
       </SidebarContent>
       <SidebarFooter>
         {/* <NotificationsNavItem /> */}
         <ToggleSidebar side='left' />
-        <NavUser />
+        {isAuthenticated && <NavUser />}
       </SidebarFooter>
       <SidebarRail side='left' />
     </Sidebar>
