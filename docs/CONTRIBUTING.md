@@ -54,7 +54,7 @@ AGIXT_AGENT=XT
 6. **Review Process**
    - A team member will review your PR
    - Address any requested changes
-   - Once approved, your changes will be merged
+   - Once approved, your changes will be merged and bounty will be issued if applicable.
 
 7. **Sync Your Fork**
    - After the PR is merged, go to your fork on GitHub
