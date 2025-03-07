@@ -2,14 +2,12 @@
 
 import React from 'react';
 import { NewChatInterface } from '@/components/interactive/Chat/NewChatInterface';
-import { InteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
-import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
-import { useRouter } from 'next/navigation';
+import { InteractiveConfig, InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
 import { getCookie } from 'cookies-next';
 import axios from 'axios';
 import log from '@/components/jrg/next-log/log';
 import { toast } from '@/hooks/useToast';
-import { mutate } from 'swr';
+import { useRouter } from 'next/navigation';
 
 interface MessageContent {
   type: string;
@@ -35,10 +33,14 @@ export default function NewChatPage() {
 
   const handleSendMessage = async (message: string | object, uploadedFiles?: Record<string, string>): Promise<void> => {
     try {
+      setLoading(true);
+
+      // Format message content
       const messageContent: MessagePart[] = [
         { type: 'text', text: typeof message === 'string' ? message : JSON.stringify(message) }
       ];
 
+      // Add file attachments if any
       if (uploadedFiles) {
         Object.entries(uploadedFiles).forEach(([fileName, fileContent]) => {
           const fileType = fileContent.split(':')[1].split('/')[0];
@@ -52,23 +54,16 @@ export default function NewChatPage() {
         });
       }
 
-      const messages = [{
-        role: 'user',
-        content: messageContent
-      }];
-
-      setLoading(true);
-      const toOpenAI = {
-        messages,
-        model: getCookie('agixt-agent'),
-        user: state?.overrides?.conversation ?? '-',
-      };
-
-      log(['Sending message: ', toOpenAI], { client: 1 });
-      
-      const completionResponse = await axios.post(
+      const response = await axios.post(
         `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/chat/completions`,
-        toOpenAI,
+        {
+          messages: [{
+            role: 'user',
+            content: messageContent
+          }],
+          model: getCookie('agixt-agent'),
+          user: '-', // Always start with new conversation
+        },
         {
           headers: {
             Authorization: getCookie('jwt'),
@@ -76,9 +71,8 @@ export default function NewChatPage() {
         },
       );
 
-      if (completionResponse?.status === 200) {
-        const chatCompletion = completionResponse.data;
-        const newConversationId = chatCompletion.id;
+      if (response?.status === 200 && response.data) {
+        const { id: newConversationId } = response.data;
 
         // Update state with new conversation ID
         if (state?.mutate) {
@@ -91,14 +85,8 @@ export default function NewChatPage() {
           }));
         }
 
-        // Handle conversation renaming if needed
-        if (state?.overrides?.conversation === '-' && state?.agixt) {
-          await state.agixt.renameConversation(state.agent, newConversationId);
-          await mutate('/conversation');
-        }
-
-        // Navigate to the chat page with the new conversation ID
-        window.location.href = `/chat/${newConversationId}`;
+        // Navigate to regular chat interface with the new conversation
+        router.push(`/chat/${newConversationId}`);
       } else {
         throw new Error('Failed to get response from agent');
       }

@@ -76,19 +76,43 @@ export function NewChatInterface({
         </Button>
       </div>
 
-      {/* Input area in the middle with greeting above */}
-      <div className="w-full max-w-[900px] px-4 mt-[45vh]">
-        {/* Greeting with more space and larger text */}
-        <div className={cn(
-          "text-center mb-12 transition-all duration-500 delay-300",
-          mounted ? "transform translate-y-0 opacity-100" : "transform -translate-y-4 opacity-0"
-        )}>
-          <h2 className="text-3xl font-semibold tracking-tight">
-            {greeting}, {user?.firstName}
-          </h2>
+      {/* Messages display */}
+      {messages.length > 0 && (
+        <div className="w-full max-w-[900px] px-4 mt-4 space-y-4 flex-grow overflow-y-auto">
+          {messages.map((message, index) => (
+            <div
+              key={index}
+              className={cn(
+                'p-4 rounded-lg',
+                message.role === 'user' 
+                  ? 'bg-primary/10 ml-auto max-w-[80%]' 
+                  : 'bg-secondary/10 mr-auto max-w-[80%]'
+              )}
+            >
+              {message.content}
+            </div>
+          ))}
         </div>
+      )}
 
-        <form onSubmit={handleSubmit} className="relative">
+      {/* Input area in the middle with greeting above */}
+      <div className={cn(
+        "w-full max-w-[900px] px-4",
+        messages.length > 0 ? "mt-4" : "mt-[45vh]"
+      )}>
+        {/* Greeting with more space and larger text */}
+        {messages.length === 0 && (
+          <div className={cn(
+            "text-center mb-12 transition-all duration-500 delay-300",
+            mounted ? "transform translate-y-0 opacity-100" : "transform -translate-y-4 opacity-0"
+          )}>
+            <h2 className="text-3xl font-semibold tracking-tight">
+              {greeting}, {user?.firstName}
+            </h2>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="relative mb-4">
           <div className={cn(
             "flex items-start space-x-2 transition-all duration-500 delay-500",
             mounted ? "transform translate-y-0 opacity-100" : "transform translate-y-4 opacity-0"

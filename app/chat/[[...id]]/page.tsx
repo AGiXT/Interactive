@@ -8,12 +8,12 @@ export default function ChatPage() {
   const params = useParams();
   const id = params?.id?.[0];
 
-  // If no ID is provided, show the new chat interface
+  // If no ID, show new chat interface
   if (!id) {
     return <NewChatPage />;
   }
 
-  // Otherwise show the chat interface with the conversation ID
+  // Otherwise show the regular chat with conversation ID
   return (
     <Chat
       showChatThemeToggles={true}
