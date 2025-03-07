@@ -1,14 +1,14 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { useProviders } from '../../hooks/useProvider';
 import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { useProviders } from '../../hooks/useProvider';
 
 export function AgentDialog({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
   const router = useRouter();
@@ -68,8 +68,8 @@ export function AgentDialog({ open, setOpen }: { open: boolean; setOpen: (open: 
               <SelectContent>
                 {providersData &&
                   providersData.map((provider) => (
-                    <SelectItem key={provider} value={provider}>
-                      {provider}
+                    <SelectItem key={provider.name} value={provider.name}>
+                      {provider.friendlyName}
                     </SelectItem>
                   ))}
               </SelectContent>

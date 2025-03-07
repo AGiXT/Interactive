@@ -4,7 +4,7 @@ import axios from 'axios';
 import { getCookie, setCookie } from 'cookies-next';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { LuDownload, LuPencil, LuTrash2 } from 'react-icons/lu';
+import { LuDownload, LuPencil, LuTrash2, LuPlus } from 'react-icons/lu';
 import { useAgent } from '../../hooks/useAgent';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -22,10 +22,12 @@ import {
   DialogTrigger,
   DialogClose,
 } from '@/components/ui/dialog';
+import { AgentDialog } from './AgentDialog';
 
 export default function AgentPanel() {
   const [renaming, setRenaming] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const { data: agentData, mutate: mutateAgent } = useAgent();
   const [newName, setNewName] = useState('');
   const [editName, setEditName] = useState('');
@@ -143,6 +145,11 @@ export default function AgentPanel() {
         </CardContent>
 
         <CardFooter className='flex justify-end gap-2 pt-2'>
+          <Button variant='outline' size='sm' className='flex items-center' onClick={() => setIsCreateDialogOpen(true)}>
+            <LuPlus className='h-4 w-4 mr-1' />
+            Create Agent
+          </Button>
+
           <Dialog>
             <DialogTrigger asChild>
               <Button variant='outline' size='sm' className='flex items-center'>
@@ -180,6 +187,7 @@ export default function AgentPanel() {
           </Button>
         </CardFooter>
       </Card>
+      <AgentDialog open={isCreateDialogOpen} setOpen={setIsCreateDialogOpen} />
     </div>
   );
 }
