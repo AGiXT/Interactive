@@ -1,29 +1,26 @@
-import { cookies } from 'next/headers';
-import AGiXTInteractive from '@/components/interactive/InteractiveAGiXT';
-import ConvSwitch from './ConvSwitch';
+'use client';
 
-export default function Home({ params }: { params: { id: string } }) {
+import { useParams } from 'next/navigation';
+import Chat from '@/components/interactive/Chat/Chat';
+import NewChatPage from './new-chat-page';
+
+export default function ChatPage() {
+  const params = useParams();
+  const id = params?.id?.[0];
+
+  // If no ID is provided, show the new chat interface
+  if (!id) {
+    return <NewChatPage />;
+  }
+
+  // Otherwise show the chat interface with the conversation ID
   return (
-    <>
-      <ConvSwitch id={params.id} />
-      <AGiXTInteractive
-        stateful={false}
-        uiConfig={{
-          showAppBar: false,
-          showChatThemeToggles: false,
-          enableVoiceInput: true,
-          footerMessage: '',
-          alternateBackground: 'primary',
-        }}
-        serverConfig={{
-          agixtServer: process.env.NEXT_PUBLIC_AGIXT_SERVER as string,
-          apiKey: cookies().get('jwt')?.value ?? '',
-        }}
-        agent={process.env.NEXT_PUBLIC_AGIXT_AGENT || 'XT'}
-        overrides={{
-          conversation: params.id,
-        }}
-      />
-    </>
+    <Chat
+      showChatThemeToggles={true}
+      alternateBackground="primary"
+      enableFileUpload={true}
+      enableVoiceInput={true}
+      showOverrideSwitchesCSV=""
+    />
   );
 }
