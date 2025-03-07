@@ -115,8 +115,14 @@ const Chat = ({
     },
   );
 
+  const resetChatState = () => {
+    setLoading(false);
+    setTransitioning(false);
+  };
+
   async function chat(message: string | object, uploadedFiles?: Record<string, string>): Promise<string> {
     try {
+      if (transitioning) return '';
       setLoading(true);
       
       const messageTextBody = typeof message === 'string' ? message : JSON.stringify(message);
@@ -144,7 +150,7 @@ const Chat = ({
       const toOpenAI = {
         messages,
         model: getCookie('agixt-agent'),
-        user: state?.overrides?.conversation ?? '-',
+        user: state?.overrides?.conversation === '-' ? '' : state?.overrides?.conversation,
       };
 
       log(['Sending: ', state?.openai, toOpenAI], { client: 1 });
@@ -164,7 +170,9 @@ const Chat = ({
         log(['RESPONSE: ', chatCompletion], { client: 1 });
 
         const newConversationId = chatCompletion.id;
-
+        setTransitioning(true);
+        
+        // Update state first before navigation
         if (state?.mutate) {
           await state.mutate((oldState: InteractiveConfig) => ({
             ...oldState,
@@ -175,16 +183,11 @@ const Chat = ({
           }));
         }
 
-        const currentConv = state?.overrides?.conversation;
-        if (currentConv === '-' && state?.agixt) {
-          await state.agixt.renameConversation(state.agent, newConversationId);
+        if (state?.overrides?.conversation === '-' && state?.agixt) {
+          const response = await state.agixt.renameConversation(state.agent, newConversationId);
           await mutate('/conversation');
+          if (response) log([response], { client: 1 });
         }
-
-        router.push(`/chat/${newConversationId}`);
-        
-        mutate(conversationSWRPath + newConversationId);
-        mutate('/user');
 
         if (chatCompletion?.choices?.[0]?.message?.content?.length > 0) {
           return chatCompletion.choices[0].message.content;
@@ -201,7 +204,7 @@ const Chat = ({
       });
       throw error;
     } finally {
-      setLoading(false);
+      resetChatState();
     }
   }
 
@@ -209,6 +212,12 @@ const Chat = ({
     if (renaming) {
       setNewName(currentConversation?.name || '');
     }
+    
+    // Reset states when conversation changes
+    return () => {
+      setLoading(false);
+      setTransitioning(false);
+    };
   }, [renaming, currentConversation]);
 
   useEffect(() => {
@@ -279,7 +288,16 @@ const Chat = ({
       title: 'New Conversation',
       icon: Plus,
       func: () => {
-        router.push('/chat');
+        setTransitioning(true);
+        if (state?.mutate) {
+          state.mutate((oldState: InteractiveConfig) => ({
+            ...oldState,
+            overrides: { ...oldState.overrides, conversation: '-' },
+          }));
+          mutate('/conversation');
+          router.replace('/chat');
+          resetChatState();
+        }
       },
       disabled: renaming,
     },
@@ -359,7 +377,7 @@ const Chat = ({
       <ChatBar
         onSend={chat}
         disabled={loading}
-        showChatThemeToggles={Boolean(showChatThemeToggles)}
+        showChatThemeToggles={Boolean(showChatThemeToggles && !transitioning)}
         enableFileUpload={Boolean(enableFileUpload)}
         enableVoiceInput={Boolean(enableVoiceInput)}
         loading={loading}
