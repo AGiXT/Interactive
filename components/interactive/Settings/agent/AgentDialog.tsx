@@ -2,24 +2,19 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { useProviders } from '../../hooks/useProvider';
 import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export function AgentDialog({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
   const router = useRouter();
   const context = useInteractiveConfig();
-  const { data: providersData, isLoading } = useProviders();
-
   const [newAgentName, setNewAgentName] = useState('');
-  const [provider, setProvider] = useState('local');
 
   const handleNewAgent = async () => {
-    await context.agixt.addAgent(newAgentName, { provider: provider });
+    await context.agixt.addAgent(newAgentName);
     setOpen(false);
     router.push(`/agent?agent=${newAgentName}`);
   };
@@ -56,24 +51,6 @@ export function AgentDialog({ open, setOpen }: { open: boolean; setOpen: (open: 
               onChange={(e) => setNewAgentName(e.target.value)}
               className='col-span-3'
             />
-          </div>
-          <div className='grid grid-cols-4 items-center gap-4'>
-            <Label htmlFor='provider' className='text-right'>
-              Select a Provider
-            </Label>
-            <Select disabled={isLoading} value={provider} onValueChange={setProvider}>
-              <SelectTrigger id='provider' className='col-span-3'>
-                <SelectValue placeholder='Select a provider' />
-              </SelectTrigger>
-              <SelectContent>
-                {providersData &&
-                  providersData.map((provider) => (
-                    <SelectItem key={provider.name} value={provider.name}>
-                      {provider.friendlyName}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
           </div>
           <div className='grid grid-cols-4 items-center gap-4'>
             <Label htmlFor='import-agent' className='text-right'>
