@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { LuDownload, LuPencil, LuTrash2, LuPlus } from 'react-icons/lu';
 import { useAgent } from '../../hooks/useAgent';
+import { AgentDialog } from './AgentDialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useCompany } from '@/components/jrg/auth/hooks/useUser';
@@ -22,7 +23,6 @@ import {
   DialogTrigger,
   DialogClose,
 } from '@/components/ui/dialog';
-import { AgentDialog } from './AgentDialog';
 
 export default function AgentPanel() {
   const [renaming, setRenaming] = useState(false);
@@ -181,7 +181,13 @@ export default function AgentPanel() {
             Export
           </Button>
 
-          <Button variant='destructive' size='sm' className='flex items-center' onClick={handleDelete}>
+          <Button
+            variant='destructive'
+            size='sm'
+            className='flex items-center'
+            disabled={agentData?.agent?.default}
+            onClick={handleDelete}
+          >
             <LuTrash2 className='h-4 w-4 mr-1' />
             Delete
           </Button>
