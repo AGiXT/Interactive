@@ -1,10 +1,10 @@
+import { useContext } from 'react';
 import useSWR, { SWRResponse } from 'swr';
-
-// Import all types from the centralized schema file
 import { RoleSchema, UserSchema } from '@/components/jrg/auth/hooks/useUser';
 import { z } from 'zod';
 import log from '../../jrg/next-log/log';
-import { createGraphQLClient } from './lib';
+import { InteractiveConfigContext } from '../InteractiveConfigContext';
+import AGiXTSDK from '@/lib/sdk';
 
 export const ConversationMetadataSchema = z.object({
   agentId: z.string().uuid(),
@@ -16,6 +16,7 @@ export const ConversationMetadataSchema = z.object({
   summary: z.unknown(),
   updatedAt: z.string().datetime(),
 });
+
 export const MessageSchema = z.object({
   id: z.string().uuid(),
   message: z.string().min(1),
@@ -25,18 +26,19 @@ export const MessageSchema = z.object({
   updatedBy: z.string().uuid().optional(),
   feedbackReceived: z.boolean().optional(),
 });
+
 export const ConversationSchema = z.object({
   messages: z.array(MessageSchema),
 });
 
 export const ConversationEdgeSchema = z.object({
   attachmentCount: z.number().int().nonnegative(),
-  createdAt: z.string(), // TODO Figure out why this errors: .datetime(),
+  createdAt: z.string(),
   hasNotifications: z.boolean(),
   id: z.string().uuid(),
   name: z.string().min(1),
   summary: z.unknown(),
-  updatedAt: z.string(), // TODO Figure out why this errors: .datetime(),.datetime(),
+  updatedAt: z.string(),
 });
 
 export const AppStateSchema = z.object({
@@ -67,93 +69,103 @@ export type ConversationEdge = z.infer<typeof ConversationEdgeSchema>;
 export type ConversationMetadata = z.infer<typeof ConversationMetadataSchema>;
 export type Message = z.infer<typeof MessageSchema>;
 
-// ============================================================================
-// Conversation Related Hooks
-// ============================================================================
-
-// /**
-//  * Hook to fetch and manage conversation data with real-time updates
-//  * @param conversationId - Conversation ID to fetch
-//  * @returns SWR response containing conversation data
-//  */
-// export function useAppState(conversationId: string): SWRResponse<Conversation | null> {
-//   const client = createGraphQLClient();
-
-//   return useSWR<Conversation | null>(
-//     conversationId ? [`/conversation`, conversationId] : null,
-//     async (): Promise<Conversation | null> => {
-//       try {
-//         const query = AppStateSchema.toGQL('subscription', 'appState', { conversationId });
-//         log(['GQL useAppState() Query', query], {
-//           client: 3,
-//         });
-//         const response = await client.request<Conversation>(query, { conversationId });
-//         return response.conversation;
-//       } catch (error) {
-//         log(['GQL useAppState() Error', error], {
-//           client: 1,
-//         });
-//         return null;
-//       }
-//     },
-//     {
-//       fallbackData: null,
-//       refreshInterval: 1000, // Real-time updates
-//     },
-//   );
-// }
-// export function useConversation(conversationId: string): SWRResponse<Conversation | null> {
-//   const client = createGraphQLClient();
-
-//   return useSWR<Conversation | null>(
-//     conversationId ? [`/conversation`, conversationId] : null,
-//     async (): Promise<Conversation | null> => {
-//       try {
-//         const query = ConversationSchema.toGQL('query', 'conversation', { conversationId });
-//         log(['GQL useConversation() Query', query], {
-//           client: 3,
-//         });
-//         const response = await client.request<Conversation>(query, { conversationId });
-//         return response.conversation;
-//       } catch (error) {
-//         log(['GQL useConversation() Error', error], {
-//           client: 1,
-//         });
-//         return null;
-//       }
-//     },
-//     {
-//       fallbackData: null,
-//       refreshInterval: 1000, // Real-time updates
-//     },
-//   );
-// }
-/**
- * Hook to fetch and manage all conversations with real-time updates
- * @returns SWR response containing array of conversation edges
- */
 export function useConversations(): SWRResponse<ConversationEdge[]> {
-  const client = createGraphQLClient();
+  const config = useContext(InteractiveConfigContext);
+  const sdk = new AGiXTSDK({ baseUri: config.baseUri });
 
   return useSWR<ConversationEdge[]>(
     '/conversations',
     async (): Promise<ConversationEdge[]> => {
       try {
-        const query = z.object({ edges: ConversationEdgeSchema }).toGQL('query', 'GetConversations');
-        log(['GQL useConversations() Query', query], {
-          client: 3,
-        });
-        const response = await client.request<{ conversations: { edges: ConversationEdge[] } }>(query);
-        return z
-          .array(ConversationEdgeSchema)
-          .parse(response.conversations.edges.filter((conv) => !conv.name.startsWith('PROMPT_TEST')));
+        const conversations = await sdk.getConversationsWithIds();
+        return conversations.map((conv: any) => ({
+          attachmentCount: 0, // SDK doesn't provide attachment info
+          createdAt: new Date().toISOString(), // SDK doesn't provide creation date
+          hasNotifications: false, // SDK doesn't provide notification info
+          id: conv.id || conv.name, // Some SDK methods use name as identifier
+          name: conv.name,
+          summary: null,
+          updatedAt: new Date().toISOString(), // SDK doesn't provide update date
+        }));
       } catch (error) {
-        log(['GQL useConversations() Error', error], {
+        log(['SDK useConversations() Error', error], {
           client: 1,
         });
         return [];
       }
     },
-    { fallbackData: [] },
+    { fallbackData: [] }
+  );
+}
+
+export function useConversation(conversationName: string): SWRResponse<{
+  messages: Message[];
+  metadata: ConversationMetadata;
+}> {
+  const config = useContext(InteractiveConfigContext);
+  const sdk = new AGiXTSDK({ baseUri: config.baseUri });
+
+  return useSWR<{ messages: Message[]; metadata: ConversationMetadata }>(
+    conversationName ? ['/conversation', conversationName] : null,
+    async () => {
+      try {
+        const conversation = await sdk.getConversation(conversationName);
+        const messages = conversation.messages.map((msg: any) => ({
+          id: msg.id || Math.random().toString(), // Generate ID if not provided
+          message: msg.content || msg.message,
+          role: msg.role,
+          timestamp: msg.timestamp || new Date().toISOString(),
+          feedbackReceived: !!msg.feedback,
+        }));
+
+        const metadata: ConversationMetadata = {
+          agentId: conversation.agentName || '', // Using agentName as ID
+          attachmentCount: 0,
+          createdAt: new Date().toISOString(),
+          hasNotifications: false,
+          id: conversation.id || conversationName,
+          name: conversationName,
+          summary: null,
+          updatedAt: new Date().toISOString(),
+        };
+
+        return {
+          messages,
+          metadata,
+        };
+      } catch (error) {
+        log(['SDK useConversation() Error', error], {
+          client: 1,
+        });
+        return {
+          messages: [],
+          metadata: {
+            agentId: '',
+            attachmentCount: 0,
+            createdAt: new Date().toISOString(),
+            hasNotifications: false,
+            id: conversationName,
+            name: conversationName,
+            summary: null,
+            updatedAt: new Date().toISOString(),
+          },
+        };
+      }
+    },
+    {
+      fallbackData: {
+        messages: [],
+        metadata: {
+          agentId: '',
+          attachmentCount: 0,
+          createdAt: new Date().toISOString(),
+          hasNotifications: false,
+          id: conversationName,
+          name: conversationName,
+          summary: null,
+          updatedAt: new Date().toISOString(),
+        },
+      },
+    }
   );
 }

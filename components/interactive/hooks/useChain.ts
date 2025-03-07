@@ -1,7 +1,9 @@
+import { useContext } from 'react';
 import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
 import log from '../../jrg/next-log/log';
-import { createGraphQLClient } from './lib';
+import { InteractiveConfigContext } from '../InteractiveConfigContext';
+import AGiXTSDK from '@/lib/sdk';
 
 export const ChainStepPromptSchema = z.object({
   chainName: z.string().nullable(),
@@ -19,86 +21,75 @@ export const ChainStepSchema = z.object({
 
 export const ChainSchema = z.object({
   id: z.string().uuid(),
-  chainName: z.string(), //.min(1),
+  chainName: z.string(),
   steps: z.array(ChainStepSchema),
 });
+
 export const ChainsSchema = ChainSchema.pick({ id: true, chainName: true });
 
 export type Chain = z.infer<typeof ChainSchema>;
 export type ChainStepPrompt = z.infer<typeof ChainStepPromptSchema>;
 export type ChainStep = z.infer<typeof ChainStepSchema>;
 
-// ============================================================================
-// Chain Related Hooks
-// ============================================================================
-
-/**
- * Hook to fetch and manage chain data
- * @param chainName - Optional chain name to fetch specific chain
- * @returns SWR response containing chain data
- */
 export function useChain(chainName?: string): SWRResponse<Chain | null> {
-  const client = createGraphQLClient();
+  const config = useContext(InteractiveConfigContext);
+  const sdk = new AGiXTSDK({ baseUri: config.baseUri });
 
   return useSWR<Chain | null>(
     chainName ? [`/chain`, chainName] : null,
     async (): Promise<Chain | null> => {
       try {
-        const query = ChainSchema.toGQL('query', 'GetChain', { chainName: chainName });
-        log(['GQL useChain() Query', query], {
-          client: 3,
-        });
-        const response = await client.request<{ chain: Chain }>(query, { chainName: chainName });
-        log(['GQL useChain() Response', response], {
-          client: 3,
-        });
-        const validated = ChainSchema.parse(response.chain);
-        log(['GQL useChain() Validated', validated], {
-          client: 3,
-        });
-        return validated;
+        const chain = await sdk.getChain(chainName!);
+        // Transform the SDK response to match the expected schema
+        const transformed: Chain = {
+          id: chainName!, // Using chainName as ID since SDK doesn't provide IDs
+          chainName: chainName!,
+          steps: chain.steps.map((step: any) => ({
+            agentName: step.agentName,
+            prompt: {
+              chainName: step.prompt.chainName,
+              commandName: step.prompt.commandName,
+              promptCategory: step.prompt.promptCategory,
+              promptName: step.prompt.promptName,
+            },
+            promptType: step.promptType,
+            step: step.step,
+          })),
+        };
+        return transformed;
       } catch (error) {
-        log(['GQL useChain() Error', error], {
+        log(['SDK useChain() Error', error], {
           client: 1,
         });
         return null;
       }
     },
-    { fallbackData: null },
+    { fallbackData: null }
   );
 }
 
-/**
- * Hook to fetch and manage all chains
- * @returns SWR response containing array of chains
- */
 export function useChains(): SWRResponse<Chain[]> {
-  const client = createGraphQLClient();
+  const config = useContext(InteractiveConfigContext);
+  const sdk = new AGiXTSDK({ baseUri: config.baseUri });
 
   return useSWR<Chain[]>(
     '/chains',
     async (): Promise<Chain[]> => {
       try {
-        const query = ChainsSchema.toGQL('query', 'GetChains');
-        log(['GQL useChains() Query', query], {
-          client: 3,
-        });
-        const response = await client.request<{ chains: Chain[] }>(query);
-        log(['GQL useChains() Response', response], {
-          client: 3,
-        });
-        const validated = z.array(ChainsSchema).parse(response.chains);
-        log(['GQL useChains() Validated', validated], {
-          client: 3,
-        });
-        return validated;
+        const chains = await sdk.getChains();
+        // Transform the chains to match the expected schema
+        return chains.map((chainName: string) => ({
+          id: chainName, // Using chainName as ID since SDK doesn't provide IDs
+          chainName: chainName,
+          steps: [], // Steps will be loaded separately when needed
+        }));
       } catch (error) {
-        log(['GQL useChains() Error', error], {
+        log(['SDK useChains() Error', error], {
           client: 1,
         });
         return [];
       }
     },
-    { fallbackData: [] },
+    { fallbackData: [] }
   );
 }
