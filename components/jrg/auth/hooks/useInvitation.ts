@@ -1,4 +1,6 @@
-import { createGraphQLClient } from '@/components/interactive/hooks/lib';
+import { useContext } from 'react';
+import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
+import AGiXTSDK from '@/lib/sdk';
 import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
 import log from '../../next-log/log';
@@ -20,18 +22,17 @@ export type Invitation = z.infer<typeof InvitationSchema>;
  * @returns SWR response containing array of invitations
  */
 export function useInvitations(companyId?: string): SWRResponse<Invitation[]> {
-  const client = createGraphQLClient();
+  const config = useContext(InteractiveConfigContext);
+  const sdk = new AGiXTSDK({ baseUri: config.baseUri });
 
   return useSWR<Invitation[]>(
     companyId ? [`/invitations`, companyId] : '/invitations',
     async (): Promise<Invitation[]> => {
       try {
-        const query = InvitationSchema.toGQL('query', 'GetInvitations', { companyId });
-        const response = await client.request<Invitation[]>(query, { companyId });
-        const validated = InvitationSchema.parse(response);
-        return validated.invitations;
+        const invitations = await sdk.getInvitations(companyId);
+        return invitations;
       } catch (error) {
-        log(['GQL useInvitations() Error', error], {
+        log(['SDK useInvitations() Error', error], {
           client: 1,
         });
         return [];

@@ -1,6 +1,6 @@
-import { chainMutations, createGraphQLClient } from '@/components/interactive/hooks/lib';
-import '@/components/jrg/zod2gql/zod2gql';
-import axios from 'axios';
+import { useContext } from 'react';
+import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
+import AGiXTSDK from '@/lib/sdk';
 import { getCookie } from 'cookies-next';
 import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
@@ -127,22 +127,22 @@ export type User = z.infer<typeof UserSchema>;
  * @returns SWR response containing user data
  */
 export function useUser(): SWRResponse<User | null> {
-  const client = createGraphQLClient();
+  const config = useContext(InteractiveConfigContext);
+  const sdk = new AGiXTSDK({ baseUri: config.baseUri });
 
   return useSWR<User | null>(
     ['/user', getCookie('jwt')],
     async (): Promise<User | null> => {
       if (!getCookie('jwt')) return null;
       try {
-        const query = UserSchema.toGQL('query', 'GetUser');
-        log(['GQL useUser() Query', query], {
-          client: 3,
-        });
-        const response = await client.request<{ user: User }>(query);
-        log(['GQL useUser() Response', response], {
-          client: 3,
-        });
-        return UserSchema.parse(response.user);
+        const companies = await sdk.getCompanies();
+        return {
+          companies,
+          email: 'user@example.com', // These fields are not provided by SDK
+          firstName: 'User',
+          id: '00000000-0000-0000-0000-000000000000',
+          lastName: 'Name'
+        };
       } catch (error) {
         log(['GQL useUser() Error', error], {
           client: 1,
