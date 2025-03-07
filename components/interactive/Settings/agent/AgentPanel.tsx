@@ -1,17 +1,17 @@
 'use client';
 
-import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
-import { useCompany } from '@/components/jrg/auth/hooks/useUser';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import axios from 'axios';
 import { getCookie, setCookie } from 'cookies-next';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { LuCheck, LuDownload, LuPencil, LuPlus, LuTrash2 } from 'react-icons/lu';
 import { useAgent } from '../../hooks/useAgent';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { useCompany } from '@/components/jrg/auth/hooks/useUser';
+import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
 
-export default function AgentPanel({ setShowCreateDialog }) {
+export default function AgentPanel() {
   const [renaming, setRenaming] = useState(false);
   const [creating, setCreating] = useState(false);
   const { data: agentData, mutate: mutateAgent } = useAgent();
@@ -24,7 +24,7 @@ export default function AgentPanel({ setShowCreateDialog }) {
   const handleConfirm = async () => {
     if (renaming) {
       try {
-        await context.agixt.renameAgent(agentData.agent.name, newName);
+        await context.agixt.renameAgent(agentData?.agent?.name || '', newName);
         setRenaming(false);
         setCookie('agixt-agent', newName, {
           domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
@@ -37,7 +37,7 @@ export default function AgentPanel({ setShowCreateDialog }) {
       try {
         const newResponse = await axios.post(
           `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/agent`,
-          { agent_name: newName, settings: { company_id: companyData.id } },
+          { agent_name: newName, settings: { company_id: companyData?.id } },
           {
             headers: {
               Authorization: getCookie('jwt'),
@@ -60,7 +60,7 @@ export default function AgentPanel({ setShowCreateDialog }) {
 
   const handleDelete = async () => {
     try {
-      await context.agixt.deleteAgent(agentData.agent.name);
+      await context.agixt.deleteAgent(agentData?.agent?.name || '');
       mutateCompany();
       mutateAgent();
       router.push(pathname);
@@ -71,11 +71,11 @@ export default function AgentPanel({ setShowCreateDialog }) {
 
   const handleExport = async () => {
     try {
-      const agentConfig = await context.agixt.getAgentConfig(agentData.agent.name);
+      const agentConfig = await context.agixt.getAgentConfig(agentData?.agent?.name || '');
       const element = document.createElement('a');
       const file = new Blob([JSON.stringify(agentConfig)], { type: 'application/json' });
       element.href = URL.createObjectURL(file);
-      element.download = `${agentData.agent.name}.json`;
+      element.download = `${agentData?.agent?.name}.json`;
       document.body.appendChild(element);
       element.click();
       document.body.removeChild(element);
