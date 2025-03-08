@@ -7,9 +7,9 @@ import axios from 'axios';
 import { getCookie } from 'cookies-next';
 import { Check, Mail, MoreHorizontal, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import log from '../../next-log/log';
-
+import useSWR from 'swr';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -22,9 +22,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-import { useOldActiveCompany, useOldCompanies, useOldInvitations } from '@/components/interactive/hooks/hooks.old';
 import { DataTable } from '@/components/idiot/wais/data/data-table';
 import { DataTableColumnHeader } from '@/components/idiot/wais/data/data-table-column-header';
+import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
+import { useCompany, useCompanies } from '@/components/idiot/auth/hooks/useUser';
 
 interface User {
   email: string;
@@ -40,7 +41,6 @@ const ROLES = [
   { id: 3, name: 'User' },
 ];
 
-const AUTHORIZED_ROLES = [0, 1, 2];
 interface Invitation {
   id: string;
   company_id: string;
@@ -52,6 +52,46 @@ interface Invitation {
   invitation_link: string;
 }
 
+function useInvitations(company_id?: string) {
+  const state = useContext(InteractiveConfigContext);
+  return useSWR<string[]>(
+    company_id ? `/invitations/${company_id}` : '/invitations',
+    async () => await state.agixt.getInvitations(company_id),
+    {
+      fallbackData: [],
+    },
+  );
+}
+function useActiveCompany() {
+  const state = useContext(InteractiveConfigContext);
+  const { data: companyData } = useCompany();
+  return useSWR<any>(
+    [`/companies`, companyData?.id ?? null],
+    async () => {
+      const companies = await state.agixt.getCompanies();
+      const user = await axios.get(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user`, {
+        headers: {
+          Authorization: getCookie('jwt'),
+        },
+      });
+      console.log('ACTIVE COMPANY', companyData);
+      console.log('ACTIVE COMPANY USER', user);
+      console.log('ALL COMPANIES', companies);
+      const target = companies.filter((company) => company.id === companyData.id)[0];
+      console.log('ACTIVE COMPANY TARGET', target);
+      console.log(
+        'USER COMPANY',
+        user.data.companies.filter((company) => company.id === companyData.id),
+      );
+      target.my_role = user.data.companies.filter((company) => company.id === companyData.id)[0].role_id;
+      console.log('ACTIVE COMPANY TARGET AFTER', target);
+      return target;
+    },
+    {
+      fallbackData: [],
+    },
+  );
+}
 export const Team = () => {
   const [email, setEmail] = useState('');
   const [roleId, setRoleId] = useState('3');
@@ -59,9 +99,9 @@ export const Team = () => {
   const [creating, setCreating] = useState(false);
   const [newParent, setNewParent] = useState('');
   const [newName, setNewName] = useState('');
-  const { data: invitationsData, mutate: mutateInvitations } = useOldInvitations();
-  const { data: companyData } = useOldCompanies();
-  const { data: activeCompany, mutate } = useOldActiveCompany();
+  const { data: invitationsData, mutate: mutateInvitations } = useInvitations();
+  const { data: companyData } = useCompanies();
+  const { data: activeCompany, mutate } = useActiveCompany();
   const [responseMessage, setResponseMessage] = useState('');
   console.log('USERS', activeCompany);
   const users_columns: ColumnDef<User>[] = [
