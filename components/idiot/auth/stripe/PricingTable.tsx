@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { cn } from '@/lib/utils';
 // import { Label } from '@/components/ui/label';
 // import { Switch } from '@/components/ui/switch';
-import useProducts from '@/components/jrg/auth/hooks/useProducts';
+import useProducts from '@/components/idiot/auth/hooks/useProducts';
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

@@ -1,7 +1,7 @@
 'use client';
 
 import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
-import { useCompany } from '@/components/jrg/auth/hooks/useUser';
+import { useCompany } from '@/components/idiot/auth/hooks/useUser';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import axios from 'axios';

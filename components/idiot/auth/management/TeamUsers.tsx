@@ -23,8 +23,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 import { useOldActiveCompany, useOldCompanies, useOldInvitations } from '@/components/interactive/hooks/hooks.old';
-import { DataTable } from '@/components/jrg/wais/data/data-table';
-import { DataTableColumnHeader } from '@/components/jrg/wais/data/data-table-column-header';
+import { DataTable } from '@/components/idiot/wais/data/data-table';
+import { DataTableColumnHeader } from '@/components/idiot/wais/data/data-table-column-header';
 
 interface User {
   email: string;

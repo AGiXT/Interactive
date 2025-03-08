@@ -6,8 +6,8 @@ import React, { FormEvent, ReactNode, useEffect, useState, useRef } from 'react'
 import { ReCAPTCHA } from 'react-google-recaptcha';
 import { useAuthentication } from './Router';
 import AuthCard from './AuthCard';
-import { toTitleCase } from '@/components/jrg/dynamic-form/DynamicForm';
-import { useAssertion } from '@/components/jrg/assert/assert';
+import { toTitleCase } from '@/components/idiot/dynamic-form/DynamicForm';
+import { useAssertion } from '@/components/idiot/assert/assert';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';

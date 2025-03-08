@@ -1,6 +1,6 @@
 'use client';
 
-import { useTheme } from '@/components/jrg/theme/useTheme';
+import { useTheme } from '@/components/idiot/theme/useTheme';
 import {
   DropdownMenuItem,
   DropdownMenuLabel,

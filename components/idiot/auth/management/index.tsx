@@ -6,8 +6,8 @@ import useSWR from 'swr';
 import { useRouter } from 'next/navigation';
 import { useAuthentication } from '../Router';
 import { Profile } from './Profile';
-import { DynamicFormFieldValueTypes } from '@/components/jrg/dynamic-form/DynamicForm';
-import { useAssertion } from '@/components/jrg/assert/assert';
+import { DynamicFormFieldValueTypes } from '@/components/idiot/dynamic-form/DynamicForm';
+import { useAssertion } from '@/components/idiot/assert/assert';
 import { Button } from '@/components/ui/button';
 import log from '../../next-log/log';
 

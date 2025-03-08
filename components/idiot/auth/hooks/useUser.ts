@@ -1,5 +1,5 @@
 import { chainMutations, createGraphQLClient } from '@/components/interactive/hooks/lib';
-import '@/components/jrg/zod2gql/zod2gql';
+import '@/components/idiot/zod2gql/zod2gql';
 import axios from 'axios';
 import { getCookie } from 'cookies-next';
 import useSWR, { SWRResponse } from 'swr';

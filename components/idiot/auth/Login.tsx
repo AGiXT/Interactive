@@ -12,7 +12,7 @@ import AuthCard from './AuthCard';
 import { AuthenticatorHelp as MissingAuthenticator } from './mfa/MissingAuthenticator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAssertion } from '@/components/jrg/assert/assert';
+import { useAssertion } from '@/components/idiot/assert/assert';
 import { Button } from '@/components/ui/button';
 
 export type LoginProps = {

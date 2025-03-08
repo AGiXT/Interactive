@@ -11,7 +11,7 @@ import { LuUser } from 'react-icons/lu';
 import OAuth from './oauth2/OAuth';
 import { useAuthentication } from './Router';
 import AuthCard from './AuthCard';
-import { useAssertion } from '@/components/jrg/assert/assert';
+import { useAssertion } from '@/components/idiot/assert/assert';
 
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';

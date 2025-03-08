@@ -2,7 +2,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { SidebarPage } from '@/components/jrg/appwrapper/SidebarPage';
+import { SidebarPage } from '@/components/idiot/appwrapper/SidebarPage';
 import MarkdownBlock from '@/components/interactive/Chat/Message/MarkdownBlock';
 
 async function getContent(slug: string[]) {
@@ -22,17 +22,13 @@ async function getContent(slug: string[]) {
   }
 }
 
-export default async function DocPage({
-  params,
-}: {
-  params: { slug: string[] }
-}) {
+export default async function DocPage({ params }: { params: { slug: string[] } }) {
   const content = await getContent(params.slug || []);
 
   return (
-    <SidebarPage title="Documentation">
-      <div className="mx-auto px-4">
-        <article className="prose dark:prose-invert prose-sm sm:prose-base lg:prose-lg overflow-x-hidden">
+    <SidebarPage title='Documentation'>
+      <div className='mx-auto px-4'>
+        <article className='prose dark:prose-invert prose-sm sm:prose-base lg:prose-lg overflow-x-hidden'>
           <MarkdownBlock content={content} />
         </article>
       </div>

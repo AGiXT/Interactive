@@ -3,7 +3,7 @@
 import { CaretRightIcon, ComponentPlaceholderIcon } from '@radix-ui/react-icons';
 import { BadgeCheck, LogOut } from 'lucide-react';
 
-import { Appearances, Themes } from '@/components/jrg/appwrapper/UserMenu';
+import { Appearances, Themes } from '@/components/idiot/appwrapper/UserMenu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
