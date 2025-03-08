@@ -1,29 +1,11 @@
 'use client';
 
-import React, { useContext, useState, useMemo, useRef } from 'react';
-import {
-  LuCopy,
-  LuDownload,
-  LuThumbsUp,
-  LuThumbsDown,
-  LuPen as LuEdit,
-  LuTrash2,
-  LuVolume2,
-  LuGitFork,
-} from 'react-icons/lu';
-import { Loader2 } from 'lucide-react';
-import clipboardCopy from 'clipboard-copy';
-import { mutate } from 'swr';
-import { InteractiveConfigContext } from '../../InteractiveConfigContext';
+import React, { useState, useMemo, useRef } from 'react';
 import MarkdownBlock from './MarkdownBlock';
 import formatDate from './formatDate';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipBasic, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/useToast';
-import { getCookie } from 'cookies-next';
 import { MessageActions } from './Actions';
 import { formatTimeAgo } from '@/lib/time-ago';
 import AudioPlayer from './Audio';
@@ -60,10 +42,6 @@ const checkUserMsgJustText = (chatItem: { role: string; message: string }) => {
 
 export default function Message({ chatItem, lastUserMessage, setLoading }: MessageProps): React.JSX.Element {
   const [updatedMessage, setUpdatedMessage] = useState(chatItem.message);
-  const { toast } = useToast();
-  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
 
   const formattedMessage = useMemo(() => {
     let formatted = chatItem.message;
