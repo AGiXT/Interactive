@@ -22,8 +22,8 @@
     ],
     "paths": {
       "@/*": ["./*"],
-      "@/jrg/*": ["./components/jrg/*"],
-      "@/auth/*": ["./components/jrg/auth/*"],
+      "@/idiot/*": ["./components/idiot/*"],
+      "@/auth/*": ["./components/idiot/auth/*"],
       "@/interactive/*": ["./components/interactive/*"]
     }
   },
@@ -34,7 +34,7 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "app/theme.ts",
-    "components/jrg/auth/auth.config.js",
+    "components/idiot/auth/auth.config.js",
     "components/interactive/interactive.config.js"
 , "components/interactive/Chat/Activity/Severtities.tsx"  ],
   "exclude": ["node_modules"]

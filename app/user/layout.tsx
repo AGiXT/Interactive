@@ -3,7 +3,7 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
 import { SidebarInset } from '@/components/ui/sidebar';
-import { SidebarPage } from '@/components/jrg/appwrapper/SidebarPage';
+import { SidebarPage } from '@/components/idiot/appwrapper/SidebarPage';
 import { usePathname } from 'next/navigation';
 
 export default function UserLayout({ children }: { children: ReactNode }): ReactNode {
