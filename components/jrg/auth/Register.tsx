@@ -36,11 +36,6 @@ export default function Register({ additionalFields = [], userRegisterEndpoint =
       return;
     }
     const formData = Object.fromEntries(new FormData((event.currentTarget as HTMLFormElement) ?? undefined));
-    if (authConfig.authModes.basic) {
-      if (!formData['password']) setResponseMessage('Please enter a password.');
-      if (!formData['password-again']) setResponseMessage('Please enter your password again.');
-      if (formData['password'] !== formData['password-again']) setResponseMessage('Passwords do not match.');
-    }
     if (getCookie('invitation')) {
       formData['invitation_id'] = getCookie('invitation') ?? ''.toString();
     }
@@ -112,14 +107,6 @@ export default function Register({ additionalFields = [], userRegisterEndpoint =
           {/* {authConfig.register.heading && <Typography variant='h2'>{authConfig.register.heading}</Typography>} */}
 
           <input type='hidden' id='email' name='email' value={getCookie('email')} />
-          {authConfig.authModes.basic && (
-            <>
-              <Label htmlFor='password'>Password</Label>
-              <Input id='password' placeholder='Password' name='password' autoComplete='password' />
-              <Label htmlFor='password-again'>Password (Again)</Label>
-              <Input id='password-again' placeholder='Password' name='password' autoComplete='password' />
-            </>
-          )}
           {additionalFields.length > 0 &&
             additionalFields.map((field) => (
               <div key={field} className='space-y-1'>

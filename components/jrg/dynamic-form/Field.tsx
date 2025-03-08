@@ -1,6 +1,5 @@
 import React from 'react';
 import CheckField from './CheckField';
-import PasswordField from './PasswordField';
 import SelectField from './SelectField';
 import TextField from './TextField';
 import RadioField from './RadioField';
@@ -57,8 +56,6 @@ const FieldInput: React.FC<FieldProps> = ({
   switch (type) {
     case 'text':
       return <TextField {...commonProps} autoComplete={autoComplete} placeholder={placeholder} />;
-    case 'password':
-      return <PasswordField {...commonProps} autoComplete={autoComplete} />;
     case 'select':
       return <SelectField {...commonProps} items={items} />;
     case 'checkbox':
