@@ -1,6 +1,6 @@
 import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
-import log from '../../jrg/next-log/log';
+import log from '../../idiot/next-log/log';
 import { createGraphQLClient } from './lib';
 
 export const ProviderSettingSchema = z.object({

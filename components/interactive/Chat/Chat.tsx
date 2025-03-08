@@ -1,8 +1,8 @@
 'use client';
 
-import { SidebarContent } from '@/components/jrg/appwrapper/SidebarContentManager';
-import { useCompany } from '@/components/jrg/auth/hooks/useUser';
-import log from '@/components/jrg/next-log/log';
+import { SidebarContent } from '@/components/idiot/appwrapper/SidebarContentManager';
+import { useCompany } from '@/components/idiot/auth/hooks/useUser';
+import log from '@/components/idiot/next-log/log';
 import { Input } from '@/components/ui/input';
 import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { toast } from '@/hooks/useToast';
@@ -241,7 +241,7 @@ export default function Chat({
   }, []);
   return (
     <>
-      <SidebarContent title='Conversation Management'>
+      <SidebarContent>
         <SidebarGroup>
           {
             <div className='w-full group-data-[collapsible=icon]:hidden'>

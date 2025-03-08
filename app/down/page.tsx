@@ -1,7 +1,7 @@
 'use client';
 
 import { SidebarInset } from '@/components/ui/sidebar';
-import { SidebarPage } from '@/components/jrg/appwrapper/SidebarPage';
+import { SidebarPage } from '@/components/idiot/appwrapper/SidebarPage';
 import { getCookie } from 'cookies-next';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';

@@ -1,8 +1,8 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { useAuth, useJWTQueryParam, useOAuth2 } from './components/jrg/auth/auth.middleware';
-import { getRequestedURI } from './components/jrg/auth/utils';
-import { MiddlewareHook } from './components/jrg/auth/types/MiddlewareHook';
-import log from './components/jrg/next-log/log';
+import { useAuth, useJWTQueryParam, useOAuth2 } from './components/idiot/auth/auth.middleware';
+import { getRequestedURI } from './components/idiot/auth/utils';
+import { MiddlewareHook } from './components/idiot/auth/types/MiddlewareHook';
+import log from './components/idiot/next-log/log';
 
 //import assert from 'assert';
 
@@ -40,11 +40,24 @@ export const useSocketIOBypass: MiddlewareHook = async (req) => {
   };
 };
 
+export const useDocsPublicAccess: MiddlewareHook = async (req) => {
+  if (req.nextUrl.pathname === '/docs') {
+    return {
+      activated: true,
+      response: NextResponse.redirect(new URL('/docs/0-Introduction', req.url)),
+    };
+  }
+  return {
+    activated: req.nextUrl.pathname.startsWith('/docs'),
+    response: NextResponse.next(),
+  };
+};
+
 export default async function Middleware(req: NextRequest): Promise<NextResponse> {
   log([`MIDDLEWARE INVOKED AT ${req.nextUrl.pathname}`], {
     server: 1,
   });
-  const hooks = [useNextAPIBypass, useOAuth2, useJWTQueryParam, useAuth];
+  const hooks = [useNextAPIBypass, useDocsPublicAccess, useOAuth2, useJWTQueryParam, useAuth];
   for (const hook of hooks) {
     const hookResult = await hook(req);
     if (hookResult.activated) {

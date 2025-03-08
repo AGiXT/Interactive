@@ -1,5 +1,5 @@
 'use client';
-import Gravatar from '@/components/jrg/auth/management/Gravatar';
+import Gravatar from '@/components/idiot/auth/management/Gravatar';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import axios from 'axios';
@@ -8,11 +8,10 @@ import { useSearchParams } from 'next/navigation';
 import React, { ReactNode, useEffect, useMemo, useState } from 'react';
 import { LuMenu as Menu } from 'react-icons/lu';
 import useSWR from 'swr';
-import AppWrapper from '../jrg/appwrapper/AppWrapper';
-import log from '../jrg/next-log/log';
+import AppWrapper from '../idiot/appwrapper/AppWrapper';
+import log from '../idiot/next-log/log';
 import Chat from './Chat/Chat';
 import ContextWrapper from './ContextWrapper';
-import Form from './Form/Form';
 import { InteractiveConfig, InteractiveConfigDefault, Overrides } from './InteractiveConfigContext';
 import { AgentSelector } from './Selectors/agent-selector';
 import ConversationSelector from './Selectors/ConversationSelector';
@@ -254,24 +253,14 @@ const Interactive = (props: Overrides & UIProps): React.JSX.Element => {
           : undefined
       }
     >
-      {process.env.NEXT_PUBLIC_INTERACTIVE_UI === 'form' ? (
-        <Form
-          mode={props.mode}
-          showChatThemeToggles={props.showChatThemeToggles}
-          enableFileUpload={props.enableFileUpload}
-          enableVoiceInput={props.enableVoiceInput}
-          showOverrideSwitchesCSV={props.showOverrideSwitchesCSV}
-        />
-      ) : (
-        <Chat
-          mode={props.mode}
-          showChatThemeToggles={props.showChatThemeToggles}
-          alternateBackground={props.alternateBackground}
-          enableFileUpload={props.enableFileUpload}
-          enableVoiceInput={props.enableVoiceInput}
-          showOverrideSwitchesCSV={props.showOverrideSwitchesCSV}
-        />
-      )}
+      <Chat
+        mode={props.mode}
+        showChatThemeToggles={props.showChatThemeToggles}
+        alternateBackground={props.alternateBackground}
+        enableFileUpload={props.enableFileUpload}
+        enableVoiceInput={props.enableVoiceInput}
+        showOverrideSwitchesCSV={props.showOverrideSwitchesCSV}
+      />
     </AppWrapper>
   );
 };

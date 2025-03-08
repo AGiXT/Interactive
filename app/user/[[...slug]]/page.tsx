@@ -1,4 +1,4 @@
-import AuthRouter from '@/components/jrg/auth/Router';
+import AuthRouter from '@/components/idiot/auth/Router';
 
 export default function UserRouter(props: any) {
   return (

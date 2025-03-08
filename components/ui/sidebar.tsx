@@ -1,6 +1,6 @@
 'use client';
 
-import { useIsMobile } from '@/components/jrg/appwrapper/hooks/useMobile';
+import { useIsMobile } from '@/components/idiot/appwrapper/hooks/useMobile';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
@@ -64,7 +64,7 @@ const SidebarProvider = React.forwardRef<
   (
     {
       defaultLeftOpen = true,
-      defaultRightOpen = true,
+      defaultRightOpen = false,
       onLeftOpenChange,
       onRightOpenChange,
       className,

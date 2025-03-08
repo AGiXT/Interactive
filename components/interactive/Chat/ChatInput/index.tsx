@@ -7,7 +7,7 @@ import { InteractiveConfigContext } from '../../InteractiveConfigContext';
 import { VoiceRecorder } from '../VoiceRecorder';
 import { ListUploadedFiles, OverrideSwitches, ResetConversation, SendMessage, Timer, UploadFiles } from './Adornments';
 import { Textarea } from '@/components/ui/textarea';
-import { DropZone } from '@/components/jrg/dropzone/DropZone';
+import { DropZone } from '@/components/idiot/dropzone/DropZone';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { TooltipBasic } from '@/components/ui/tooltip';
@@ -48,6 +48,7 @@ export default function ChatBar({
     handleBlur,
     value: message,
     setValue: setMessage,
+    setIsActive,
   } = useDynamicInput('', uploadedFiles);
 
   const handleUploadFiles = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
@@ -133,9 +134,8 @@ export default function ChatBar({
               <ListUploadedFiles uploadedFiles={uploadedFiles} setUploadedFiles={setUploadedFiles} />
             )}
             <div className='flex-grow' />
-            {timer > -1 && <Timer loading={loading} timer={timer} />}
             <TooltipBasic title='Collapse Input' side='top'>
-              <Button size='icon' variant='ghost' className='rounded-full' onClick={() => handleBlur()}>
+              <Button size='icon' variant='ghost' className='rounded-full' onClick={() => setIsActive(false)}>
                 <BiCollapseVertical className='w-4 h-4' />
               </Button>
             </TooltipBasic>
@@ -179,9 +179,7 @@ export default function ChatBar({
             className='justify-start w-full px-4 hover:bg-transparent'
             onClick={handleFocus}
           >
-            <span className='font-light text-muted-foreground'>
-              {loading ? 'Sending...' : 'Enter your message here...'}
-            </span>
+            <span className='font-light text-muted-foreground'>{loading ? 'Sending...' : 'Enter your message here...'}</span>
           </Button>
           {enableVoiceInput && <VoiceRecorder onSend={onSend} disabled={disabled} />}
         </>
@@ -222,8 +220,12 @@ export function useDynamicInput(initialValue = '', uploadedFiles: { [x: string]:
   };
 
   const handleBlur = () => {
-    setIsActive(false);
+    setValue('');
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'unset';
+    }
   };
 
-  return { textareaRef, isActive, handleFocus, handleBlur, value, setValue };
+  return { textareaRef, isActive, setIsActive, handleFocus, handleBlur, value, setValue };
 }

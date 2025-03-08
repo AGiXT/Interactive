@@ -2,7 +2,7 @@
 
 import MarkdownBlock from '@/components/interactive/Chat/Message/MarkdownBlock';
 import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
-import { useCompany } from '@/components/jrg/auth/hooks/useUser';
+import { useCompany } from '@/components/idiot/auth/hooks/useUser';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
-import { ConnectedServices } from '@/components/jrg/auth/management/ConnectedServices';
+import { ConnectedServices } from '@/components/idiot/auth/management/ConnectedServices';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -16,7 +16,7 @@ import { useProviders } from '../hooks/useProvider';
 import Extension from './extension';
 
 import MarkdownBlock from '@/components/interactive/Chat/Message/MarkdownBlock';
-import { useCompany } from '@/components/jrg/auth/hooks/useUser';
+import { useCompany } from '@/components/idiot/auth/hooks/useUser';
 import { Input } from '@/components/ui/input';
 
 // Types remain the same

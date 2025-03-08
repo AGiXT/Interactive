@@ -1,7 +1,7 @@
 'use client';
 
-import { SidebarContent } from '@/components/jrg/appwrapper/SidebarContentManager';
-import IconButton from '@/components/jrg/theme/IconButton';
+import { SidebarContent } from '@/components/idiot/appwrapper/SidebarContentManager';
+import IconButton from '@/components/idiot/theme/IconButton';
 import { Input } from '@/components/ui/input';
 import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { ArrowBigLeft, Check, Download, Pencil, Plus, Save, Trash2, Upload } from 'lucide-react';

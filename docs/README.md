@@ -9,12 +9,15 @@
 
 ![AGiXT_New](https://github.com/user-attachments/assets/14a5c1ae-6af8-4de8-a82e-f24ea52da23f)
 
+AGiXT Interactive is a NextJS application allowing interaction with AGiXT agents with extensive administration options.
 
+## Videos
 
-AGiXT Interactive is both an embeddable React component and standalone NextJS application allowing interaction with agents with extensive administration options.
-
+Demonstration of creating a new user and setting up an AGiXT agent connected to GitHub:
 
 https://github.com/user-attachments/assets/5dceb1b2-dfbc-4c2d-b648-974882eff08d
+
+Demonstration of creating a new user and setting up an AGiXT agent's mandatory context training:
 
 https://github.com/user-attachments/assets/2111009a-17e0-42e5-bcbc-843d127495e0
 
@@ -45,7 +48,7 @@ npm run dev
 
 Access at <http://localhost:3437>
 
-## Standalone NextJS Application
+## Environment Variables
 
 The preferred method of configuration for standalone NextJS applications is using a `.env` file. The application will automatically handle the `NEXT_PUBLIC_` prefix internally, so you should set variables without this prefix in your `.env` file.
 
@@ -125,3 +128,7 @@ AGIXT_FILE_UPLOAD_ENABLED=true
 AGIXT_VOICE_INPUT_ENABLED=true
 AGIXT_SHOW_OVERRIDE_SWITCHES=tts,websearch,vision
 ```
+
+## Contributing
+
+Contributions are welcome! Please see the [Contributing Guide](CONTRIBUTING.md) for more information.
