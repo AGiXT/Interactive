@@ -4,7 +4,6 @@ import { CaretRightIcon, ComponentPlaceholderIcon } from '@radix-ui/react-icons'
 import { BadgeCheck, LogOut } from 'lucide-react';
 
 import { Appearances, Themes } from '@/components/jrg/appwrapper/UserMenu';
-import { getGravatarUrl } from '@/components/jrg/auth/gravatar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -19,6 +18,13 @@ import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/c
 import { useRouter } from 'next/navigation';
 import { Skeleton } from '../../ui/skeleton';
 import { useUser } from '../auth/hooks/useUser';
+import md5 from 'md5';
+
+const getGravatarUrl = (email?: string, size = 40): string => {
+  if (!email) return '';
+  const hash = md5(email.trim().toLowerCase());
+  return `https://www.gravatar.com/avatar/${hash}?s=${size}&d=404`;
+};
 
 export function NavUser() {
   const { isMobile } = useSidebar('left');
@@ -52,9 +58,9 @@ export function NavUser() {
                 ) : (
                   <>
                     <span className='font-semibold capitalize truncate'>
-                     {user?.firstName} {user?.lastName}
-                   </span>
-                   <span className='text-xs truncate'>{user?.email}</span>
+                      {user?.firstName} {user?.lastName}
+                    </span>
+                    <span className='text-xs truncate'>{user?.email}</span>
                   </>
                 )}
               </div>
@@ -76,9 +82,9 @@ export function NavUser() {
                 </Avatar>
                 <div className='grid flex-1 text-sm leading-tight text-left'>
                   <span className='font-semibold truncate'>
-                   {user?.firstName} {user?.lastName}
-                 </span>
-                 <span className='text-xs truncate'>{user?.email}</span>
+                    {user?.firstName} {user?.lastName}
+                  </span>
+                  <span className='text-xs truncate'>{user?.email}</span>
                 </div>
               </div>
             </DropdownMenuLabel>
