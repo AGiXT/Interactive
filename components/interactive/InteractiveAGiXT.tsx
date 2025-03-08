@@ -12,7 +12,6 @@ import AppWrapper from '../jrg/appwrapper/AppWrapper';
 import log from '../jrg/next-log/log';
 import Chat from './Chat/Chat';
 import ContextWrapper from './ContextWrapper';
-import Form from './Form/Form';
 import { InteractiveConfig, InteractiveConfigDefault, Overrides } from './InteractiveConfigContext';
 import { AgentSelector } from './Selectors/agent-selector';
 import ConversationSelector from './Selectors/ConversationSelector';
@@ -254,24 +253,14 @@ const Interactive = (props: Overrides & UIProps): React.JSX.Element => {
           : undefined
       }
     >
-      {process.env.NEXT_PUBLIC_INTERACTIVE_UI === 'form' ? (
-        <Form
-          mode={props.mode}
-          showChatThemeToggles={props.showChatThemeToggles}
-          enableFileUpload={props.enableFileUpload}
-          enableVoiceInput={props.enableVoiceInput}
-          showOverrideSwitchesCSV={props.showOverrideSwitchesCSV}
-        />
-      ) : (
-        <Chat
-          mode={props.mode}
-          showChatThemeToggles={props.showChatThemeToggles}
-          alternateBackground={props.alternateBackground}
-          enableFileUpload={props.enableFileUpload}
-          enableVoiceInput={props.enableVoiceInput}
-          showOverrideSwitchesCSV={props.showOverrideSwitchesCSV}
-        />
-      )}
+      <Chat
+        mode={props.mode}
+        showChatThemeToggles={props.showChatThemeToggles}
+        alternateBackground={props.alternateBackground}
+        enableFileUpload={props.enableFileUpload}
+        enableVoiceInput={props.enableVoiceInput}
+        showOverrideSwitchesCSV={props.showOverrideSwitchesCSV}
+      />
     </AppWrapper>
   );
 };
