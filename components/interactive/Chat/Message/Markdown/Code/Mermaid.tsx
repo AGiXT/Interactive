@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import mermaid from 'mermaid';
-import log from '@/components/jrg/next-log/log';
+import log from '@/components/idiot/next-log/log';
 
 interface MermaidProps {
   chart: string;
@@ -57,7 +57,7 @@ const Mermaid: React.FC<MermaidProps> = ({ chart }) => {
           loopTextColor: isDark ? '#E5E7EB' : '#1F2937',
           activationBorderColor: isDark ? '#525252' : '#737373',
           activationBkgColor: isDark ? '#374151' : '#F3F4F6',
-          sequenceNumberColor: isDark ? '#E5E7EB' : '#1F2937'
+          sequenceNumberColor: isDark ? '#E5E7EB' : '#1F2937',
         },
         securityLevel: 'loose',
         fontFamily: 'Fira Code',
@@ -101,11 +101,11 @@ const Mermaid: React.FC<MermaidProps> = ({ chart }) => {
   };
 
   const handleZoomIn = () => {
-    setScale(prev => Math.min(prev + ZOOM_STEP, MAX_SCALE));
+    setScale((prev) => Math.min(prev + ZOOM_STEP, MAX_SCALE));
   };
 
   const handleZoomOut = () => {
-    setScale(prev => Math.max(prev - ZOOM_STEP, MIN_SCALE));
+    setScale((prev) => Math.max(prev - ZOOM_STEP, MIN_SCALE));
   };
 
   if (!isClient) {
@@ -113,19 +113,19 @@ const Mermaid: React.FC<MermaidProps> = ({ chart }) => {
   }
 
   return (
-    <div className="relative border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-      <div className="flex gap-2 mb-2">
+    <div className='relative border border-gray-200 dark:border-gray-700 rounded-lg p-4'>
+      <div className='flex gap-2 mb-2'>
         <button
           onClick={handleZoomIn}
-          className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
-          title="Zoom in"
+          className='px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700'
+          title='Zoom in'
         >
           +
         </button>
         <button
           onClick={handleZoomOut}
-          className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
-          title="Zoom out"
+          className='px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700'
+          title='Zoom out'
         >
           -
         </button>
@@ -134,13 +134,13 @@ const Mermaid: React.FC<MermaidProps> = ({ chart }) => {
             setScale(1);
             setPosition({ x: 0, y: 0 });
           }}
-          className="px-2 py-1 text-sm bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+          className='px-2 py-1 text-sm bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700'
         >
           Reset
         </button>
       </div>
       <div
-        className="overflow-hidden cursor-move"
+        className='overflow-hidden cursor-move'
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -151,10 +151,10 @@ const Mermaid: React.FC<MermaidProps> = ({ chart }) => {
           style={{
             transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
             transformOrigin: '0 0',
-            transition: isDragging ? 'none' : 'transform 0.1s ease-out'
+            transition: isDragging ? 'none' : 'transform 0.1s ease-out',
           }}
         >
-          <pre className="mermaid" id={elementId}>
+          <pre className='mermaid' id={elementId}>
             {chart}
           </pre>
         </div>

@@ -4,7 +4,7 @@ import OpenAI from 'openai';
 import { getCookie } from 'cookies-next';
 import { InteractiveConfigContext, InteractiveConfigDefault, InteractiveConfig } from './InteractiveConfigContext';
 import AGiXTSDK from '@/lib/sdk';
-import log from '../jrg/next-log/log';
+import log from '../idiot/next-log/log';
 
 export default function InteractiveConfigContextWrapper({
   initialState = InteractiveConfigDefault,

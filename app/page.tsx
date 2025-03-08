@@ -3,10 +3,10 @@ import { redirect } from 'next/navigation';
 import { Hero } from '@/components/home/hero';
 import { Features } from '@/components/home/features';
 import { HowItWorks } from '@/components/home/how-it-works';
-import PricingGrid from '@/components/jrg/auth/stripe/PricingTable';
+import PricingGrid from '@/components/idiot/auth/stripe/PricingTable';
 import { Contact } from '@/components/home/contact';
 import { CallToAction } from '@/components/home/call-to-action';
-import { ThemeToggle } from '@/components/jrg/theme/ThemeToggle';
+import { ThemeToggle } from '@/components/idiot/theme/ThemeToggle';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
@@ -28,7 +28,7 @@ export default function Home() {
         </div>
         <div className='flex items-center gap-2'>
           <Link href='/docs'>
-            <Button variant="ghost" size='lg' className='px-4'>
+            <Button variant='ghost' size='lg' className='px-4'>
               Documentation
             </Button>
           </Link>
