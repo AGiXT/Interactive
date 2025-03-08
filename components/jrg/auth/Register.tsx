@@ -8,7 +8,6 @@ import { useAuthentication } from './Router';
 import AuthCard from './AuthCard';
 import { toTitleCase } from '@/components/jrg/dynamic-form/DynamicForm';
 import { useAssertion } from '@/components/jrg/assert/assert';
-import { validateURI } from '@/lib/validation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -26,7 +25,7 @@ export default function Register({ additionalFields = [], userRegisterEndpoint =
   const [submitted, setSubmitted] = useState(false);
   const [responseMessage, setResponseMessage] = useState('');
   const authConfig = useAuthentication();
-  useAssertion(validateURI(authConfig.authServer + userRegisterEndpoint), 'Invalid login endpoint.', [
+  useAssertion(authConfig.authServer + userRegisterEndpoint, 'Invalid login endpoint.', [
     authConfig.authServer,
     userRegisterEndpoint,
   ]);

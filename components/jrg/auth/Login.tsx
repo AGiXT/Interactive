@@ -12,7 +12,6 @@ import AuthCard from './AuthCard';
 import { AuthenticatorHelp as MissingAuthenticator } from './mfa/MissingAuthenticator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { validateURI } from '@/lib/validation';
 import { useAssertion } from '@/components/jrg/assert/assert';
 import { Button } from '@/components/ui/button';
 
@@ -28,7 +27,7 @@ export default function Login({
   const router = useRouter();
   const [captcha, setCaptcha] = useState<string | null>(null);
 
-  useAssertion(validateURI(authConfig.authServer + userLoginEndpoint), 'Invalid login endpoint.', [
+  useAssertion(authConfig.authServer + userLoginEndpoint, 'Invalid login endpoint.', [
     authConfig.authServer,
     userLoginEndpoint,
   ]);
@@ -51,7 +50,14 @@ export default function Login({
         if (response.status !== 200) {
           setResponseMessage(response.data.detail);
         } else {
-          if (validateURI(response.data.detail)) {
+          let isURI = false;
+          try {
+            new URL(response.data.detail);
+            isURI = true;
+          } catch {
+            isURI = false;
+          }
+          if (isURI) {
             console.log('Is URI.');
             window.location.href = response.data.detail;
           } else {

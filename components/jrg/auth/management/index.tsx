@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation';
 import { useAuthentication } from '../Router';
 import { Profile } from './Profile';
 import { DynamicFormFieldValueTypes } from '@/components/jrg/dynamic-form/DynamicForm';
-import { validateURI } from '@/lib/validation';
 import { useAssertion } from '@/components/jrg/assert/assert';
 import { Button } from '@/components/ui/button';
 import log from '../../next-log/log';
@@ -42,11 +41,11 @@ export default function Manage({
   };
   const router = useRouter();
   const authConfig = useAuthentication();
-  useAssertion(validateURI(authConfig.authServer + userDataEndpoint), 'Invalid identify endpoint.', [
+  useAssertion(authConfig.authServer + userDataEndpoint, 'Invalid identify endpoint.', [
     authConfig.authServer,
     userDataEndpoint,
   ]);
-  useAssertion(validateURI(authConfig.authServer + userUpdateEndpoint), 'Invalid identify endpoint.', [
+  useAssertion(authConfig.authServer + userUpdateEndpoint, 'Invalid identify endpoint.', [
     authConfig.authServer,
     userUpdateEndpoint,
   ]);

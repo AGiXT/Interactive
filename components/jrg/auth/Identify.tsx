@@ -12,7 +12,6 @@ import OAuth from './oauth2/OAuth';
 import { useAuthentication } from './Router';
 import AuthCard from './AuthCard';
 import { useAssertion } from '@/components/jrg/assert/assert';
-import { validateURI } from '@/lib/validation';
 
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -47,7 +46,7 @@ export default function Identify({
   // if (redirectToOnNotExists === '/register' && authConfig.authModes.magical) {
   //   redirectToOnNotExists = '/login';
   // }
-  useAssertion(validateURI(authConfig.authServer + identifyEndpoint), 'Invalid identify endpoint.', [
+  useAssertion(authConfig.authServer + identifyEndpoint, 'Invalid identify endpoint.', [
     authConfig.authServer,
     identifyEndpoint,
   ]);
