@@ -2,7 +2,7 @@ import { useToast } from '@/hooks/useToast';
 import { useRouter } from 'next/navigation';
 import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
-import log from '../../jrg/next-log/log';
+import log from '../../idiot/next-log/log';
 import { useInteractiveConfig } from '../InteractiveConfigContext';
 import { createGraphQLClient } from './lib';
 
