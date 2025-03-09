@@ -104,21 +104,16 @@ export default function Chat({
       ...(getCookie('agixt-analyze-user-input') ? { analyze_user_input: getCookie('agixt-analyze-user-input') } : {}),
     });
 
-    const toOpenAI = {
-      messages: messages,
-      model: getCookie('agixt-agent'),
-      user: state.overrides.conversation,
-    };
     setLoading(true);
-    log(['Sending: ', state.openai, toOpenAI], { client: 1 });
-    // const req = state.openai.chat.completions.create(toOpenAI);
     await new Promise((resolve) => setTimeout(resolve, 100));
     mutate(conversationSWRPath + state.overrides.conversation);
     try {
       const completionResponse = await axios.post(
         `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/chat/completions`,
         {
-          ...toOpenAI,
+          messages: messages,
+          model: getCookie('agixt-agent'),
+          user: state.overrides.conversation,
         },
         {
           headers: {
@@ -129,35 +124,28 @@ export default function Chat({
       if (completionResponse.status === 200) {
         const chatCompletion = completionResponse.data;
         log(['RESPONSE: ', chatCompletion], { client: 1 });
+
+        // Store conversation ID
+        const conversationId = chatCompletion.id;
+
+        // Update conversation state
         state.mutate((oldState) => ({
           ...oldState,
           overrides: {
             ...oldState.overrides,
-            conversation: chatCompletion.id,
+            conversation: conversationId,
           },
         }));
-        router.push(`/chat/${chatCompletion.id}`);
-        let response;
-        if (state.overrides.conversation === '-') {
-          response = await state.agixt.renameConversation(state.agent, state.overrides.conversation);
-          // response = await axios.put(
-          //   `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/conversation`,
-          //   {
-          //     agent_name: state.agent,
-          //     conversation_name: state.overrides?.conversation,
-          //     new_name: '-',
-          //   },
-          //   {
-          //     headers: {
-          //       Authorization: getCookie('jwt'),
-          //     },
-          //   },
-          // );
-          await mutate('/conversation');
-          log([response], { client: 1 });
-        }
+
+        // Push route after state is updated
+        router.push(`/chat/${conversationId}`);
+
+        // Refresh data after updating conversation
         setLoading(false);
-        mutate(conversationSWRPath + response);
+
+        // Trigger proper mutations
+        mutate(conversationSWRPath + conversationId);
+        mutate('/conversation');
         mutate('/user');
 
         if (chatCompletion?.choices[0]?.message.content.length > 0) {
@@ -177,13 +165,157 @@ export default function Chat({
       });
     }
   }
+  // Function to handle importing a conversation
+  const handleImportConversation = async () => {
+    // Create a file input element
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.json';
+
+    // Handle file selection
+    fileInput.onchange = async (event) => {
+      try {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Extract the file name without extension to use as part of the conversation name
+        const fileName = file.name.replace(/\.[^/.]+$/, '');
+
+        // Read the file content
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          try {
+            // Parse the JSON content
+            const content = JSON.parse(e.target.result);
+
+            // Use the name from the JSON if available, otherwise use filename
+            const baseName = content.name || fileName;
+            const timestamp = new Date().toISOString().split('.')[0].replace(/:/g, '-');
+            const conversationName = `${baseName}_${timestamp}`;
+
+            // Format the conversation content
+            let conversationContent = [];
+            if (content.messages && Array.isArray(content.messages)) {
+              conversationContent = content.messages.map((msg) => ({
+                role: msg.role || 'user',
+                message: msg.content || msg.message || '',
+                timestamp: msg.timestamp || new Date().toISOString(),
+              }));
+            } else if (content.conversation_history && Array.isArray(content.conversation_history)) {
+              // Alternative format that might be used
+              conversationContent = content.conversation_history.map((msg) => ({
+                role: msg.role || 'user',
+                message: msg.message || msg.content || '',
+                timestamp: msg.timestamp || new Date().toISOString(),
+              }));
+            }
+
+            // Check if there are any messages to import
+            if (conversationContent.length === 0) {
+              throw new Error('No valid conversation messages found in the imported file');
+            }
+
+            // Create the new conversation
+            const newConversation = await state.agixt.newConversation(state.agent, conversationName, conversationContent);
+            log(['New conversation:', newConversation], { client: 3 });
+            const newConversationID = newConversation.id || '-';
+            // Update the conversation list and navigate to the new conversation
+            await mutate('/conversations');
+
+            // Set the new conversation as active
+            state.mutate((oldState) => ({
+              ...oldState,
+              overrides: { ...oldState.overrides, conversation: conversationName },
+            }));
+
+            // Navigate to the new conversation
+            router.push(`/chat/${newConversationID}`);
+
+            toast({
+              title: 'Success',
+              description: 'Conversation imported successfully',
+              duration: 3000,
+            });
+          } catch (error) {
+            console.error('Error processing file:', error);
+            toast({
+              title: 'Error',
+              description: `Failed to process the imported conversation file: ${error.message || 'Unknown error'}`,
+              duration: 5000,
+              variant: 'destructive',
+            });
+          }
+        };
+
+        reader.readAsText(file);
+      } catch (error) {
+        console.error('Error importing conversation:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to import conversation',
+          duration: 5000,
+          variant: 'destructive',
+        });
+      }
+    };
+
+    // Trigger the file input click
+    fileInput.click();
+  };
+  // Fix for the handleDeleteConversation function
   const handleDeleteConversation = async (): Promise<void> => {
-    await state.agixt.deleteConversation(currentConversation?.id || '-');
-    await mutate();
-    state.mutate((oldState) => ({
-      ...oldState,
-      overrides: { ...oldState.overrides, conversation: '-' },
-    }));
+    try {
+      await state.agixt.deleteConversation(currentConversation?.id || '-');
+
+      // Properly invalidate both the conversation list and the specific conversation cache
+      await mutate('/conversations'); // Assuming this is the key used in useConversations()
+      await mutate(conversationSWRPath + state.overrides.conversation);
+
+      // Update the state
+      state.mutate((oldState) => ({
+        ...oldState,
+        overrides: { ...oldState.overrides, conversation: '-' },
+      }));
+
+      // Navigate to the main chat route
+      router.push('/chat');
+
+      toast({
+        title: 'Success',
+        description: 'Conversation deleted successfully',
+        duration: 3000,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete conversation',
+        duration: 5000,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleRenameConversation = async (newName: string): Promise<void> => {
+    try {
+      await state.agixt.renameConversation(state.agent, currentConversation?.id || '-', newName);
+
+      // Properly invalidate both the conversation list and the specific conversation
+      await mutate('/conversations'); // Assuming this is the key used in useConversations()
+      await mutate(conversationSWRPath + state.overrides.conversation);
+
+      toast({
+        title: 'Success',
+        description: 'Conversation renamed successfully',
+        duration: 3000,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to rename conversation',
+        duration: 5000,
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleExportConversation = async (): Promise<void> => {
@@ -272,7 +404,7 @@ export default function Chat({
                 icon: renaming ? Check : Pencil,
                 func: renaming
                   ? () => {
-                      state.agixt.renameConversation(state.agent, currentConversation.id, newName);
+                      handleRenameConversation(newName);
                       setRenaming(false);
                     }
                   : () => setRenaming(true),
@@ -282,10 +414,9 @@ export default function Chat({
                 title: 'Import Conversation',
                 icon: Upload,
                 func: () => {
-                  // setImportMode(true);
-                  // setIsDialogOpen(true);
+                  handleImportConversation();
                 },
-                disabled: true,
+                disabled: renaming,
               },
               {
                 title: 'Export Conversation',
