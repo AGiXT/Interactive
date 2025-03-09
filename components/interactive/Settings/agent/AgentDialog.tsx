@@ -1,16 +1,20 @@
 'use client';
 
 import { useState } from 'react';
+import { useAgent } from '../../hooks/useAgent';
 import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/useToast';
+import { useCompany } from '@/components/idiot/auth/hooks/useUser';
 
 export function AgentDialog({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
   const context = useInteractiveConfig();
   const { toast } = useToast();
+  const { mutate: mutateActiveAgent } = useAgent();
+  const { mutate: mutateActiveCompany } = useCompany();
   const [newAgentName, setNewAgentName] = useState('');
 
   const handleNewAgent = async () => {
@@ -20,6 +24,8 @@ export function AgentDialog({ open, setOpen }: { open: boolean; setOpen: (open: 
         title: 'Success',
         description: `Agent "${newAgentName}" created successfully`,
       });
+      mutateActiveCompany();
+      mutateActiveAgent();
       setOpen(false);
     } catch (error) {
       console.error('Failed to create agent:', error);
