@@ -1,5 +1,4 @@
 import React, { ReactNode } from 'react';
-import generateId from './generateID';
 
 interface MarkdownHeadingProps {
   tag: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
@@ -15,7 +14,7 @@ export default function MarkdownHeading({ tag, children, className, ...props }: 
     text = children;
   }
 
-  const id = generateId(text);
+  const id = text ? text.toString().toLowerCase().replace(/\W+/g, '-') : '';
 
   const baseClasses = 'my-1 font-bold';
   const sizeClasses = {

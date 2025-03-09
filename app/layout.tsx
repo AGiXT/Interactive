@@ -14,7 +14,7 @@ import { cookies } from 'next/headers';
 import { ReactNode } from 'react';
 import './globals.css';
 import { metadata, viewport } from './metadata';
-import { SolanaWalletProvider } from '@/components/idiot/wallet/wallet-provider';
+import { SolanaWalletProvider } from '@/components/wais/wallet/wallet-provider';
 
 const inter = Inter({ subsets: ['latin'] });
 

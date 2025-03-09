@@ -1,12 +1,7 @@
 'use client';
 
 import { LuRefreshCw as AutorenewOutlined, LuInfo as Info, LuPencil as Pencil } from 'react-icons/lu';
-import { FaRunning } from 'react-icons/fa';
-import { Ban as Error, CircleCheck, TriangleAlert } from 'lucide-react';
 import React, { ReactNode, useEffect, useMemo, useState } from 'react';
-import { TfiThought } from 'react-icons/tfi';
-import { GiMirrorMirror } from 'react-icons/gi';
-
 import dayjs from 'dayjs';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
@@ -15,7 +10,6 @@ import formatDate from '../Message/formatDate';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
-import { z } from 'zod';
 import { severities } from './Severtities.tsx';
 
 export function getTimeDifference(timestamp1, timestamp2) {

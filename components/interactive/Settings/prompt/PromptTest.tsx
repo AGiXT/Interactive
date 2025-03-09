@@ -3,7 +3,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import axios from 'axios';
 import { getCookie } from 'cookies-next';
-import { randomUUID } from 'crypto';
 import { Loader2, Repeat, Send } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import MarkdownBlock from '../../Chat/Message/MarkdownBlock';

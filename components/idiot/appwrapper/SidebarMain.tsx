@@ -5,7 +5,6 @@ import { getCookie } from 'cookies-next';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
-
 import { AgentSelector } from '../../interactive/Selectors/agent-selector';
 import { ChatHistory } from '../../interactive/Layout/chat-history';
 import { NavMain } from '@/components/idiot/appwrapper/NavMain';
@@ -21,9 +20,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { ToggleSidebar } from './ToggleSidebar';
-import { useRouter } from 'next/navigation';
 import { useUser } from '../auth/hooks/useUser';
-import { NotificationsNavItem } from '@/interactive/Notifications/popup';
 
 export function SidebarMain({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [hasStarted, setHasStarted] = useState(false);

@@ -19,14 +19,6 @@ export const AgentSchema = z.object({
 
 export type Agent = z.infer<typeof AgentSchema>;
 
-// ============================================================================
-// Agent Related Hooks
-// ============================================================================
-
-/**
- * Hook to fetch and manage all agents across companies
- * @returns SWR response containing array of agents
- */
 export function useAgents(): SWRResponse<Agent[]> {
   const companiesHook = useCompanies();
   const { data: companies } = companiesHook;
@@ -48,11 +40,6 @@ export function useAgents(): SWRResponse<Agent[]> {
   return swrHook;
 }
 
-/**
- * Hook to fetch and manage agent data and commands
- * @param name - Optional agent name to fetch
- * @returns SWR response containing agent data and commands
- */
 export function useAgent(
   withSettings = false,
   name?: string,

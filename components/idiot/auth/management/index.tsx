@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation';
 import { useAuthentication } from '../Router';
 import { Profile } from './Profile';
 import { DynamicFormFieldValueTypes } from '@/components/idiot/dynamic-form/DynamicForm';
-import { useAssertion } from '@/components/idiot/assert/assert';
 import { Button } from '@/components/ui/button';
 import log from '../../next-log/log';
 
@@ -25,7 +24,6 @@ export default function Manage({
   userDataSWRKey = '/user',
   userDataEndpoint = '/v1/user',
   userUpdateEndpoint = '/v1/user',
-  userPasswordChangeEndpoint = '/v1/user/password',
 }: ManageProps): ReactNode {
   const [responseMessage, setResponseMessage] = useState('');
   const [active, setActive] = useState<ActivePage>('Profile');
@@ -41,14 +39,6 @@ export default function Manage({
   };
   const router = useRouter();
   const authConfig = useAuthentication();
-  useAssertion(authConfig.authServer + userDataEndpoint, 'Invalid identify endpoint.', [
-    authConfig.authServer,
-    userDataEndpoint,
-  ]);
-  useAssertion(authConfig.authServer + userUpdateEndpoint, 'Invalid identify endpoint.', [
-    authConfig.authServer,
-    userUpdateEndpoint,
-  ]);
   const { data, error, isLoading } = useSWR<User, any, string>(userDataSWRKey, async () => {
     return (
       await axios.get(`${authConfig.authServer}${userDataEndpoint}`, {

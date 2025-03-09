@@ -17,15 +17,7 @@ export const ProviderSchema = z.object({
 });
 
 export type Provider = z.infer<typeof ProviderSchema>;
-// ============================================================================
-// Provider Related Hooks
-// ============================================================================
 
-/**
- * Hook to fetch and manage provider data
- * @param providerName - Optional provider name to fetch specific provider
- * @returns SWR response containing provider data
- */
 export function useProvider(providerName?: string): SWRResponse<Provider | null> {
   const client = createGraphQLClient();
 
@@ -48,10 +40,6 @@ export function useProvider(providerName?: string): SWRResponse<Provider | null>
   );
 }
 
-/**
- * Hook to fetch and manage all providers
- * @returns SWR response containing array of providers
- */
 export function useProviders(): SWRResponse<Provider[]> {
   const client = createGraphQLClient();
 
