@@ -1,9 +1,5 @@
 import { useEffect } from 'react';
 
-export default function assert(test: boolean, message?: string | undefined) {
-  if (!test) throw new Error('Assertion Failure: ' + (message ?? 'No message provided.'));
-}
-
 export function useAssertion(uri: string, message: string, dependencies: any[]) {
   let assertion = false;
   try {
@@ -13,6 +9,6 @@ export function useAssertion(uri: string, message: string, dependencies: any[]) 
     assertion = false;
   }
   useEffect(() => {
-    assert(assertion, message);
+    if (!assertion) throw new Error('Assertion Failure: ' + (message ?? 'No message provided.'));
   }, [assertion, message, dependencies]);
 }
