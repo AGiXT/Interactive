@@ -104,21 +104,16 @@ export default function Chat({
       ...(getCookie('agixt-analyze-user-input') ? { analyze_user_input: getCookie('agixt-analyze-user-input') } : {}),
     });
 
-    const toOpenAI = {
-      messages: messages,
-      model: getCookie('agixt-agent'),
-      user: state.overrides.conversation,
-    };
     setLoading(true);
-    log(['Sending: ', state.openai, toOpenAI], { client: 1 });
-    // const req = state.openai.chat.completions.create(toOpenAI);
     await new Promise((resolve) => setTimeout(resolve, 100));
     mutate(conversationSWRPath + state.overrides.conversation);
     try {
       const completionResponse = await axios.post(
         `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/chat/completions`,
         {
-          ...toOpenAI,
+          messages: messages,
+          model: getCookie('agixt-agent'),
+          user: state.overrides.conversation,
         },
         {
           headers: {
@@ -138,24 +133,6 @@ export default function Chat({
         }));
         router.push(`/chat/${chatCompletion.id}`);
         let response;
-        if (state.overrides.conversation === '-') {
-          response = await state.agixt.renameConversation(state.agent, state.overrides.conversation);
-          // response = await axios.put(
-          //   `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/conversation`,
-          //   {
-          //     agent_name: state.agent,
-          //     conversation_name: state.overrides?.conversation,
-          //     new_name: '-',
-          //   },
-          //   {
-          //     headers: {
-          //       Authorization: getCookie('jwt'),
-          //     },
-          //   },
-          // );
-          await mutate('/conversation');
-          log([response], { client: 1 });
-        }
         setLoading(false);
         mutate(conversationSWRPath + response);
         mutate('/user');
@@ -177,15 +154,61 @@ export default function Chat({
       });
     }
   }
+  // Fix for the handleDeleteConversation function
   const handleDeleteConversation = async (): Promise<void> => {
-    await state.agixt.deleteConversation(currentConversation?.id || '-');
-    await mutate();
-    state.mutate((oldState) => ({
-      ...oldState,
-      overrides: { ...oldState.overrides, conversation: '-' },
-    }));
+    try {
+      await state.agixt.deleteConversation(currentConversation?.id || '-');
+
+      // Properly invalidate both the conversation list and the specific conversation cache
+      await mutate('/conversations'); // Assuming this is the key used in useConversations()
+      await mutate(conversationSWRPath + state.overrides.conversation);
+
+      // Update the state
+      state.mutate((oldState) => ({
+        ...oldState,
+        overrides: { ...oldState.overrides, conversation: '-' },
+      }));
+
+      // Navigate to the main chat route
+      router.push('/chat');
+
+      toast({
+        title: 'Success',
+        description: 'Conversation deleted successfully',
+        duration: 3000,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete conversation',
+        duration: 5000,
+        variant: 'destructive',
+      });
+    }
   };
 
+  const handleRenameConversation = async (newName: string): Promise<void> => {
+    try {
+      await state.agixt.renameConversation(state.agent, currentConversation?.id || '-', newName);
+
+      // Properly invalidate both the conversation list and the specific conversation
+      await mutate('/conversations'); // Assuming this is the key used in useConversations()
+      await mutate(conversationSWRPath + state.overrides.conversation);
+
+      toast({
+        title: 'Success',
+        description: 'Conversation renamed successfully',
+        duration: 3000,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to rename conversation',
+        duration: 5000,
+        variant: 'destructive',
+      });
+    }
+  };
   const handleExportConversation = async (): Promise<void> => {
     // Get the full conversation content
     const conversationContent = await state.agixt.getConversation('', currentConversation?.id || '-');
@@ -272,7 +295,7 @@ export default function Chat({
                 icon: renaming ? Check : Pencil,
                 func: renaming
                   ? () => {
-                      state.agixt.renameConversation(state.agent, currentConversation.id, newName);
+                      handleRenameConversation(newName);
                       setRenaming(false);
                     }
                   : () => setRenaming(true),
