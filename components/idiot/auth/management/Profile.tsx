@@ -3,7 +3,6 @@
 import axios from 'axios';
 import { deleteCookie, getCookie } from 'cookies-next';
 import { mutate } from 'swr';
-import VerifySMS from '../mfa/SMS';
 import DynamicForm from '@/components/idiot/dynamic-form/DynamicForm';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -109,7 +108,6 @@ export const Profile = ({
           {data.missing_requirements.some((obj) => Object.keys(obj).some((key) => key === 'verify_email')) && (
             <p className='text-xl'>Please check your email and verify it using the link provided.</p>
           )}
-          {data.missing_requirements.verify_sms && <VerifySMS verifiedCallback={async () => await mutate(userDataSWRKey)} />}
           {data.missing_requirements.some((obj) =>
             Object.keys(obj).some((key) => !['verify_email', 'verify_sms'].includes(key)),
           ) && (
