@@ -1,14 +1,15 @@
 'use client';
-import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
-import { useCompany } from '@/components/idiot/auth/hooks/useUser';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import axios from 'axios';
 import { getCookie, setCookie } from 'cookies-next';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { LuDownload, LuPencil, LuTrash2 } from 'react-icons/lu';
+import { LuDownload, LuPencil, LuTrash2, LuPlus } from 'react-icons/lu';
 import { useAgent } from '../../hooks/useAgent';
+import { AgentDialog } from './AgentDialog';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { useCompany } from '@/components/idiot/auth/hooks/useUser';
+import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
@@ -25,6 +26,7 @@ import {
 export default function AgentPanel() {
   const [renaming, setRenaming] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const { data: agentData, mutate: mutateAgent } = useAgent();
   const [newName, setNewName] = useState('');
   const [editName, setEditName] = useState('');
@@ -142,6 +144,11 @@ export default function AgentPanel() {
         </CardContent>
 
         <CardFooter className='flex justify-end gap-2 pt-2'>
+          <Button variant='outline' size='sm' className='flex items-center' onClick={() => setIsCreateDialogOpen(true)}>
+            <LuPlus className='h-4 w-4 mr-1' />
+            Create Agent
+          </Button>
+
           <Dialog>
             <DialogTrigger asChild>
               <Button variant='outline' size='sm' className='flex items-center'>
@@ -173,12 +180,19 @@ export default function AgentPanel() {
             Export
           </Button>
 
-          <Button variant='destructive' size='sm' className='flex items-center' onClick={handleDelete}>
+          <Button
+            variant='destructive'
+            size='sm'
+            className='flex items-center'
+            disabled={agentData?.agent?.default}
+            onClick={handleDelete}
+          >
             <LuTrash2 className='h-4 w-4 mr-1' />
             Delete
           </Button>
         </CardFooter>
       </Card>
+      <AgentDialog open={isCreateDialogOpen} setOpen={setIsCreateDialogOpen} />
     </div>
   );
 }
