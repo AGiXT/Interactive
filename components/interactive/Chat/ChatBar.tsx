@@ -2,14 +2,13 @@
 
 import React, { ReactNode, useContext, useEffect, useState } from 'react';
 import { CheckCircle as LuCheckCircle } from 'lucide-react';
-import { LuPaperclip, LuSend, LuArrowUp, LuLoader, LuTrash2 } from 'react-icons/lu';
+import { LuPaperclip, LuSend, LuLoader, LuTrash2 } from 'react-icons/lu';
 import { setCookie } from 'cookies-next';
 import { InteractiveConfigContext } from '../InteractiveConfigContext';
 import { VoiceRecorder } from './VoiceRecorder';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,

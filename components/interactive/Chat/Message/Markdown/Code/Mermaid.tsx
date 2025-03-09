@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import mermaid from 'mermaid';
-import log from '@/components/idiot/next-log/log';
 
 interface MermaidProps {
   chart: string;
