@@ -1,9 +1,9 @@
 import useSWR, { SWRResponse } from 'swr';
 
 // Import all types from the centralized schema file
-import { RoleSchema, UserSchema } from '@/components/jrg/auth/hooks/useUser';
+import { RoleSchema, UserSchema } from '@/components/idiot/auth/hooks/useUser';
 import { z } from 'zod';
-import log from '../../jrg/next-log/log';
+import log from '../../idiot/next-log/log';
 import { createGraphQLClient } from './lib';
 
 export const ConversationMetadataSchema = z.object({
@@ -67,71 +67,6 @@ export type ConversationEdge = z.infer<typeof ConversationEdgeSchema>;
 export type ConversationMetadata = z.infer<typeof ConversationMetadataSchema>;
 export type Message = z.infer<typeof MessageSchema>;
 
-// ============================================================================
-// Conversation Related Hooks
-// ============================================================================
-
-// /**
-//  * Hook to fetch and manage conversation data with real-time updates
-//  * @param conversationId - Conversation ID to fetch
-//  * @returns SWR response containing conversation data
-//  */
-// export function useAppState(conversationId: string): SWRResponse<Conversation | null> {
-//   const client = createGraphQLClient();
-
-//   return useSWR<Conversation | null>(
-//     conversationId ? [`/conversation`, conversationId] : null,
-//     async (): Promise<Conversation | null> => {
-//       try {
-//         const query = AppStateSchema.toGQL('subscription', 'appState', { conversationId });
-//         log(['GQL useAppState() Query', query], {
-//           client: 3,
-//         });
-//         const response = await client.request<Conversation>(query, { conversationId });
-//         return response.conversation;
-//       } catch (error) {
-//         log(['GQL useAppState() Error', error], {
-//           client: 1,
-//         });
-//         return null;
-//       }
-//     },
-//     {
-//       fallbackData: null,
-//       refreshInterval: 1000, // Real-time updates
-//     },
-//   );
-// }
-// export function useConversation(conversationId: string): SWRResponse<Conversation | null> {
-//   const client = createGraphQLClient();
-
-//   return useSWR<Conversation | null>(
-//     conversationId ? [`/conversation`, conversationId] : null,
-//     async (): Promise<Conversation | null> => {
-//       try {
-//         const query = ConversationSchema.toGQL('query', 'conversation', { conversationId });
-//         log(['GQL useConversation() Query', query], {
-//           client: 3,
-//         });
-//         const response = await client.request<Conversation>(query, { conversationId });
-//         return response.conversation;
-//       } catch (error) {
-//         log(['GQL useConversation() Error', error], {
-//           client: 1,
-//         });
-//         return null;
-//       }
-//     },
-//     {
-//       fallbackData: null,
-//       refreshInterval: 1000, // Real-time updates
-//     },
-//   );
-// }
-/**
- * Hook to fetch and manage all conversations with real-time updates
- * @returns SWR response containing array of conversation edges
- */
 export function useConversations(): SWRResponse<ConversationEdge[]> {
   const client = createGraphQLClient();
 

@@ -2,14 +2,13 @@
 
 import React, { ReactNode, useContext, useEffect, useState } from 'react';
 import { CheckCircle as LuCheckCircle } from 'lucide-react';
-import { LuPaperclip, LuSend, LuArrowUp, LuLoader, LuTrash2 } from 'react-icons/lu';
+import { LuPaperclip, LuSend, LuLoader, LuTrash2 } from 'react-icons/lu';
 import { setCookie } from 'cookies-next';
 import { InteractiveConfigContext } from '../InteractiveConfigContext';
 import { VoiceRecorder } from './VoiceRecorder';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -20,9 +19,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { DropZone } from '@/components/jrg/dropzone/DropZone';
-import SwitchDark from '@/components/jrg/theme/SwitchDark';
-import SwitchColorblind from '@/components/jrg/theme/SwitchColorblind';
+import { DropZone } from '@/components/idiot/dropzone/DropZone';
+import SwitchDark from '@/components/idiot/theme/SwitchDark';
+import SwitchColorblind from '@/components/idiot/theme/SwitchColorblind';
 
 export default function ChatBar({
   onSend,

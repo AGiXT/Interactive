@@ -2,7 +2,7 @@ import { useToast } from '@/hooks/useToast';
 import { useRouter } from 'next/navigation';
 import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
-import log from '../../jrg/next-log/log';
+import log from '../../idiot/next-log/log';
 import { useInteractiveConfig } from '../InteractiveConfigContext';
 import { createGraphQLClient } from './lib';
 
@@ -21,10 +21,6 @@ export const PromptSchema = z.object({
 export type Prompt = z.infer<typeof PromptSchema>;
 export type PromptArgument = z.infer<typeof PromptArgumentSchema>;
 
-/**
- * Hook to fetch and manage all prompts and categories
- * @returns SWR response containing prompts array and categories array with management functions
- */
 export function usePrompts(): SWRResponse<Prompt[]> & {
   create: (name: string, content: string) => Promise<void>;
   import: (name: string, file: File) => Promise<void>;
@@ -80,11 +76,6 @@ export function usePrompts(): SWRResponse<Prompt[]> & {
   });
 }
 
-/**
- * Hook to get a specific prompt by name from the prompts list
- * @param name - Name of the prompt to find
- * @returns SWR response containing prompt data if found
- */
 export function usePrompt(name: string): SWRResponse<Prompt | null> & {
   delete: () => Promise<void>;
   rename: (newName: string) => Promise<void>;

@@ -16,8 +16,15 @@ export default function MarkdownImage({ src, alt, className, width, height, titl
   if (!src) return null;
 
   const isAGIXTServer = src.startsWith(process.env.NEXT_PUBLIC_AGIXT_SERVER as string);
-  const isBadge = src.includes('badge') || src.includes('shields.io');
   
+  let isBadge = false;
+  try {
+    const url = new URL(src);
+    const allowedHosts = ['shields.io'];
+    isBadge = src.includes('badge') || allowedHosts.includes(url.host);
+  } catch (e) {
+    console.error(`Invalid URL: ${src}`);
+  }
   let finalAlt = alt || '';
   let finalWidth = width;
   let finalHeight = height;
