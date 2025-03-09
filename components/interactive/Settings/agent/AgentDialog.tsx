@@ -71,7 +71,7 @@ export function AgentDialog({ open, setOpen }: { open: boolean; setOpen: (open: 
           <DialogTitle>Create New Agent</DialogTitle>
         </DialogHeader>
         <div className='grid gap-4 py-4'>
-          <div className='grid grid-cols-4 items-center gap-4'>
+          <div className='flex flex-col items-start gap-4'>
             <Label htmlFor='agent-name' className='text-right'>
               New Agent Name
             </Label>
