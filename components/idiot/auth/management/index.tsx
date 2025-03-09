@@ -24,7 +24,6 @@ export default function Manage({
   userDataSWRKey = '/user',
   userDataEndpoint = '/v1/user',
   userUpdateEndpoint = '/v1/user',
-  userPasswordChangeEndpoint = '/v1/user/password',
 }: ManageProps): ReactNode {
   const [responseMessage, setResponseMessage] = useState('');
   const [active, setActive] = useState<ActivePage>('Profile');
