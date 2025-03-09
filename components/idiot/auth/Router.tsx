@@ -8,11 +8,11 @@ import Register, { RegisterProps } from './Register';
 import Close, { CloseProps } from './oauth2/Close';
 import Logout, { LogoutProps } from './Logout';
 import Subscribe, { SubscribeProps } from './Subscribe';
-import { AuthenticationContext } from './AuthenticationContext';
 import OrganizationalUnit, { OrganizationalUnitProps } from './OU';
 import ErrorPage, { ErrorPageProps } from './ErrorPage';
 import oAuth2Providers from './oauth2/OAuthProviders';
 import deepMerge from '@/lib/objects';
+import { createContext } from 'react';
 
 type RouterPageProps = {
   path: string;
@@ -40,6 +40,8 @@ export type AuthenticationConfig = {
   recaptchaSiteKey?: string;
   enableOU: boolean;
 };
+
+const AuthenticationContext = createContext<AuthenticationConfig | undefined>(undefined);
 
 export const useAuthentication = () => {
   const context = useContext(AuthenticationContext);
