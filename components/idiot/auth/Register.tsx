@@ -7,7 +7,6 @@ import { ReCAPTCHA } from 'react-google-recaptcha';
 import { useAuthentication } from './Router';
 import AuthCard from './AuthCard';
 import { toTitleCase } from '@/components/idiot/dynamic-form/DynamicForm';
-import { useAssertion } from '@/components/idiot/assert/assert';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -25,10 +24,6 @@ export default function Register({ additionalFields = [], userRegisterEndpoint =
   const [submitted, setSubmitted] = useState(false);
   const [responseMessage, setResponseMessage] = useState('');
   const authConfig = useAuthentication();
-  useAssertion(authConfig.authServer + userRegisterEndpoint, 'Invalid login endpoint.', [
-    authConfig.authServer,
-    userRegisterEndpoint,
-  ]);
   const submitForm = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     if (authConfig.recaptchaSiteKey && !captcha) {

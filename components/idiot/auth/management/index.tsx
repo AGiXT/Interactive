@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation';
 import { useAuthentication } from '../Router';
 import { Profile } from './Profile';
 import { DynamicFormFieldValueTypes } from '@/components/idiot/dynamic-form/DynamicForm';
-import { useAssertion } from '@/components/idiot/assert/assert';
 import { Button } from '@/components/ui/button';
 import log from '../../next-log/log';
 
@@ -41,14 +40,6 @@ export default function Manage({
   };
   const router = useRouter();
   const authConfig = useAuthentication();
-  useAssertion(authConfig.authServer + userDataEndpoint, 'Invalid identify endpoint.', [
-    authConfig.authServer,
-    userDataEndpoint,
-  ]);
-  useAssertion(authConfig.authServer + userUpdateEndpoint, 'Invalid identify endpoint.', [
-    authConfig.authServer,
-    userUpdateEndpoint,
-  ]);
   const { data, error, isLoading } = useSWR<User, any, string>(userDataSWRKey, async () => {
     return (
       await axios.get(`${authConfig.authServer}${userDataEndpoint}`, {

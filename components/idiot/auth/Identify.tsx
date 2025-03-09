@@ -11,8 +11,6 @@ import { LuUser } from 'react-icons/lu';
 import OAuth from './oauth2/OAuth';
 import { useAuthentication } from './Router';
 import AuthCard from './AuthCard';
-import { useAssertion } from '@/components/idiot/assert/assert';
-
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,21 +34,12 @@ export type IdentifyProps = {
 export default function Identify({
   identifyEndpoint = '/v1/user/exists',
   redirectToOnExists = '/login',
-  redirectToOnNotExists = '/register', // TODO Default this to /register if in basic mode, and /login in magical mode
+  redirectToOnNotExists = '/register',
   oAuthOverrides = {},
 }): ReactNode {
   const router = useRouter();
   const authConfig = useAuthentication();
   const pathname = usePathname();
-  // console.log('TEST');
-  // if (redirectToOnNotExists === '/register' && authConfig.authModes.magical) {
-  //   redirectToOnNotExists = '/login';
-  // }
-  useAssertion(authConfig.authServer + identifyEndpoint, 'Invalid identify endpoint.', [
-    authConfig.authServer,
-    identifyEndpoint,
-  ]);
-
   const {
     register,
     handleSubmit,
@@ -77,13 +66,6 @@ export default function Identify({
   return (
     <AuthCard title='Welcome' description='Please choose an authentication method.'>
       <form onSubmit={handleSubmit(onSubmit)} className='flex flex-col gap-4'>
-        {/* <div className='text-center'>
-          {authConfig.identify.heading && <h2 className='text-3xl font-bold'>{authConfig.identify.heading}</h2>}
-          {showEmail && showOAuth && (
-            <p className='my-2 text-balance text-muted-foreground'>Please choose from one of the following</p>
-          )}
-        </div> */}
-
         {showEmail && (
           <>
             <Label htmlFor='E-Mail Address'>E-Mail Address</Label>
