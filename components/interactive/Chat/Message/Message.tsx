@@ -23,6 +23,7 @@ export type MessageProps = {
   lastUserMessage: string;
   alternateBackground?: string;
   setLoading: (loading: boolean) => void;
+  loading?: boolean;
 };
 
 const checkUserMsgJustText = (chatItem: { role: string; message: string }) => {
@@ -39,7 +40,7 @@ const checkUserMsgJustText = (chatItem: { role: string; message: string }) => {
   );
 };
 
-export default function Message({ chatItem, lastUserMessage, setLoading }: MessageProps): React.JSX.Element {
+export default function Message({ chatItem, lastUserMessage, setLoading, loading }: MessageProps): React.JSX.Element {
   const [updatedMessage, setUpdatedMessage] = useState(chatItem.message);
 
   const formattedMessage = useMemo(() => {
@@ -80,6 +81,7 @@ export default function Message({ chatItem, lastUserMessage, setLoading }: Messa
               content={audios.message}
               chatItem={{ ...chatItem, message: audios.message }}
               setLoading={setLoading}
+              loading={loading}
             />
           )}
           {audios.sources.map((src) => (

@@ -12,8 +12,9 @@ export type MarkdownBlockProps = {
   content: string;
   chatItem?: { role: string; timestamp: string; message: string };
   setLoading?: (loading: boolean) => void;
+  loading?: boolean;
 };
-export default function MarkdownBlock({ content, chatItem, setLoading }: MarkdownBlockProps): ReactNode {
+export default function MarkdownBlock({ content, chatItem, setLoading, loading }: MarkdownBlockProps): ReactNode {
   const renderMessage = (message: string): string => {
     return message
       ? message
@@ -51,6 +52,9 @@ export default function MarkdownBlock({ content, chatItem, setLoading }: Markdow
     return { headers, rows };
   }
   try {
+    if (loading) {
+      return <div className="text-muted-foreground">Loading...</div>;
+    }
     return (
       // Switch to https://github.com/ariabuckles/simple-markdown ?
       textToMarkdown(content.toString()).map((segment) =>
