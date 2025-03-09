@@ -271,9 +271,20 @@ export default function Chat({
                 title: renaming ? 'Save Name' : 'Rename Conversation',
                 icon: renaming ? Check : Pencil,
                 func: renaming
-                  ? () => {
-                      state.agixt.renameConversation(state.agent, currentConversation?.id || state.overrides.conversation, newName);
-                      setRenaming(false);
+                  ? async () => {
+                      try {
+                         await state.agixt.renameConversation(state.agent, currentConversation?.id || state.overrides.conversation, newName);
+                       await mutate('/conversation');
+                         setRenaming(false);
+                      } catch (error) {
+                        toast({
+                          title: 'Error',
+                          description: 'Failed to rename conversation',
+                          duration: 5000,
+                        });
+                        setRenaming(true);
+                        return;
+                      }
                     }
                   : () => setRenaming(true),
                 disabled: false,
