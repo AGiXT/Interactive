@@ -21,32 +21,67 @@ import ChatLog from './ChatLog';
 export async function getAndFormatConversastion(state): Promise<any[]> {
   const rawConversation = await state.agixt.getConversation('', state.overrides.conversation, 100, 1);
   log(['Raw conversation: ', rawConversation], { client: 3 });
-  return rawConversation.reduce((accumulator, currentMessage: { id: string; message: string }) => {
+
+  // Create a map of activity messages for faster lookups
+  const activityMessages = {};
+  const formattedConversation = [];
+
+  // First pass: identify and store all activities
+  rawConversation.forEach((message) => {
+    const messageType = message.message.split(' ')[0];
+    if (!messageType.startsWith('[SUBACTIVITY]')) {
+      formattedConversation.push({ ...message, children: [] });
+      activityMessages[message.id] = formattedConversation[formattedConversation.length - 1];
+    }
+  });
+
+  // Second pass: handle subactivities
+  rawConversation.forEach((currentMessage) => {
     const messageType = currentMessage.message.split(' ')[0];
     if (messageType.startsWith('[SUBACTIVITY]')) {
-      let target;
-      const parent = messageType.split('[')[2].split(']')[0];
+      try {
+        // Try to extract parent ID
+        const parent = messageType.split('[')[2].split(']')[0];
+        let foundParent = false;
 
-      const parentIndex = accumulator.findIndex((message) => {
-        return message.id === parent || message.children.some((child) => child.id === parent);
-      });
-      if (parentIndex !== -1) {
-        if (accumulator[parentIndex].id === parent) {
-          target = accumulator[parentIndex];
+        // Look for the parent in our activity map
+        if (activityMessages[parent]) {
+          activityMessages[parent].children.push({ ...currentMessage, children: [] });
+          foundParent = true;
         } else {
-          target = accumulator[parentIndex].children.find((child) => child.id === parent);
+          // If no exact match, try to find it in children
+          for (const activity of formattedConversation) {
+            const targetInChildren = activity.children.find((child) => child.id === parent);
+            if (targetInChildren) {
+              targetInChildren.children.push({ ...currentMessage, children: [] });
+              foundParent = true;
+              break;
+            }
+          }
         }
-        target.children.push({ ...currentMessage, children: [] });
-      } else {
-        throw new Error(
-          `Parent message not found for subactivity ${currentMessage.id} - ${currentMessage.message}, parent ID: ${parent}`,
-        );
+
+        // If still not found, add to the last activity as a fallback
+        if (!foundParent && formattedConversation.length > 0) {
+          const lastActivity = formattedConversation[formattedConversation.length - 1];
+          lastActivity.children.push({ ...currentMessage, children: [] });
+          console.log(`Parent message not found for subactivity ${currentMessage.id}, attaching to last activity`);
+        }
+      } catch (error) {
+        // If parsing fails, add to the last activity as a fallback
+        if (formattedConversation.length > 0) {
+          const lastActivity = formattedConversation[formattedConversation.length - 1];
+          lastActivity.children.push({ ...currentMessage, children: [] });
+          console.log(`Error processing subactivity ${currentMessage.id}, attaching to last activity:`, error);
+        } else {
+          // If no activities exist yet, convert this subactivity to an activity
+          formattedConversation.push({ ...currentMessage, children: [] });
+          console.log(`No activities found, converting subactivity ${currentMessage.id} to activity`);
+        }
       }
-    } else {
-      accumulator.push({ ...currentMessage, children: [] });
     }
-    return accumulator;
-  }, []);
+  });
+
+  return formattedConversation;
 }
 
 const conversationSWRPath = '/conversation/';
