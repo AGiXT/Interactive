@@ -13,15 +13,7 @@ export const CommandArgSchema = z.object({
 });
 
 export type CommandArgs = z.infer<typeof CommandArgSchema>;
-// ============================================================================
-// Command Related Hooks
-// ============================================================================
 
-/**
- * Hook to fetch and manage command arguments
- * @param commandName - Command name to fetch arguments for
- * @returns SWR response containing command arguments
- */
 export function useCommandArgs(commandName: string): SWRResponse<CommandArgs | null> {
   const client = createGraphQLClient();
 
