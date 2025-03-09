@@ -56,8 +56,6 @@ export default function Register({ additionalFields = [], userRegisterEndpoint =
       console.log(exception);
       registerResponse = null;
     }
-
-    // TODO Check for status 418 which is app disabled by admin.
     setResponseMessage(registerResponseData?.detail);
     const loginParams = [];
     if (registerResponseData?.otp_uri) {

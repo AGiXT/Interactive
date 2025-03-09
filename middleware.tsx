@@ -1,11 +1,12 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { useAuth, useJWTQueryParam, useOAuth2 } from './components/idiot/auth/auth.middleware';
 import { getRequestedURI } from './components/idiot/auth/utils';
-import { MiddlewareHook } from './components/idiot/auth/types/MiddlewareHook';
 import log from './components/idiot/next-log/log';
 
-//import assert from 'assert';
-
+export type MiddlewareHook = (req: NextRequest) => Promise<{
+  activated: boolean;
+  response: NextResponse;
+}>;
 export const mergeConfigs = (obj1: any, obj2: any): any =>
   Object.keys(obj2).reduce(
     (acc, key) => ({
