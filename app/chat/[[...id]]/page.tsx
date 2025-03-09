@@ -1,36 +1,58 @@
-import { cookies } from 'next/headers';
-import AGiXTInteractive from '@/components/interactive/InteractiveAGiXT';
+'use client';
+
+import { getCookie } from 'cookies-next';
+import { NewChatInterface } from '@/components/interactive/Chat/NewChatInterface';
 import ConvSwitch from './ConvSwitch';
-import NewChatPage from './new-chat-page';
+import Chat from '@/components/interactive/Chat/Chat';
+import { useRouter } from 'next/navigation';
 
 export default function Home({ params }: { params: { id: string } }) {
-  // If no ID is provided, show the new chat interface
-  if (!params.id || params.id.length === 0) {
-    return <NewChatPage />;
-  }
+  const router = useRouter();
 
-  // Otherwise show the existing chat interface
+  const handleNewChat = async (message: string | object, uploadedFiles?: Record<string, string>): Promise<void> => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': getCookie('jwt') || '',
+        },
+        body: JSON.stringify({
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'text', text: message.toString() },
+              ...(uploadedFiles ? Object.entries(uploadedFiles).map(([fileName, fileContent]) => ({
+                type: `${fileContent.split(':')[1].split('/')[0]}_url`,
+                file_name: fileName,
+                [`${fileContent.split(':')[1].split('/')[0]}_url`]: {
+                  url: fileContent,
+                },
+              })) : []),
+            ],
+          }],
+          model: getCookie('agixt-agent'),
+          user: params.id || '-',
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        router.push(`/chat/${data.id}`);
+      }
+    } catch (error) {
+      console.error('Failed to send message:', error);
+    }
+  };
+
   return (
     <>
-      <ConvSwitch id={params.id} />
-      <AGiXTInteractive
-        stateful={false}
-        uiConfig={{
-          showAppBar: false,
-          showChatThemeToggles: false,
-          enableVoiceInput: true,
-          footerMessage: '',
-          alternateBackground: 'primary',
-        }}
-        serverConfig={{
-          agixtServer: process.env.NEXT_PUBLIC_AGIXT_SERVER as string,
-          apiKey: cookies().get('jwt')?.value ?? '',
-        }}
-        agent={process.env.NEXT_PUBLIC_AGIXT_AGENT || 'XT'}
-        overrides={{
-          conversation: params.id,
-        }}
-      />
+      <ConvSwitch id={params.id ? params.id : '-'} />
+      {params.id ? (
+        <Chat />
+      ) : (
+        <NewChatInterface onNewChat={handleNewChat} />
+      )}
     </>
   );
 }

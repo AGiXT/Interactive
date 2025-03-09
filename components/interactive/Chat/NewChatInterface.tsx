@@ -47,7 +47,6 @@ export function NewChatInterface({
 
   const handleVoiceInput = async (message: string | object, uploadedFiles?: Record<string, string>) => {
     await onNewChat(message, uploadedFiles);
-    // No need to return anything as VoiceRecorder expects void
   };
 
   React.useEffect(() => {
@@ -59,7 +58,12 @@ export function NewChatInterface({
     if (input.trim() && !loading) {
       const messageText = input.trim();
       setInput('');
-      await onNewChat(messageText);
+      try {
+        await onNewChat(messageText);
+      } catch (error) {
+        console.error('Failed to send message:', error);
+        setInput(messageText); // Restore input on error
+      }
     }
   };
 
