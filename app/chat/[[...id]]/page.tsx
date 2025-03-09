@@ -1,11 +1,13 @@
 import { cookies } from 'next/headers';
 import AGiXTInteractive from '@/components/interactive/InteractiveAGiXT';
 import ConvSwitch from './ConvSwitch';
+import ImportConversation from '@/components/interactive/ImportConversation';
 
 export default function Home({ params }: { params: { id: string } }) {
   return (
     <>
       <ConvSwitch id={params.id} />
+      <ImportConversation />
       <AGiXTInteractive
         stateful={false}
         uiConfig={{
