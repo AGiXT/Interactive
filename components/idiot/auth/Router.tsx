@@ -8,7 +8,6 @@ import Register, { RegisterProps } from './Register';
 import Close, { CloseProps } from './oauth2/Close';
 import Logout, { LogoutProps } from './Logout';
 import Subscribe, { SubscribeProps } from './Subscribe';
-import OrganizationalUnit, { OrganizationalUnitProps } from './OU';
 import ErrorPage, { ErrorPageProps } from './ErrorPage';
 import oAuth2Providers from './oauth2/OAuthProviders';
 import deepMerge from '@/lib/objects';
@@ -38,7 +37,6 @@ export type AuthenticationConfig = {
   appName: string;
   authBaseURI: string;
   recaptchaSiteKey?: string;
-  enableOU: boolean;
 };
 
 const AuthenticationContext = createContext<AuthenticationConfig | undefined>(undefined);
@@ -98,7 +96,6 @@ const pageConfigDefaults: AuthenticationConfig = {
     magical: process.env.NEXT_PUBLIC_ALLOW_EMAIL_SIGN_IN === 'true',
   },
   recaptchaSiteKey: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
-  enableOU: false,
 };
 
 export default function AuthRouter({
@@ -123,9 +120,6 @@ export default function AuthRouter({
     [corePagesConfig.close.path]: <Close {...corePagesConfig.close.props} />,
     [corePagesConfig.subscribe.path]: <Subscribe searchParams={searchParams} {...corePagesConfig.subscribe.props} />,
     [corePagesConfig.logout.path]: <Logout {...corePagesConfig.logout.props} />,
-    ...(corePagesConfig.enableOU
-      ? { [corePagesConfig.ou.path]: <OrganizationalUnit searchParams={searchParams} {...corePagesConfig.ou.props} /> }
-      : {}),
     [corePagesConfig.error.path]: <ErrorPage {...corePagesConfig.error.props} />,
     ...additionalPages,
   };
