@@ -74,10 +74,6 @@ const pageConfigDefaults: AuthenticationConfig = {
     path: '/subscribe',
     heading: 'Please Subscribe to Access The Application',
   },
-  ou: {
-    path: '/ou',
-    heading: 'Organizational Unit Management',
-  },
   logout: {
     path: '/logout',
     props: undefined,
