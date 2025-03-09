@@ -124,17 +124,28 @@ export default function Chat({
       if (completionResponse.status === 200) {
         const chatCompletion = completionResponse.data;
         log(['RESPONSE: ', chatCompletion], { client: 1 });
+
+        // Store conversation ID
+        const conversationId = chatCompletion.id;
+
+        // Update conversation state
         state.mutate((oldState) => ({
           ...oldState,
           overrides: {
             ...oldState.overrides,
-            conversation: chatCompletion.id,
+            conversation: conversationId,
           },
         }));
-        router.push(`/chat/${chatCompletion.id}`);
-        let response;
+
+        // Push route after state is updated
+        router.push(`/chat/${conversationId}`);
+
+        // Refresh data after updating conversation
         setLoading(false);
-        mutate(conversationSWRPath + response);
+
+        // Trigger proper mutations
+        mutate(conversationSWRPath + conversationId);
+        mutate('/conversation');
         mutate('/user');
 
         if (chatCompletion?.choices[0]?.message.content.length > 0) {
@@ -154,6 +165,102 @@ export default function Chat({
       });
     }
   }
+  // Function to handle importing a conversation
+  const handleImportConversation = async () => {
+    // Create a file input element
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.json';
+
+    // Handle file selection
+    fileInput.onchange = async (event) => {
+      try {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Extract the file name without extension to use as part of the conversation name
+        const fileName = file.name.replace(/\.[^/.]+$/, '');
+
+        // Read the file content
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          try {
+            // Parse the JSON content
+            const content = JSON.parse(e.target.result);
+
+            // Use the name from the JSON if available, otherwise use filename
+            const baseName = content.name || fileName;
+            const timestamp = new Date().toISOString().split('.')[0].replace(/:/g, '-');
+            const conversationName = `${baseName}_${timestamp}`;
+
+            // Format the conversation content
+            let conversationContent = [];
+            if (content.messages && Array.isArray(content.messages)) {
+              conversationContent = content.messages.map((msg) => ({
+                role: msg.role || 'user',
+                message: msg.content || msg.message || '',
+                timestamp: msg.timestamp || new Date().toISOString(),
+              }));
+            } else if (content.conversation_history && Array.isArray(content.conversation_history)) {
+              // Alternative format that might be used
+              conversationContent = content.conversation_history.map((msg) => ({
+                role: msg.role || 'user',
+                message: msg.message || msg.content || '',
+                timestamp: msg.timestamp || new Date().toISOString(),
+              }));
+            }
+
+            // Check if there are any messages to import
+            if (conversationContent.length === 0) {
+              throw new Error('No valid conversation messages found in the imported file');
+            }
+
+            // Create the new conversation
+            await state.agixt.newConversation(state.agent, conversationName, conversationContent);
+
+            // Update the conversation list and navigate to the new conversation
+            await mutate('/conversations');
+
+            // Set the new conversation as active
+            state.mutate((oldState) => ({
+              ...oldState,
+              overrides: { ...oldState.overrides, conversation: conversationName },
+            }));
+
+            // Navigate to the new conversation
+            router.push(`/chat/${conversationName}`);
+
+            toast({
+              title: 'Success',
+              description: 'Conversation imported successfully',
+              duration: 3000,
+            });
+          } catch (error) {
+            console.error('Error processing file:', error);
+            toast({
+              title: 'Error',
+              description: `Failed to process the imported conversation file: ${error.message || 'Unknown error'}`,
+              duration: 5000,
+              variant: 'destructive',
+            });
+          }
+        };
+
+        reader.readAsText(file);
+      } catch (error) {
+        console.error('Error importing conversation:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to import conversation',
+          duration: 5000,
+          variant: 'destructive',
+        });
+      }
+    };
+
+    // Trigger the file input click
+    fileInput.click();
+  };
   // Fix for the handleDeleteConversation function
   const handleDeleteConversation = async (): Promise<void> => {
     try {
@@ -209,6 +316,7 @@ export default function Chat({
       });
     }
   };
+
   const handleExportConversation = async (): Promise<void> => {
     // Get the full conversation content
     const conversationContent = await state.agixt.getConversation('', currentConversation?.id || '-');
@@ -305,10 +413,9 @@ export default function Chat({
                 title: 'Import Conversation',
                 icon: Upload,
                 func: () => {
-                  // setImportMode(true);
-                  // setIsDialogOpen(true);
+                  handleImportConversation();
                 },
-                disabled: true,
+                disabled: renaming,
               },
               {
                 title: 'Export Conversation',
