@@ -272,7 +272,7 @@ export default function Chat({
                 icon: renaming ? Check : Pencil,
                 func: renaming
                   ? () => {
-                      state.agixt.renameConversation(state.agent, currentConversation.id, newName);
+                      state.agixt.renameConversation(state.agent, currentConversation?.id || state.overrides.conversation, newName);
                       setRenaming(false);
                     }
                   : () => setRenaming(true),
