@@ -22,8 +22,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-import { DataTable } from '@/components/idiot/wais/data/data-table';
-import { DataTableColumnHeader } from '@/components/idiot/wais/data/data-table-column-header';
+import { DataTable } from '@/components/wais/data/data-table';
+import { DataTableColumnHeader } from '@/components/wais/data/data-table-column-header';
 import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
 import { useCompany, useCompanies } from '@/components/idiot/auth/hooks/useUser';
 
