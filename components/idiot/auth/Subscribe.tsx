@@ -1,7 +1,6 @@
 'use client';
 
 import { getCookie } from 'cookies-next';
-import { useRouter } from 'next/navigation';
 import React, { Suspense } from 'react';
 import { useAuthentication } from './Router';
 import PricingTable from './stripe/PricingTable';

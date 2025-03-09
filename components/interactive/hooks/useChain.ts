@@ -28,15 +28,6 @@ export type Chain = z.infer<typeof ChainSchema>;
 export type ChainStepPrompt = z.infer<typeof ChainStepPromptSchema>;
 export type ChainStep = z.infer<typeof ChainStepSchema>;
 
-// ============================================================================
-// Chain Related Hooks
-// ============================================================================
-
-/**
- * Hook to fetch and manage chain data
- * @param chainName - Optional chain name to fetch specific chain
- * @returns SWR response containing chain data
- */
 export function useChain(chainName?: string): SWRResponse<Chain | null> {
   const client = createGraphQLClient();
 
@@ -68,10 +59,6 @@ export function useChain(chainName?: string): SWRResponse<Chain | null> {
   );
 }
 
-/**
- * Hook to fetch and manage all chains
- * @returns SWR response containing array of chains
- */
 export function useChains(): SWRResponse<Chain[]> {
   const client = createGraphQLClient();
 

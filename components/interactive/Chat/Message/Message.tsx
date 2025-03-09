@@ -5,7 +5,6 @@ import MarkdownBlock from './MarkdownBlock';
 import formatDate from './formatDate';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useToast } from '@/hooks/useToast';
 import { MessageActions } from './Actions';
 import { formatTimeAgo } from '@/lib/time-ago';
 import AudioPlayer from './Audio';
