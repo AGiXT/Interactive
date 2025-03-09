@@ -11,8 +11,6 @@ import { LuUser } from 'react-icons/lu';
 import OAuth from './oauth2/OAuth';
 import { useAuthentication } from './Router';
 import AuthCard from './AuthCard';
-import { useAssertion } from '@/components/idiot/assert/assert';
-
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,10 +44,6 @@ export default function Identify({
   // if (redirectToOnNotExists === '/register' && authConfig.authModes.magical) {
   //   redirectToOnNotExists = '/login';
   // }
-  useAssertion(authConfig.authServer + identifyEndpoint, 'Invalid identify endpoint.', [
-    authConfig.authServer,
-    identifyEndpoint,
-  ]);
 
   const {
     register,
