@@ -6,7 +6,11 @@ import { z } from 'zod';
 import { useCompanies } from '../../idiot/auth/hooks/useUser';
 import log from '../../idiot/next-log/log';
 import { InteractiveConfigContext } from '../InteractiveConfigContext';
-import { chainMutations, createGraphQLClient } from './lib';
+
+export const AgentSettingSchema = z.object({
+  name: z.string(),
+  value: z.string()
+});
 
 export const AgentSchema = z.object({
   companyId: z.string().uuid(),
@@ -14,30 +18,58 @@ export const AgentSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1),
   status: z.union([z.boolean(), z.literal(null)]),
-  settings: z.array(z.object({ name: z.string(), value: z.string() })),
+  settings: z.array(AgentSettingSchema),
+  companyName: z.string().optional()
 });
 
+export type AgentSetting = z.infer<typeof AgentSettingSchema>;
 export type Agent = z.infer<typeof AgentSchema>;
+
+// Base agent interface from API/company
+interface BaseAgent {
+  name: string;
+  status: boolean | null;
+  companyId: string;
+  default: boolean;
+  id: string;
+  settings?: AgentSetting[] | AgentSetting;
+}
+
+// Company interface
+interface Company {
+  id: string;
+  name: string;
+  primary: boolean;
+  agents: BaseAgent[];
+}
+
+function normalizeSettings(settings: AgentSetting[] | AgentSetting | undefined): AgentSetting[] {
+  if (!settings) return [];
+  return Array.isArray(settings) ? settings : [settings];
+}
+
+function convertToAgent(baseAgent: BaseAgent, companyName?: string): Agent {
+  return {
+    ...baseAgent,
+    settings: normalizeSettings(baseAgent.settings),
+    companyName,
+  };
+}
 
 export function useAgents(): SWRResponse<Agent[]> {
   const companiesHook = useCompanies();
-  const { data: companies } = companiesHook;
+  const { data: companies = [] } = companiesHook;
 
-  const swrHook = useSWR<Agent[]>(
+  return useSWR<Agent[]>(
     ['/agents', companies],
     (): Agent[] =>
-      companies?.flatMap((company) =>
-        company.agents.map((agent) => ({
-          ...agent,
-          companyName: company.name,
-        })),
-      ) || [],
-    { fallbackData: [] },
+      companies.flatMap((company: Company) =>
+        (company.agents || []).map((agent: BaseAgent) => 
+          convertToAgent(agent, company.name)
+        )
+      ),
+    { fallbackData: [] }
   );
-
-  const originalMutate = swrHook.mutate;
-  swrHook.mutate = chainMutations(companiesHook, originalMutate);
-  return swrHook;
 }
 
 export function useAgent(
@@ -46,67 +78,87 @@ export function useAgent(
 ): SWRResponse<{
   agent: Agent | null;
   commands: string[];
+  extensions: any[];
 }> {
-  const getDefaultAgent = () => {
-    const primaryCompany = companies.find((c) => c.primary);
+  const getDefaultAgent = (companies: Company[]): Agent | null => {
+    const primaryCompany = companies?.find((c) => c.primary);
     if (primaryCompany?.agents?.length) {
-      const primaryAgent = primaryCompany?.agents.find((a) => a.default);
-      foundEarly = primaryAgent || primaryCompany?.agents[0];
-      searchName = foundEarly?.name;
-      setCookie('agixt-agent', searchName, {
-        domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
-      });
+      const primaryAgent = primaryCompany.agents.find((a) => a.default);
+      const baseAgent = primaryAgent || primaryCompany.agents[0];
+      if (baseAgent?.name) {
+        setCookie('agixt-agent', baseAgent.name, {
+          domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
+        });
+      }
+      return baseAgent ? convertToAgent(baseAgent, primaryCompany.name) : null;
     }
-    return foundEarly;
+    return null;
   };
+
   const companiesHook = useCompanies();
-  const { data: companies } = companiesHook;
+  const { data: companies = [] } = companiesHook;
   const state = useContext(InteractiveConfigContext);
   let searchName = name || (getCookie('agixt-agent') as string | undefined);
-  let foundEarly = null;
+  let foundEarly: Agent | null = null;
 
-  if (!searchName && companies?.length) {
-    foundEarly = getDefaultAgent();
+  if (!searchName && companies.length) {
+    foundEarly = getDefaultAgent(companies);
+    searchName = foundEarly?.name;
   }
-  log([`GQL useAgent() SEARCH NAME: ${searchName}`], {
+
+  log([`REST useAgent() SEARCH NAME: ${searchName}`], {
     client: 3,
   });
-  const swrHook = useSWR<{ agent: Agent | null; commands: string[]; extensions: any[] }>(
-    [`/agent?name=${searchName}`, companies, withSettings],
-    async (): Promise<{ agent: Agent | null; commands: string[]; extensions: any[] }> => {
+
+  return useSWR<{
+    agent: Agent | null;
+    commands: string[];
+    extensions: any[];
+  }>(
+    searchName ? [`/agent?name=${searchName}`, companies, withSettings] : null,
+    async () => {
       try {
-        if (withSettings) {
-          const client = createGraphQLClient();
-          const query = AgentSchema.toGQL('query', 'GetAgent', { name: searchName });
-          log(['GQL useAgent() Query', query], {
-            client: 3,
-          });
-          const response = await client.request<{ agent: Agent }>(query, { name: searchName });
-          log(['GQL useAgent() Response', response], {
-            client: 3,
-          });
-          return AgentSchema.parse(response.agent);
+        if (withSettings && searchName) {
+          const agentConfig = await state.agixt.getAgentConfig(searchName);
+          const commands = await state.agixt.getCommands(searchName);
+          const extensions = await state.agixt.getAgentExtensions(searchName);
+          
+          // Convert API response to Agent type
+          const baseAgent: BaseAgent = {
+            companyId: agentConfig.companyId || 'default',
+            default: agentConfig.default || false,
+            id: agentConfig.id || 'default',
+            name: agentConfig.name,
+            status: agentConfig.status || null,
+            settings: agentConfig.settings || []
+          };
+
+          return {
+            agent: AgentSchema.parse(convertToAgent(baseAgent)),
+            commands,
+            extensions
+          };
         } else {
           const toReturn = { agent: foundEarly, commands: [], extensions: [] };
-          if (companies?.length && !toReturn.agent) {
+          if (companies.length && !toReturn.agent && searchName) {
             for (const company of companies) {
-              log(['GQL useAgent() Checking Company', company], {
+              log(['REST useAgent() Checking Company', company], {
                 client: 3,
               });
-              const agent = company.agents.find((a) => a.name === searchName);
-              if (agent) {
-                toReturn.agent = agent;
+              const baseAgent = company.agents.find((a) => a.name === searchName);
+              if (baseAgent) {
+                toReturn.agent = convertToAgent(baseAgent, company.name);
               }
             }
           }
           if (!toReturn.agent) {
-            log(['GQL useAgent() Agent Not Found, Using Default', toReturn], {
+            log(['REST useAgent() Agent Not Found, Using Default', toReturn], {
               client: 3,
             });
-            toReturn.agent = getDefaultAgent();
+            toReturn.agent = getDefaultAgent(companies);
           }
           if (toReturn.agent) {
-            log(['GQL useAgent() Agent Found, Getting Commands', toReturn], {
+            log(['REST useAgent() Agent Found, Getting Commands', toReturn], {
               client: 3,
             });
             toReturn.extensions = (
@@ -118,23 +170,19 @@ export function useAgent(
             ).data.extensions;
             toReturn.commands = await state.agixt.getCommands(toReturn.agent.name);
           } else {
-            log(['GQL useAgent() Did Not Get Agent', toReturn], {
+            log(['REST useAgent() Did Not Get Agent', toReturn], {
               client: 3,
             });
           }
-
           return toReturn;
         }
       } catch (error) {
-        log(['GQL useAgent() Error', error], {
+        log(['REST useAgent() Error', error], {
           client: 1,
         });
         return { agent: null, commands: [], extensions: [] };
       }
     },
-    { fallbackData: { agent: null, commands: [], extensions: [] } },
+    { fallbackData: { agent: null, commands: [], extensions: [] } }
   );
-  const originalMutate = swrHook.mutate;
-  swrHook.mutate = chainMutations(companiesHook, originalMutate);
-  return swrHook;
 }

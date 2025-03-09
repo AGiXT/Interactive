@@ -1,7 +1,8 @@
+import { useContext } from 'react';
 import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
 import log from '../../idiot/next-log/log';
-import { createGraphQLClient } from './lib';
+import { InteractiveConfigContext } from '../InteractiveConfigContext';
 
 export const ProviderSettingSchema = z.object({
   name: z.string().min(1),
@@ -19,18 +20,19 @@ export const ProviderSchema = z.object({
 export type Provider = z.infer<typeof ProviderSchema>;
 
 export function useProvider(providerName?: string): SWRResponse<Provider | null> {
-  const client = createGraphQLClient();
+  const { agixt } = useContext(InteractiveConfigContext);
 
   return useSWR<Provider | null>(
     providerName ? [`/provider`, providerName] : null,
     async (): Promise<Provider | null> => {
       try {
-        const query = ProviderSchema.toGQL('query', 'GetProvider', { providerName });
-        const response = await client.request<Provider>(query, { providerName });
-        const validated = ProviderSchema.parse(response);
-        return validated.provider;
+        log(['REST useProvider() Fetching provider', providerName], {
+          client: 3,
+        });
+        const settings = await agixt.getProviderSettings(providerName!);
+        return ProviderSchema.parse(settings);
       } catch (error) {
-        log(['GQL useProvider() Error', error], {
+        log(['REST useProvider() Error', error], {
           client: 1,
         });
         return null;
@@ -41,24 +43,26 @@ export function useProvider(providerName?: string): SWRResponse<Provider | null>
 }
 
 export function useProviders(): SWRResponse<Provider[]> {
-  const client = createGraphQLClient();
+  const { agixt } = useContext(InteractiveConfigContext);
 
   return useSWR<Provider[]>(
     '/providers',
     async (): Promise<Provider[]> => {
       try {
-        const query = ProviderSchema.toGQL('query', 'GetProviders');
-        const response = await client.request<Provider[]>(query);
-        log(['GQL useProviders() Response', response], {
+        log(['REST useProviders() Fetching providers'], {
           client: 3,
         });
-        const validated = z.array(ProviderSchema).parse(response.providers);
-        log(['GQL useProviders() Validated', validated], {
+        const providers = await agixt.getAllProviders();
+        log(['REST useProviders() Response', providers], {
+          client: 3,
+        });
+        const validated = z.array(ProviderSchema).parse(providers);
+        log(['REST useProviders() Validated', validated], {
           client: 3,
         });
         return validated;
       } catch (error) {
-        log(['GQL useProviders() Error', error], {
+        log(['REST useProviders() Error', error], {
           client: 1,
         });
         return [];

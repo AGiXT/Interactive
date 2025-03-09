@@ -1,10 +1,9 @@
 import useSWR, { SWRResponse } from 'swr';
-
-// Import all types from the centralized schema file
 import { RoleSchema, UserSchema } from '@/components/idiot/auth/hooks/useUser';
 import { z } from 'zod';
 import log from '../../idiot/next-log/log';
-import { createGraphQLClient } from './lib';
+import { useContext } from 'react';
+import { InteractiveConfigContext } from '../InteractiveConfigContext';
 
 export const ConversationMetadataSchema = z.object({
   agentId: z.string().uuid(),
@@ -16,6 +15,7 @@ export const ConversationMetadataSchema = z.object({
   summary: z.unknown(),
   updatedAt: z.string().datetime(),
 });
+
 export const MessageSchema = z.object({
   id: z.string().uuid(),
   message: z.string().min(1),
@@ -25,6 +25,7 @@ export const MessageSchema = z.object({
   updatedBy: z.string().uuid().optional(),
   feedbackReceived: z.boolean().optional(),
 });
+
 export const ConversationSchema = z.object({
   messages: z.array(MessageSchema),
 });
@@ -36,7 +37,7 @@ export const ConversationEdgeSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1),
   summary: z.unknown(),
-  updatedAt: z.string(), // TODO Figure out why this errors: .datetime(),.datetime(),
+  updatedAt: z.string(), // TODO Figure out why this errors: .datetime()
 });
 
 export const AppStateSchema = z.object({
@@ -68,22 +69,38 @@ export type ConversationMetadata = z.infer<typeof ConversationMetadataSchema>;
 export type Message = z.infer<typeof MessageSchema>;
 
 export function useConversations(): SWRResponse<ConversationEdge[]> {
-  const client = createGraphQLClient();
+  const { agixt } = useContext(InteractiveConfigContext);
 
   return useSWR<ConversationEdge[]>(
     '/conversations',
     async (): Promise<ConversationEdge[]> => {
       try {
-        const query = z.object({ edges: ConversationEdgeSchema }).toGQL('query', 'GetConversations');
-        log(['GQL useConversations() Query', query], {
+        log(['REST useConversations() Fetching conversations'], {
           client: 3,
         });
-        const response = await client.request<{ conversations: { edges: ConversationEdge[] } }>(query);
+        // Get conversations with full objects
+        const conversations = await agixt.getConversations(true);
+        log(['REST useConversations() Response', conversations], {
+          client: 3,
+        });
+
+        // Transform the conversations to match the expected schema
+        const edges = conversations.map(conv => ({
+          attachmentCount: conv.attachment_count || 0,
+          createdAt: conv.created_at || new Date().toISOString(),
+          hasNotifications: conv.has_notifications || false,
+          id: conv.id,
+          name: conv.name,
+          summary: conv.summary || null,
+          updatedAt: conv.updated_at || conv.created_at || new Date().toISOString()
+        }));
+
+        // Filter out test prompts and validate
         return z
           .array(ConversationEdgeSchema)
-          .parse(response.conversations.edges.filter((conv) => !conv.name.startsWith('PROMPT_TEST')));
+          .parse(edges.filter((conv) => !conv.name.startsWith('PROMPT_TEST')));
       } catch (error) {
-        log(['GQL useConversations() Error', error], {
+        log(['REST useConversations() Error', error], {
           client: 1,
         });
         return [];
