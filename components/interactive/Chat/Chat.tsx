@@ -216,8 +216,9 @@ export default function Chat({
             }
 
             // Create the new conversation
-            await state.agixt.newConversation(state.agent, conversationName, conversationContent);
-
+            const newConversation = await state.agixt.newConversation(state.agent, conversationName, conversationContent);
+            log(['New conversation:', newConversation], { client: 3 });
+            const newConversationID = newConversation.id || '-';
             // Update the conversation list and navigate to the new conversation
             await mutate('/conversations');
 
@@ -228,7 +229,7 @@ export default function Chat({
             }));
 
             // Navigate to the new conversation
-            router.push(`/chat/${conversationName}`);
+            router.push(`/chat/${newConversationID}`);
 
             toast({
               title: 'Success',
