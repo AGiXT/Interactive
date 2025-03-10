@@ -12,8 +12,8 @@ export function ChainSelector({
   onChange,
 }: {
   category?: string;
-  value?: string;
-  onChange?: (value: string) => void;
+  value?: string | null;
+  onChange?: (value: string | null) => void;
 }): React.JSX.Element {
   const { data: chainData, error } = useChains();
   const searchParams = useSearchParams();
