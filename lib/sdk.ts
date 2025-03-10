@@ -145,11 +145,12 @@ export default class AGiXTSDK {
   }
 
   async newConversation(agentName: string, conversationName: string, conversationContent: any[] = []) {
-    return this.request<{ conversation_history: any[] }>('post', '/api/conversation', {
+    // return r.conversation_history and r.id
+    return this.request<{ conversation_history: any[]; id: any }>('post', '/api/conversation', {
       conversation_name: conversationName,
       agent_name: agentName,
       conversation_content: conversationContent,
-    }).then((r) => r.conversation_history);
+    }).then((r) => r);
   }
 
   async deleteConversation(conversationName: string, agentName?: string) {

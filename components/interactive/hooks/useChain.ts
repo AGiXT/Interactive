@@ -7,7 +7,7 @@ import { InteractiveConfigContext } from '../InteractiveConfigContext';
 export const ChainStepPromptSchema = z.object({
   chainName: z.string().nullable(),
   commandName: z.string().nullable(),
-  promptCategory: z.unknown(),
+  promptCategory: z.string().nullable(),
   promptName: z.string().nullable(),
 });
 
