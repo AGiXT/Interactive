@@ -178,16 +178,14 @@ export const items: Item[] = [
         icon: Puzzle,
         url: '/settings/extensions',
         queryParams: {
-          tab: 'extensions',
           mode: 'user',
         },
       },
       {
         title: 'Abilities',
         icon: Workflow,
-        url: '/settings/extensions',
+        url: '/settings/abilities',
         queryParams: {
-          tab: 'abilities',
           mode: 'user',
         },
       },
