@@ -13,8 +13,8 @@ export function CommandSelector({
   category = 'Default',
 }: {
   agentName: string;
-  value?: string;
-  onChange?: (value: string) => void;
+  value?: string | null;
+  onChange?: (value: string | null) => void;
   category?: string;
 }): React.JSX.Element {
   const { data: agentData, error } = useAgent();
