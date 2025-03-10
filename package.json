@@ -87,8 +87,6 @@
     "cmdk": "^1.0.4",
     "cookies-next": "^4.3.0",
     "dayjs": "^1.11.13",
-    "graphql-request": "^7.1.2",
-    "graphql-ws": "^5.16.1",
     "input-otp": "^1.4.2",
     "javascript-time-ago": "^2.5.11",
     "katex": "^0.16.21",

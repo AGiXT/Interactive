@@ -1,5 +1,3 @@
-import { chainMutations, createGraphQLClient } from '@/components/interactive/hooks/lib';
-import '@/components/idiot/zod2gql/zod2gql';
 import axios from 'axios';
 import { getCookie } from 'cookies-next';
 import useSWR, { SWRResponse } from 'swr';
@@ -21,94 +19,10 @@ export const CompanySchema = z.object({
   name: z.string().min(1),
   primary: z.boolean(),
   roleId: z.number().int().positive(),
-  // users: z.array(
-  //   z.object({
-  //     email: z.string().email(),
-  //     firstName: z.string().min(1),
-  //     id: z.string().uuid(),
-  //     lastName: z.string().min(1),
-  //   }),
-  // ),
+  extensions: z.array(z.unknown()).optional()
 });
 
 export type Company = z.infer<typeof CompanySchema>;
-/**
- * Hook to fetch and manage company data
- * @returns SWR response containing array of companies
- */
-export function useCompanies(): SWRResponse<Company[]> {
-  const userHook = useUser();
-  const { data: user } = userHook;
-
-  const swrHook = useSWR<Company[]>(['/companies', user], () => user?.companies || [], { fallbackData: [] });
-
-  const originalMutate = swrHook.mutate;
-  swrHook.mutate = chainMutations(userHook, originalMutate);
-
-  return swrHook;
-}
-
-/**
- * Hook to fetch and manage specific company data
- * @param id - Optional company ID to fetch
- * @returns SWR response containing company data or null
- */
-export function useCompany(id?: string): SWRResponse<Company | null> {
-  const companiesHook = useCompanies();
-  const { data: companies } = companiesHook;
-  console.log('COMPANY THING');
-  const swrHook = useSWR<Company | null>(
-    [`/company?id=${id}`, companies, getCookie('jwt')],
-    async (): Promise<Company | null> => {
-      if (!getCookie('jwt')) return null;
-      try {
-        if (id) {
-          return companies?.find((c) => c.id === id) || null;
-        } else {
-          log(['GQL useCompany() Companies', companies], {
-            client: 1,
-          });
-          const agentName = getCookie('agixt-agent');
-          log(['GQL useCompany() AgentName', agentName], {
-            client: 1,
-          });
-          const targetCompany =
-            companies?.find((c) => (agentName ? c.agents.some((a) => a.name === agentName) : c.primary)) || null;
-          log(['GQL useCompany() Company', targetCompany], {
-            client: 1,
-          });
-          if (!targetCompany) return null;
-          targetCompany.extensions = (
-            await axios.get(
-              `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/companies/${targetCompany.id}/extensions`,
-
-              {
-                headers: {
-                  Authorization: getCookie('jwt'),
-                },
-              },
-            )
-          ).data.extensions;
-          log(['GQL useCompany() Company With Extensions', targetCompany], {
-            client: 3,
-          });
-          return targetCompany;
-        }
-      } catch (error) {
-        log(['GQL useCompany() Error', error], {
-          client: 3,
-        });
-        return null;
-      }
-    },
-    { fallbackData: null },
-  );
-
-  const originalMutate = swrHook.mutate;
-  swrHook.mutate = chainMutations(companiesHook, originalMutate);
-
-  return swrHook;
-}
 
 export const RoleSchema = z.enum(['user', 'system', 'assistant', 'function']);
 
@@ -122,48 +36,115 @@ export const UserSchema = z.object({
 
 export type User = z.infer<typeof UserSchema>;
 
-/**
- * Hook to fetch and manage current user data
- * @returns SWR response containing user data
- */
-export function useUser(): SWRResponse<User | null> {
-  const client = createGraphQLClient();
+const emptyUser: User = {
+  companies: [],
+  email: '',
+  firstName: '',
+  id: '',
+  lastName: '',
+};
 
+async function fetchUser(): Promise<User | null> {
+  if (!getCookie('jwt')) return null;
+  
+  try {
+    log(['REST useUser() Fetching user'], {
+      client: 3,
+    });
+    
+    const response = await axios.get(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user`, {
+      headers: {
+        Authorization: getCookie('jwt'),
+      },
+    });
+    
+    log(['REST useUser() Response', response.data], {
+      client: 3,
+    });
+    
+    return UserSchema.parse(response.data);
+  } catch (error) {
+    log(['REST useUser() Error', error], {
+      client: 1,
+    });
+    return emptyUser;
+  }
+}
+
+export function useUser(): SWRResponse<User | null> {
   return useSWR<User | null>(
     ['/user', getCookie('jwt')],
-    async (): Promise<User | null> => {
+    fetchUser,
+    {
+      fallbackData: emptyUser,
+    },
+  );
+}
+
+export function useCompanies(): SWRResponse<Company[]> {
+  const userHook = useUser();
+  const { data: user } = userHook;
+
+  const swrHook = useSWR<Company[]>(
+    ['/companies', user],
+    () => user?.companies || [],
+    { fallbackData: [] }
+  );
+
+  return swrHook;
+}
+
+export function useCompany(id?: string): SWRResponse<Company | null> {
+  const companiesHook = useCompanies();
+  const { data: companies } = companiesHook;
+
+  return useSWR<Company | null>(
+    [`/company?id=${id}`, companies, getCookie('jwt')],
+    async (): Promise<Company | null> => {
       if (!getCookie('jwt')) return null;
       try {
-        const query = UserSchema.toGQL('query', 'GetUser');
-        log(['GQL useUser() Query', query], {
-          client: 3,
-        });
-        const response = await client.request<{ user: User }>(query);
-        log(['GQL useUser() Response', response], {
-          client: 3,
-        });
-        return UserSchema.parse(response.user);
+        if (id) {
+          return companies?.find((c) => c.id === id) || null;
+        } else {
+          log(['REST useCompany() Companies', companies], {
+            client: 1,
+          });
+          const agentName = getCookie('agixt-agent');
+          log(['REST useCompany() AgentName', agentName], {
+            client: 1,
+          });
+          
+          const targetCompany =
+            companies?.find((c) => (agentName ? c.agents.some((a) => a.name === agentName) : c.primary)) || null;
+          
+          log(['REST useCompany() Company', targetCompany], {
+            client: 1,
+          });
+          
+          if (!targetCompany) return null;
+
+          // Fetch company extensions
+          const extensionsResponse = await axios.get(
+            `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/companies/${targetCompany.id}/extensions`,
+            {
+              headers: {
+                Authorization: getCookie('jwt'),
+              },
+            },
+          );
+
+          return {
+            ...targetCompany,
+            extensions: extensionsResponse.data.extensions
+          };
+        }
       } catch (error) {
-        log(['GQL useUser() Error', error], {
-          client: 1,
+        log(['REST useCompany() Error', error], {
+          client: 3,
         });
-        return {
-          companies: [],
-          email: '',
-          firstName: '',
-          id: '',
-          lastName: '',
-        };
+        return null;
       }
     },
-    {
-      fallbackData: {
-        companies: [],
-        email: '',
-        firstName: '',
-        id: '',
-        lastName: '',
-      },
-    },
+    { fallbackData: null },
   );
 }

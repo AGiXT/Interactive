@@ -4,7 +4,6 @@ import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
 import log from '../../idiot/next-log/log';
 import { useInteractiveConfig } from '../InteractiveConfigContext';
-import { createGraphQLClient } from './lib';
 
 export const PromptArgumentSchema = z.object({
   name: z.string(),
@@ -25,7 +24,6 @@ export function usePrompts(): SWRResponse<Prompt[]> & {
   create: (name: string, content: string) => Promise<void>;
   import: (name: string, file: File) => Promise<void>;
 } {
-  const client = createGraphQLClient();
   const { toast } = useToast();
   const { agixt } = useInteractiveConfig();
   const router = useRouter();
@@ -34,11 +32,30 @@ export function usePrompts(): SWRResponse<Prompt[]> & {
     '/prompts',
     async (): Promise<Prompt[]> => {
       try {
-        const query = PromptSchema.toGQL('query', 'GetPrompts');
-        const response = await client.request(query);
-        return response.prompts || [];
+        log(['REST usePrompts() Fetching prompts'], {
+          client: 3,
+        });
+        const categories = await agixt.getPromptCategories();
+        const prompts: Prompt[] = [];
+
+        for (const category of categories) {
+          const categoryPrompts = await agixt.getPrompts(category);
+          await Promise.all(
+            categoryPrompts.map(async (promptName) => {
+              const prompt = await agixt.getPrompt(promptName, category);
+              const args = await agixt.getPromptArgs(promptName, category);
+              prompts.push({
+                name: promptName,
+                category,
+                content: prompt,
+                arguments: Object.keys(args || {}).map(name => ({ name }))
+              });
+            })
+          );
+        }
+        return prompts;
       } catch (error) {
-        log(['GQL usePrompts() Error', error], {
+        log(['REST usePrompts() Error', error], {
           client: 1,
         });
         return [];
@@ -87,13 +104,20 @@ export function usePrompt(name: string): SWRResponse<Prompt | null> & {
   const { agixt } = useInteractiveConfig();
   const { toast } = useToast();
   const router = useRouter();
-  const swrHook = useSWR<Prompt | null>([name, prompts], () => prompts?.find((p) => p.name === name) || null, {
-    fallbackData: null,
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-  });
+
+  const swrHook = useSWR<Prompt | null>(
+    [name, prompts],
+    () => prompts?.find((p) => p.name === name) || null,
+    {
+      fallbackData: null,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    }
+  );
+
   const isLoading = promptsLoading || swrHook.isLoading;
   const error = promptsError || swrHook.error;
+
   return Object.assign(
     { ...swrHook, isLoading, error },
     {

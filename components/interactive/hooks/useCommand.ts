@@ -1,7 +1,8 @@
+import { useContext } from 'react';
 import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
 import log from '../../idiot/next-log/log';
-import { createGraphQLClient } from './lib';
+import { InteractiveConfigContext } from '../InteractiveConfigContext';
 
 export const CommandArgValueSchema = z.object({
   value: z.string(),
@@ -15,17 +16,22 @@ export const CommandArgSchema = z.object({
 export type CommandArgs = z.infer<typeof CommandArgSchema>;
 
 export function useCommandArgs(commandName: string): SWRResponse<CommandArgs | null> {
-  const client = createGraphQLClient();
+  const { agixt } = useContext(InteractiveConfigContext);
 
   return useSWR<CommandArgs | null>(
     commandName ? [`/command_args`, commandName] : null,
     async (): Promise<CommandArgs | null> => {
       try {
-        const query = CommandArgSchema.toGQL('query', 'GetCommandArgs', { commandName });
-        const response = await client.request<CommandArgs>(query, { commandName });
-        return CommandArgSchema.parse(response);
+        log(['REST useCommandArgs() Fetching command args', commandName], {
+          client: 3,
+        });
+        const args = await agixt.getCommandArgs(commandName);
+        log(['REST useCommandArgs() Response', args], {
+          client: 3,
+        });
+        return CommandArgSchema.parse(args);
       } catch (error) {
-        log(['GQL useCommandArgs() Error', error], {
+        log(['REST useCommandArgs() Error', error], {
           client: 1,
         });
         return null;
