@@ -14,7 +14,7 @@ import useSWR from 'swr';
 import { ChainSelector } from '../../Selectors/ChainSelector';
 import { CommandSelector } from '../../Selectors/CommandSelector';
 import PromptSelector from '../../Selectors/PromptSelector';
-import { useChain, useChains } from '../../hooks/useChain';
+import { type ChainStepPrompt, useChain, useChains } from '../../hooks/useChain';
 
 const ignoreArgs = [
   'prompt_name',
@@ -45,18 +45,18 @@ export default function ChainStep({
   last_step: boolean;
   agent_name: string;
   step_type: string;
-  step_object: any;
+  step_object: ChainStepPrompt;
 }) {
   const [agentName, setAgentName] = useState(agent_name);
   const [targetName, setTargetName] = useState(
-    step_type === 'Prompt'
-      ? step_object.prompt_name
+    step_type === 'Chain'
+      ? step_object.chainName
       : step_type === 'Command'
-        ? step_object.command_name
-        : step_object.chain,
+        ? step_object.commandName
+        : step_object.promptName,
   );
-  const [args, setArgs] = useState(step_object);
-  const [targetCategory, setTargetCategory] = useState(step_object.category || 'Default');
+  const [args, setArgs] = useState<Record<string, string | number | boolean>>({});
+  const [targetCategory, setTargetCategory] = useState(step_object.promptCategory || 'Default');
   const [stepType, setStepType] = useState(step_type);
   const context = useInteractiveConfig();
   const [modified, setModified] = useState(false);
@@ -97,7 +97,7 @@ export default function ChainStep({
         component: (
           <div>
             <Label htmlFor='command-name'>Command Name</Label>
-            <CommandSelector agentName={agentName} value={targetName} mutate={setTargetName} />
+            <CommandSelector agentName={agentName} value={targetName} onChange={setTargetName} />
           </div>
         ),
       },
@@ -105,7 +105,7 @@ export default function ChainStep({
         component: (
           <div>
             <Label htmlFor='chain-name'>Chain Name</Label>
-            <ChainSelector value={targetName} mutate={setTargetName} />
+            <ChainSelector value={targetName} onChange={setTargetName} />
           </div>
         ),
       },
@@ -114,6 +114,7 @@ export default function ChainStep({
   );
 
   useEffect(() => {
+    if (!targetName) return;
     (async (): Promise<void> => {
       let newArgs;
       if (stepType === 'Prompt') {
@@ -142,12 +143,12 @@ export default function ChainStep({
   }, [stepType, targetName, targetCategory]);
 
   useEffect(() => {
-    if (step_object.prompt_category) {
-      setTargetCategory(step_object.prompt_category);
+    if (step_object.promptCategory) {
+      setTargetCategory(step_object.promptCategory);
     } else {
       setTargetCategory('Default');
     }
-  }, [step_object.prompt_category]);
+  }, [step_object.promptCategory]);
 
   const handleIncrement = async (): Promise<void> => {
     await context.agixt.moveStep(searchParams.get('chain') ?? '', step, Number(step) + 1);

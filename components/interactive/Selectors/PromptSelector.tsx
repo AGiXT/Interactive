@@ -14,8 +14,8 @@ export default function PromptSelector({
   onChange,
 }: {
   category?: string;
-  value?: string;
-  onChange?: (value: string) => void;
+  value?: string | null;
+  onChange?: (value: string | null) => void;
 }): React.JSX.Element {
   const state = useContext(InteractiveConfigContext);
   const { data: promptData, error } = usePrompts();

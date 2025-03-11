@@ -14,16 +14,17 @@ export default function ChainSteps() {
   const { data: chainData, mutate, error } = useChain(searchParams.get('chain') ?? undefined);
 
   const handleAdd = async () => {
+    if (!chainData) return;
     const lastStep = chainData.steps.length === 0 ? undefined : chainData.steps[chainData.steps.length - 1];
     await context.agixt.addStep(
       chainData.chainName,
       chainData.steps.length + 1,
       lastStep ? lastStep.agentName : context.agent,
-      lastStep ? lastStep?.prompt?.promptCategory : 'Prompt',
+      lastStep ? lastStep.promptType : 'Prompt',
       lastStep
         ? lastStep.prompt
         : {
-            prompt_name: 'Think About It',
+            prompt_name: '',
             prompt_category: 'Default',
           },
     );
@@ -38,8 +39,8 @@ export default function ChainSteps() {
             <CardContent>
               <ChainStep
                 {...step}
-                agent_name={step.agent_name}
-                step_type={step.chainName ? 'Chain' : step.commandName ? 'Command' : 'Prompt'}
+                agent_name={step.agentName}
+                step_type={step.prompt.chainName ? 'Chain' : step.prompt.commandName ? 'Command' : 'Prompt'}
                 step_object={step.prompt}
                 last_step={chainData.steps.length === index + 1}
               />

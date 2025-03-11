@@ -8,10 +8,14 @@ import { useAgent } from '../hooks/useAgent';
 import { useProviders } from '../hooks/useProvider';
 import Extension from './extension';
 import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
-import { ConnectedServices } from '@/components/idiot/auth/management/ConnectedServices';
-import { TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 
+import MarkdownBlock from '@/components/interactive/Chat/Message/MarkdownBlock';
 import { useCompany } from '@/components/idiot/auth/hooks/useUser';
+import { Input } from '@/components/ui/input';
 
 // Types remain the same
 type Command = {
@@ -40,7 +44,7 @@ interface ExtensionSettings {
   settings: Record<string, string>;
 }
 
-export function Extensions() {
+export function Abilities() {
   const { agent } = useInteractiveConfig();
   const pathname = usePathname();
   const { data: agentData, mutate: mutateAgent } = useAgent();
@@ -197,11 +201,6 @@ export function Extensions() {
     },
     [searchText],
   );
-  useEffect(() => {
-    if (!searchParams.get('tab')) {
-      router.push(`${pathname}?tab=extensions`);
-    }
-  }, [searchParams]);
   const { connectedExtensions, availableExtensions } = categorizeExtensions(extensions);
   const { connectedProviders, availableProviders } = categorizeProviders(Object.values(providerData));
   console.log(connectedProviders, availableProviders);
@@ -227,79 +226,60 @@ export function Extensions() {
             </>
           )} */}
       </div>
-
-      <div className='grid gap-4'>
-        <p className='text-sm text-muted-foreground'>
-          Manage your connected third-party extensions that grant your agent additional capabilities through abilities.
-        </p>
-        {searchParams.get('mode') !== 'company' &&
-          [
-            {
-              extension_name: 'text-to-speech',
-              friendly_name: 'Text to Speech',
-              description: 'Convert text responses to spoken audio output.',
-              settings: [],
-            },
-            {
-              extension_name: 'web-search',
-              friendly_name: 'Web Search',
-              description: 'Search and reference current web content.',
-              settings: [],
-            },
-            {
-              extension_name: 'image-generation',
-              friendly_name: 'Image Generation',
-              description: 'Create AI-generated images from text descriptions.',
-              settings: [],
-            },
-            {
-              extension_name: 'analysis',
-              friendly_name: 'File Analysis',
-              description: 'Analyze uploaded files and documents for insights.',
-              settings: [],
-            },
-          ].map((ext) => (
-            <Extension
-              key={ext.extension_name}
-              extension={ext}
-              connected={false}
-              onConnect={() => {}}
-              onDisconnect={() => {}}
-              settings={{}}
-              setSettings={() => {}}
-              error={null}
-              setSelectedExtension={() => {}}
-            />
-          ))}
-        {searchParams.get('mode') !== 'company' && <ConnectedServices />}
-        {connectedExtensions.map((extension) => (
-          <Extension
-            key={extension.extension_name}
-            extension={extension}
-            connected
-            onDisconnect={handleDisconnect}
-            settings={settings}
-            onConnect={handleSaveSettings}
-            setSettings={setSettings}
-            error={error}
-          />
-        ))}
-
-        {availableExtensions.map((extension) => (
-          <Extension
-            key={extension.extension_name}
-            extension={extension}
-            onDisconnect={handleDisconnect}
-            connected={false}
-            onConnect={handleSaveSettings}
-            settings={settings}
-            setSettings={setSettings}
-            error={error}
-          />
-        ))}
+      <div className='flex items-center justify-between mb-4'>
+        <h3 className='text-lg font-medium'>Enabled Abilities</h3>
+        <div className='flex items-center gap-2'>
+          <Label htmlFor='show-enabled-only'>Show Enabled Only</Label>
+          <Switch id='show-enabled-only' checked={showEnabledOnly} onCheckedChange={setShowEnabledOnly} />
+        </div>
       </div>
+
+      {extensionsWithCommands.length === 0 ? (
+        <Alert>
+          <AlertDescription>
+            No extensions are currently enabled. Enable extensions to see their abilities here.
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <div className='grid gap-4'>
+          <Input placeholder='Search...' value={searchText} onChange={(e) => setSearchText(e.target.value)} />
+          {extensionsWithCommands
+            .sort((a, b) => a.extension_name.localeCompare(b.extension_name))
+            .map((extension) => (
+              <Card key={extension.extension_name}>
+                <CardHeader>
+                  <CardTitle>{extension.extension_name}</CardTitle>
+                  <CardDescription>
+                    <MarkdownBlock content={extension.description || 'No description available'} />
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className='space-y-4'>
+                  {extension.commands
+                    .filter((command) =>
+                      [command.command_name, command.extension_name, command.friendly_name, command.description].some(
+                        (value) => value?.toLowerCase().includes(searchText.toLowerCase()),
+                      ),
+                    )
+                    .filter((command) => !showEnabledOnly || command.enabled)
+                    .map((command) => (
+                      <Card key={command.command_name} className='p-4 border border-border/50'>
+                        <div className='flex items-center mb-2'>
+                          <Switch
+                            checked={command.enabled}
+                            onCheckedChange={(checked) => handleToggleCommand(command.friendly_name, checked)}
+                          />
+                          <h4 className='text-lg font-medium'>&nbsp;&nbsp;{command.friendly_name}</h4>
+                        </div>
+                        <MarkdownBlock content={command.description?.split('\nArgs')[0] || 'No description available'} />
+                      </Card>
+                    ))}
+                </CardContent>
+              </Card>
+            ))}
+        </div>
+      )}
     </div>
   );
 }
 
-export default Extensions;
+export default Abilities;

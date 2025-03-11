@@ -7,7 +7,7 @@ import { Copy, Download } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import 'katex/dist/katex.min.css';
 import Latex from 'react-latex-next';
-import { getCookie } from 'cookies-next';
+import { useTheme } from '@/components/idiot/theme/useTheme';
 import MarkdownBlock from '../MarkdownBlock';
 import { DataTable } from '../data-table';
 import { createColumns } from '../data-table/data-table-columns';
@@ -151,7 +151,7 @@ export default function CodeBlock({
   const [isOpen, setIsOpen] = useState(true);
 
   if (inline) {
-    return <span className='bg-gray-200 dark:bg-gray-700 rounded-md px-1 py-0.5 font-mono'>{children}</span>;
+    return <span className='bg-muted rounded-md px-1 py-0.5 font-mono text-muted-foreground'>{children}</span>;
   }
 
   if (!language || language === 'Text') {
@@ -205,7 +205,7 @@ export default function CodeBlock({
     <Collapsible
       open={isOpen}
       onOpenChange={setIsOpen}
-      className={`my-2 overflow-hidden border rounded-lg bg-background transition-all duration-300 ease-in-out ${isOpen ? 'w-full' : 'inline-block'}`}
+      className={`my-2 overflow-hidden border rounded-lg bg-card transition-all duration-300 ease-in-out ${isOpen ? 'w-full' : 'inline-block'}`}
     >
       <div className='relative flex items-center justify-between pr-4 border-b-2 border-border'>
         <CollapsibleTrigger className='p-2 hover:bg-muted'>
@@ -229,7 +229,7 @@ export default function CodeBlock({
           <button onClick={downloadCode} className='p-2 rounded-full hover:bg-muted'>
             <Download className='w-5 h-5' />
           </button>
-          <span className='ml-2 text-sm'>
+          <span className='ml-2 text-sm text-muted-foreground'>
             {fileNameWithExtension || 'text.txt'} | {language || ''}
           </span>
         </div>
@@ -243,19 +243,20 @@ export default function CodeBlock({
         )}
 
         <TabPanel value={tab} index={hasCustomRenderer ? 1 : 0}>
-          <div className='code-container' ref={codeBlockRef}>
+          <div className='code-container bg-card p-4' ref={codeBlockRef}>
             {languageKey in fileExtensions ? (
               <SyntaxHighlighter
                 {...props}
                 language={languageKey}
-                style={getCookie('theme')?.includes('dark') ? a11yDark : a11yLight}
+                style={useTheme().currentTheme.includes('dark') ? a11yDark : a11yLight}
                 showLineNumbers
                 wrapLongLines
+                customStyle={{ background: 'transparent' }}
               >
                 {children}
               </SyntaxHighlighter>
             ) : (
-              <code className='code-block'>{children}</code>
+              <code className='code-block text-muted-foreground'>{children}</code>
             )}
           </div>
         </TabPanel>
