@@ -13,6 +13,7 @@ import { AuthenticatorHelp as MissingAuthenticator } from './mfa/MissingAuthenti
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from '@/components/ui/input-otp';
 
 export type LoginProps = {
   userLoginEndpoint?: string;
@@ -92,7 +93,7 @@ export default function Login({
         )}
         <input type='hidden' id='email' name='email' value={getCookie('email')} />
         <Label htmlFor='token'>Multi-Factor Code</Label>
-        <Input id='token' placeholder='Enter your 6 digit code' name='token' autoComplete='one-time-code' />
+        <OTPInput name='token' id='token' />
         <MissingAuthenticator />
         {authConfig.recaptchaSiteKey && (
           <div className='my-3'>
@@ -132,3 +133,23 @@ const CopyButton = ({ otp_uri }: { otp_uri: string }) => {
     </Button>
   );
 };
+
+export function OTPInput({ name, id }: { name?: string; id?: string }) {
+  return (
+    <div className='flex justify-center'>
+      <InputOTP maxLength={6} name={name} id={id} autoFocus>
+        <InputOTPGroup>
+          <InputOTPSlot className='w-[50px] h-12 text-lg' index={0} />
+          <InputOTPSlot className='w-[50px] h-12 text-lg' index={1} />
+          <InputOTPSlot className='w-[50px] h-12 text-lg' index={2} />
+        </InputOTPGroup>
+        <InputOTPSeparator />
+        <InputOTPGroup>
+          <InputOTPSlot className='w-[50px] h-12 text-lg' index={3} />
+          <InputOTPSlot className='w-[50px] h-12 text-lg' index={4} />
+          <InputOTPSlot className='w-[50px] h-12 text-lg' index={5} />
+        </InputOTPGroup>
+      </InputOTP>
+    </div>
+  );
+}
