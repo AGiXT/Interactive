@@ -60,8 +60,6 @@ export function Extensions() {
   const allEnabledCommands = extensions.flatMap((ext) =>
     ext.commands.filter((cmd) => cmd.enabled).map((cmd) => ({ ...cmd, extension_name: ext.extension_name })),
   );
-  console.log('ACTIVE COMPANY', activeCompany);
-  console.log('ACTIVE AGENT', agentData);
   // Categorize extensions for the available tab
   const categorizeExtensions = (exts: Extension[]) => {
     return {
@@ -79,7 +77,6 @@ export function Extensions() {
   };
   // Categorize extensions for the available tab
   const categorizeProviders = (providers: any[]) => {
-    console.log(agentData);
     const connected = providers.filter(
       (provider) =>
         provider.settings &&
@@ -175,7 +172,6 @@ export function Extensions() {
     await handleSaveSettings(extension.extension_name, emptySettings);
   };
 
-  console.log(providerData);
   function filterExtensions(extensions, text) {
     return text
       ? extensions
@@ -204,7 +200,6 @@ export function Extensions() {
   }, [searchParams]);
   const { connectedExtensions, availableExtensions } = categorizeExtensions(extensions);
   const { connectedProviders, availableProviders } = categorizeProviders(Object.values(providerData));
-  console.log(connectedProviders, availableProviders);
   return (
     <div className='space-y-6'>
       <div className='flex items-center gap-2'>

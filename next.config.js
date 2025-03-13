@@ -215,6 +215,5 @@ const nextConfig = configs.reduce((accumulator, config) => mergeConfigs(accumula
     ];
   },
 });
-console.log(nextConfig);
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 module.exports = nextConfig;

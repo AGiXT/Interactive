@@ -56,7 +56,6 @@ export function useCompanies(): SWRResponse<Company[]> {
 export function useCompany(id?: string): SWRResponse<Company | null> {
   const companiesHook = useCompanies();
   const { data: companies } = companiesHook;
-  console.log('COMPANY THING');
   const swrHook = useSWR<Company | null>(
     [`/company?id=${id}`, companies, getCookie('jwt')],
     async (): Promise<Company | null> => {

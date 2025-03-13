@@ -34,7 +34,6 @@ export const getQueryParams = (req: NextRequest): any =>
     : {};
 
 export const getRequestedURI = (req: NextRequest): string => {
-  console.log(`Processing: ${req.url}`);
   return req.url
     .split('?')[0]
     .replace(/localhost:\d+/, (process.env.APP_URI || '').replace('https://', '').replace('http://', ''));
@@ -44,13 +43,11 @@ export const getJWT = (req: NextRequest) => {
   const rawJWT = req.cookies.get('jwt')?.value;
   // Strip any and all 'Bearer 's off of JWT.
   const jwt = rawJWT?.split(' ')[rawJWT?.split(' ').length - 1] ?? rawJWT ?? '';
-  console.log('JWT:', jwt);
   return jwt;
 };
 export const verifyJWT = async (jwt: string): Promise<Response> => {
   if (!process.env.SERVERSIDE_AGIXT_SERVER) {
     process.env.SERVERSIDE_AGIXT_SERVER = ['agixt', 'localhost', 'back-end', 'boilerplate', 'back-end-image'].join(',');
-    console.log('Initialized container names: ', process.env.SERVERSIDE_AGIXT_SERVER);
   }
   const containerNames = process.env.SERVERSIDE_AGIXT_SERVER.split(',');
   const responses = {} as any;
@@ -58,7 +55,6 @@ export const verifyJWT = async (jwt: string): Promise<Response> => {
   let response;
   for (const containerName of containerNames) {
     const testEndpoint = authEndpoint.replace('localhost', containerName);
-    console.log(`Verifying JWT Bearer ${jwt} with server at ${testEndpoint}...`);
     try {
       response = await fetch(testEndpoint, {
         headers: {
@@ -68,7 +64,6 @@ export const verifyJWT = async (jwt: string): Promise<Response> => {
       });
 
       if (response.status === 200 || [401, 402, 403].includes(response.status)) {
-        console.log(`Successfully contacted server at ${testEndpoint}!`);
         if (Object.keys(responses).length > 0) {
           containerNames.sort((a, b) => {
             if (a === containerName) {
@@ -80,12 +75,11 @@ export const verifyJWT = async (jwt: string): Promise<Response> => {
             }
           });
           process.env.SERVERSIDE_AGIXT_SERVER = containerNames.join(',');
-          console.log('New container names: ', process.env.SERVERSIDE_AGIXT_SERVER);
         }
         return response;
       } else {
         responses[testEndpoint] = await response.text();
-        console.log(`Failed to contact server at ${testEndpoint}.`);
+        console.error(`Failed to contact server at ${testEndpoint}.`);
       }
     } catch (exception) {
       responses[testEndpoint] = exception;
