@@ -74,17 +74,8 @@ function useActiveCompany() {
           Authorization: getCookie('jwt'),
         },
       });
-      console.log('ACTIVE COMPANY', companyData);
-      console.log('ACTIVE COMPANY USER', user);
-      console.log('ALL COMPANIES', companies);
       const target = companies.filter((company) => company.id === companyData.id)[0];
-      console.log('ACTIVE COMPANY TARGET', target);
-      console.log(
-        'USER COMPANY',
-        user.data.companies.filter((company) => company.id === companyData.id),
-      );
       target.my_role = user.data.companies.filter((company) => company.id === companyData.id)[0].role_id;
-      console.log('ACTIVE COMPANY TARGET AFTER', target);
       return target;
     },
     {
@@ -103,7 +94,6 @@ export const Team = () => {
   const { data: companyData } = useCompanies();
   const { data: activeCompany, mutate } = useActiveCompany();
   const [responseMessage, setResponseMessage] = useState('');
-  console.log('USERS', activeCompany);
   const users_columns: ColumnDef<User>[] = [
     {
       id: 'select',

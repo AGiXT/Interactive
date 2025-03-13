@@ -86,9 +86,6 @@ export const ConnectedServices = () => {
     const provider = disconnectDialog.provider?.toLowerCase() || '';
     try {
       const jwt = getCookie('jwt');
-      console.log('Full OAuth response:', response); // See everything in the response
-      console.log('Code from response:', response.code);
-      console.log('Provider:', provider);
 
       if (!response.code) {
         console.error('No code received in OAuth response');
@@ -108,13 +105,12 @@ export const ConnectedServices = () => {
           },
         },
       );
-      console.log('OAuth API response:', result);
       await fetchConnections();
     } catch (err: any) {
       await fetchConnections();
       console.error('OAuth error:', err);
       if (err.config) {
-        console.log('Failed request details:', {
+        console.error('Failed request details:', {
           url: err.config.url,
           method: err.config.method,
           headers: err.config.headers,

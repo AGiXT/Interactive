@@ -64,18 +64,15 @@ export async function getAndFormatConversastion(state): Promise<any[]> {
         if (!foundParent && formattedConversation.length > 0) {
           const lastActivity = formattedConversation[formattedConversation.length - 1];
           lastActivity.children.push({ ...currentMessage, children: [] });
-          console.log(`Parent message not found for subactivity ${currentMessage.id}, attaching to last activity`);
         }
       } catch (error) {
         // If parsing fails, add to the last activity as a fallback
         if (formattedConversation.length > 0) {
           const lastActivity = formattedConversation[formattedConversation.length - 1];
           lastActivity.children.push({ ...currentMessage, children: [] });
-          console.log(`Error processing subactivity ${currentMessage.id}, attaching to last activity:`, error);
         } else {
           // If no activities exist yet, convert this subactivity to an activity
           formattedConversation.push({ ...currentMessage, children: [] });
-          console.log(`No activities found, converting subactivity ${currentMessage.id} to activity`);
         }
       }
     }
@@ -463,7 +460,6 @@ export default function Chat({
                 title: 'Delete Conversation',
                 icon: Trash2,
                 func: () => {
-                  console.log('DELETE');
                   handleDeleteConversation();
                 },
                 disabled: renaming,

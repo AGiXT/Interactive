@@ -54,10 +54,9 @@ export default function Login({
             isURI = false;
           }
           if (isURI) {
-            console.log('Is URI.');
             window.location.href = response.data.detail;
           } else {
-            console.log('Is not URI.');
+            console.error('Is not URI.');
             setResponseMessage(response.data.detail);
           }
         }

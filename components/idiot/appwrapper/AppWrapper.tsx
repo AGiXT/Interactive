@@ -63,8 +63,6 @@ export default function AppWrapper({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  console.log(header, footer, mainSX);
-
   header = header
     ? {
         height: '3rem',

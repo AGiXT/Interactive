@@ -36,24 +36,21 @@ export default function Register({ additionalFields = [], userRegisterEndpoint =
     }
     let registerResponse;
     let registerResponseData;
-    console.log('AUTH PROCESS START');
     try {
       // TODO fix the stupid double submission.
-      console.log('AUTH SENDING REQUEST');
       registerResponse = await axios
         .post(`${authConfig.authServer}${userRegisterEndpoint}`, {
           ...formData,
         })
         .catch((exception: AxiosError) => {
-          console.log('AUTH REQUEST ERROR');
-          console.log(exception);
+          console.error('AUTH REQUEST ERROR');
+          console.error(exception);
           return exception.response;
         });
-      console.log('AUTH REQUEST SUCCESS');
       registerResponseData = registerResponse?.data;
     } catch (exception) {
-      console.log('ERROR OCCURRED DURING AUTH PROCESS');
-      console.log(exception);
+      console.error('ERROR OCCURRED DURING AUTH PROCESS');
+      console.error(exception);
       registerResponse = null;
     }
     setResponseMessage(registerResponseData?.detail);
@@ -68,10 +65,9 @@ export default function Register({ additionalFields = [], userRegisterEndpoint =
       loginParams.push(`verify_sms=true`);
     }
     if ([200, 201].includes(registerResponse?.status || 500)) {
-      console.log('AUTH PUSHING TO LOGIN');
       router.push(loginParams.length > 0 ? `/user/login?${loginParams.join('&')}` : '/user/login');
     } else {
-      console.log('AUTH NO WORK HELP');
+      console.error('AUTH NO WORK HELP');
     }
   };
   useEffect(() => {

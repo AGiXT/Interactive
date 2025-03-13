@@ -197,8 +197,6 @@ export const useAuth: MiddlewareHook = async (req) => {
       }
     }
   }
-  console.log('Going to:');
-  console.log(toReturn);
   return toReturn;
 };
 
@@ -215,7 +213,6 @@ export const useOAuth2: MiddlewareHook = async (req) => {
 
     // Use the state parameter as the JWT if present
     const jwt = queryParams.state || getJWT(req);
-    console.log('Using JWT from state:', jwt);
 
     try {
       const response = await fetch(oAuthEndpoint, {
@@ -232,9 +229,7 @@ export const useOAuth2: MiddlewareHook = async (req) => {
         },
       });
 
-      console.log('Middleware OAuth2 response status:', response.status);
       const auth = await response.json();
-      console.log('Middleware OAuth2 response:', auth);
 
       if (response.status !== 200) {
         throw new Error(`Invalid token response, status ${response.status}.`);

@@ -20,13 +20,9 @@ export default function PromptSelector({
   const state = useContext(InteractiveConfigContext);
   const { data: promptData, error } = usePrompts();
   const searchParams = useSearchParams();
-  console.log('PROMPT DATA', promptData);
   const router = useRouter();
   const pathname = usePathname();
-  console.log(error);
-  useEffect(() => {
-    console.log('Value changed to ', value);
-  }, [value]);
+  useEffect(() => {}, [value]);
   return (
     <TooltipProvider>
       <Tooltip>

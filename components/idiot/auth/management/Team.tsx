@@ -34,7 +34,6 @@ export const Team = () => {
   const { data: companyData } = useCompanies();
   const { data: activeCompany, mutate } = useCompany();
   const [responseMessage, setResponseMessage] = useState('');
-  console.log(activeCompany);
   const handleConfirm = async () => {
     if (renaming) {
       try {
