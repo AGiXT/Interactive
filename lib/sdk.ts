@@ -1,25 +1,21 @@
 import axios, { AxiosRequestConfig } from 'axios';
-
-type Conversation = {
-  id: string;
-  name: string;
-  has_notifications: boolean;
-  created_at: string;
-  updated_at: string;
-};
+import { getCookie } from 'cookies-next';
 
 export default class AGiXTSDK {
   private baseUri: string;
   private headers: AxiosRequestConfig['headers'];
 
-  constructor(config: { baseUri: string; apiKey?: string }) {
-    this.baseUri = config.baseUri?.endsWith('/') ? config.baseUri.slice(0, -1) : config.baseUri || 'http://localhost:7437';
-    this.headers = config.apiKey
-      ? {
-          Authorization: `Bearer ${config.apiKey.replace('Bearer ', '')}`,
-          'Content-Type': 'application/json',
-        }
-      : { 'Content-Type': 'application/json' };
+  constructor() {
+    let baseUri = process.env.NEXT_PUBLIC_AGIXT_SERVER || 'http://localhost:7437';
+    if (baseUri.endsWith('/')) {
+      baseUri = baseUri.slice(0, -1);
+    }
+    const jwt = getCookie('jwt') || '';
+    this.baseUri = baseUri;
+    this.headers = {
+      Authorization: jwt,
+      'Content-Type': 'application/json',
+    };
   }
 
   private async request<T>(method: string, endpoint: string, data?: any, params?: any): Promise<T> {
@@ -37,6 +33,160 @@ export default class AGiXTSDK {
     }
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // Auth Methods
+  // ─────────────────────────────────────────────────────────────
+
+  async login(email: string, otp: string): Promise<string> {
+    const result = await this.request<any>('post', '/v1/login', { email, token: otp });
+    let token = '';
+    if (result.detail && result.detail.includes('?token=')) {
+      token = result.detail.split('?token=')[1];
+    } else if (result.token) {
+      token = result.token;
+    }
+    this.headers = {
+      ...this.headers,
+      Authorization: token,
+    };
+    return token;
+  }
+
+  async registerUser(email: string, firstName: string, lastName: string, invitation_id?: string): Promise<string> {
+    const result = await this.request<any>('post', '/v1/user', {
+      email,
+      first_name: firstName,
+      last_name: lastName,
+      invitation_id,
+    });
+    return result.otp_uri || '';
+  }
+
+  async userExists(email: string): Promise<boolean> {
+    return this.request<boolean>('get', `/v1/user/exists?email=${encodeURIComponent(email)}`);
+  }
+
+  async updateUser(data: any): Promise<any> {
+    return this.request<any>('put', '/v1/user', data);
+  }
+
+  async getUser(): Promise<any> {
+    return this.request<any>('get', '/v1/user');
+  }
+
+  async deleteUser(): Promise<string> {
+    return this.request<{ detail: string }>('delete', '/v1/user').then((r) => r.detail);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Invitations Methods
+  // ─────────────────────────────────────────────────────────────
+
+  async getInvitations(companyId?: string): Promise<any[]> {
+    const endpoint = companyId ? `/v1/invitations/${companyId}` : '/v1/invitations';
+    return this.request<{ invitations: any[] }>('get', endpoint).then((r) => r.invitations);
+  }
+
+  async deleteInvitation(invitationId: string): Promise<string> {
+    return this.request<{ detail: string }>('delete', `/v1/invitation/${invitationId}`).then((r) => r.detail);
+  }
+
+  async createInvitation(invitation: any): Promise<any> {
+    return this.request<any>('post', '/v1/invitations', invitation);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Verification & MFA Methods
+  // ─────────────────────────────────────────────────────────────
+
+  async verifyMfa(code: string): Promise<string> {
+    return this.request<{ detail: string }>('post', '/v1/user/verify/mfa', { code }).then((r) => r.detail);
+  }
+
+  async verifySms(code: string): Promise<string> {
+    return this.request<{ detail: string }>('post', '/v1/user/verify/sms', { code }).then((r) => r.detail);
+  }
+
+  async verifyEmail(email: string, code?: string): Promise<string> {
+    return this.request<{ detail: string }>('post', '/v1/user/verify/email', { email, code }).then((r) => r.detail);
+  }
+
+  async sendMfaSms(email: string): Promise<string> {
+    return this.request<{ detail: string }>('post', '/v1/user/mfa/sms', { email }).then((r) => r.detail);
+  }
+
+  async sendMfaEmail(email: string): Promise<string> {
+    return this.request<{ detail: string }>('post', '/v1/user/mfa/email', { email }).then((r) => r.detail);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // OAuth2 Methods
+  // ─────────────────────────────────────────────────────────────
+
+  async oauthLogin(
+    provider: string,
+    code: string,
+    referrer?: string,
+  ): Promise<{ detail: string; email?: string; token?: string }> {
+    return this.request<{ detail: string; email?: string; token?: string }>('post', `/v1/oauth2/${provider}`, {
+      code,
+      referrer,
+    });
+  }
+
+  async updateOauthToken(provider: string, access_token: string, refresh_token?: string): Promise<string> {
+    return this.request<{ detail: string }>('put', `/v1/oauth2/${provider}`, { access_token, refresh_token }).then(
+      (r) => r.detail,
+    );
+  }
+
+  async getOauthProviders(): Promise<string[]> {
+    return this.request<string[]>('get', '/v1/oauth2');
+  }
+
+  async deleteOauthToken(provider: string): Promise<string> {
+    return this.request<{ detail: string }>('delete', `/v1/oauth2/${provider}`).then((r) => r.detail);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Companies Methods
+  // ─────────────────────────────────────────────────────────────
+
+  async getCompanies(): Promise<any[]> {
+    return this.request<any[]>('get', '/v1/companies');
+  }
+
+  async createCompany(company: any): Promise<any> {
+    return this.request<any>('post', '/v1/companies', company);
+  }
+
+  async deleteCompany(companyId: string): Promise<string> {
+    return this.request<{ detail: string }>('delete', `/v1/companies/${companyId}`).then((r) => r.detail);
+  }
+
+  async deleteUserFromCompany(companyId: string, userId: string): Promise<string> {
+    return this.request<{ detail: string }>('delete', `/v1/companies/${companyId}/users/${userId}`).then((r) => r.detail);
+  }
+
+  async getCompanyExtensions(companyId: string): Promise<any> {
+    return this.request<any>('get', `/v1/companies/${companyId}/extensions`);
+  }
+
+  async toggleCompanyCommand(companyId: string, commandName: string, enable: boolean): Promise<string> {
+    return this.request<{ message: string }>('patch', `/v1/companies/${companyId}/command`, {
+      command_name: commandName,
+      enable,
+    }).then((r) => r.message);
+  }
+
+  async renameCompany(companyId: string, newName: string): Promise<any> {
+    return this.request<any>('put', `/v1/companies/${companyId}`, { name: newName });
+  }
+
+  async updateUserRole(payload: any): Promise<string> {
+    return this.request<{ detail: string }>('put', `/v1/user/role`, payload).then((r) => r.detail);
+  }
+
   // Provider Methods
   async getProviders() {
     return this.request<{ providers: string[] }>('get', '/api/provider').then((r) => r.providers);
@@ -52,10 +202,6 @@ export default class AGiXTSDK {
 
   async getProviderSettings(providerName: string) {
     return this.request<{ settings: any }>('get', `/api/provider/${providerName}`).then((r) => r.settings);
-  }
-
-  async getEmbedProviders() {
-    return this.request<{ providers: string[] }>('get', '/api/embedding_providers').then((r) => r.providers);
   }
 
   // Agent Methods
@@ -194,42 +340,11 @@ export default class AGiXTSDK {
   }
 
   // Agent Interaction Methods
-  async promptAgent(agentName: string, promptName: string, promptArgs: any) {
+  async promptAgent(agentName: string, promptName: string = 'Think About It', promptArgs: any = {}) {
     return this.request<{ response: string }>('post', `/api/agent/${agentName}/prompt`, {
       prompt_name: promptName,
       prompt_args: promptArgs,
     }).then((r) => r.response);
-  }
-
-  async instruct(agentName: string, userInput: string, conversation: string) {
-    return this.promptAgent(agentName, 'instruct', {
-      user_input: userInput,
-      disable_memory: true,
-      conversation_name: conversation,
-    });
-  }
-
-  async chat(agentName: string, userInput: string, conversation: string, contextResults = 4) {
-    return this.promptAgent(agentName, 'Chat', {
-      user_input: userInput,
-      context_results: contextResults,
-      conversation_name: conversation,
-      disable_memory: true,
-    });
-  }
-
-  async smartinstruct(agentName: string, userInput: string, conversation: string) {
-    return this.runChain('Smart Instruct', userInput, agentName, false, 1, {
-      conversation_name: conversation,
-      disable_memory: true,
-    });
-  }
-
-  async smartchat(agentName: string, userInput: string, conversation: string) {
-    return this.runChain('Smart Chat', userInput, agentName, false, 1, {
-      conversation_name: conversation,
-      disable_memory: true,
-    });
   }
 
   // Command Methods
@@ -431,43 +546,6 @@ export default class AGiXTSDK {
     }).then((r) => r.message);
   }
 
-  async learnGithubRepo(
-    agentName: string,
-    githubRepo: string,
-    githubUser?: string,
-    githubToken?: string,
-    githubBranch = 'main',
-    useAgentSettings = false,
-    collectionNumber = '0',
-  ) {
-    return this.request<{ message: string }>('post', `/api/agent/${agentName}/learn/github`, {
-      github_repo: githubRepo,
-      github_user: githubUser,
-      github_token: githubToken,
-      github_branch: githubBranch,
-      use_agent_settings: useAgentSettings,
-      collection_number: collectionNumber,
-    }).then((r) => r.message);
-  }
-
-  async learnArxiv(agentName: string, query = '', arxivIds = '', maxResults = 5, collectionNumber = '0') {
-    return this.request<{ message: string }>('post', `/api/agent/${agentName}/learn/arxiv`, {
-      query,
-      arxiv_ids: arxivIds,
-      max_results: maxResults,
-      collection_number: collectionNumber,
-    }).then((r) => r.message);
-  }
-
-  async agentReader(agentName: string, readerName: string, data: any, collectionNumber = '0') {
-    if (!data.collection_number) {
-      data.collection_number = collectionNumber;
-    }
-    return this.request<{ message: string }>('post', `/api/agent/${agentName}/reader/${readerName}`, { data }).then(
-      (r) => r.message,
-    );
-  }
-
   // Memory Query Methods
   async getAgentMemories(agentName: string, userInput: string, limit = 5, minRelevanceScore = 0.5, collectionNumber = '0') {
     return this.request<{ memories: any }>('post', `/api/agent/${agentName}/memory/${collectionNumber}/query`, {
@@ -489,35 +567,6 @@ export default class AGiXTSDK {
       dataset_name: datasetName,
       batch_size: batchSize,
     }).then((r) => r.message);
-  }
-
-  // Voice and Audio Methods
-  async executeCommandWithVoice(
-    agentName: string,
-    base64Audio: string,
-    audioFormat = 'm4a',
-    audioVariable = 'data_to_correlate_with_input',
-    commandName = 'Store information in my long term memory',
-    commandArgs = { input: 'Voice transcription from user' },
-    tts = false,
-    conversationName = 'AGiXT Terminal',
-  ) {
-    return this.request<{ response: string }>('post', `/api/agent/${agentName}/command`, {
-      command_name: 'Command with Voice',
-      command_args: {
-        base64_audio: base64Audio,
-        audio_variable: audioVariable,
-        audio_format: audioFormat,
-        tts,
-        command_name: commandName,
-        command_args: commandArgs,
-      },
-      conversation_name: conversationName,
-    }).then((r) => r.response);
-  }
-
-  async getEmbeddersDetails() {
-    return this.request<{ embedders: any }>('get', '/api/embedders').then((r) => r.embedders);
   }
 
   // Feedback Methods
@@ -583,30 +632,6 @@ export default class AGiXTSDK {
     return this.request<{ message: string }>('put', `/api/agent/${agentName}/persona`, { persona }).then((r) => r.message);
   }
 
-  async promptAgentWithVoice(
-    agentName: string,
-    base64Audio: string,
-    audioFormat = 'm4a',
-    audioVariable = 'user_input',
-    promptName = 'Custom Input',
-    promptArgs = { context_results: 6, inject_memories_from_collection_number: 0 },
-    tts = false,
-    conversationName = 'AGiXT Terminal',
-  ) {
-    return this.request<{ response: string }>('post', `/api/agent/${agentName}/command`, {
-      command_name: 'Prompt with Voice',
-      command_args: {
-        base64_audio: base64Audio,
-        audio_variable: audioVariable,
-        audio_format: audioFormat,
-        tts,
-        prompt_name: promptName,
-        prompt_args: promptArgs,
-      },
-      conversation_name: conversationName,
-    }).then((r) => r.response);
-  }
-
   async textToSpeech(agentName: string, text: string) {
     return this.request<{ url: string }>('post', `/api/agent/${agentName}/text_to_speech`, { text }).then((r) => r.url);
   }
@@ -622,39 +647,5 @@ export default class AGiXTSDK {
 
   async getConversationsWithIds() {
     return this.request<{ conversations_with_ids: any }>('get', '/api/conversations').then((r) => r.conversations_with_ids);
-  }
-
-  // Task Planning Methods
-  async planTask(
-    agentName: string,
-    userInput: string,
-    websearch = false,
-    websearchDepth = 3,
-    conversationName = '',
-    logUserInput = true,
-    logOutput = true,
-    enableNewCommand = true,
-  ) {
-    return this.request<{ response: string }>('post', `/api/agent/${agentName}/plan/task`, {
-      user_input: userInput,
-      websearch,
-      websearch_depth: websearchDepth,
-      conversation_name: conversationName,
-      log_user_input: logUserInput,
-      log_output: logOutput,
-      enable_new_command: enableNewCommand,
-    }).then((r) => r.response);
-  }
-
-  // Company Methods
-  async getCompanies() {
-    return this.request<any[]>('get', '/v1/companies');
-  }
-
-  async getInvitations(company_id?: string) {
-    return this.request<{ invitations: any[] }>(
-      'get',
-      company_id ? `/v1/invitations/${company_id}` : '/v1/invitations',
-    ).then((r) => r.invitations);
   }
 }

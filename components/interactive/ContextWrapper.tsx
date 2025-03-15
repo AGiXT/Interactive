@@ -49,10 +49,7 @@ export default function InteractiveConfigContextWrapper({
       'Booting State With',
     );
   }
-  const agixt: AGiXTSDK = new AGiXTSDK({
-    baseUri: agixtServer,
-    apiKey: apiKey,
-  });
+  const agixt: AGiXTSDK = new AGiXTSDK();
   const openai: OpenAI = new OpenAI({
     apiKey: apiKey.replace('Bearer ', ''),
     baseURL: agixtServer + '/v1',
