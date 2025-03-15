@@ -2,15 +2,11 @@
 
 import axios from 'axios';
 import { getCookie } from 'cookies-next';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useState } from 'react';
 import { useAgent } from '../hooks/useAgent';
-import { useProviders } from '../hooks/useProvider';
 import Extension from './extension';
-import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
 import { ConnectedServices } from '@/components/idiot/auth/management/ConnectedServices';
-import { TabsTrigger } from '@/components/ui/tabs';
-
 import { useCompany } from '@/components/idiot/auth/hooks/useUser';
 
 // Types remain the same
@@ -41,25 +37,17 @@ interface ExtensionSettings {
 }
 
 export function Extensions() {
-  const { agent } = useInteractiveConfig();
-  const pathname = usePathname();
   const { data: agentData, mutate: mutateAgent } = useAgent();
   const [searchText, setSearchText] = useState('');
-  const router = useRouter();
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [error, setError] = useState<ErrorState>(null);
-  const [showEnabledOnly, setShowEnabledOnly] = useState(false);
-  const agent_name = (getCookie('agixt-agent') || process.env.NEXT_PUBLIC_AGIXT_AGENT) ?? agent;
+  const agent_name = getCookie('agixt-agent') || process.env.NEXT_PUBLIC_AGIXT_AGENT;
   const { data: activeCompany, mutate: mutateCompany } = useCompany();
 
-  const { data: providerData } = useProviders();
   const searchParams = useSearchParams();
   // Filter extensions for the enabled commands view
   const extensions = searchParams.get('mode') === 'company' ? activeCompany?.extensions || [] : agentData?.extensions || [];
-  const extensionsWithCommands = extensions.filter((ext) => ext.commands?.length > 0);
-  const allEnabledCommands = extensions.flatMap((ext) =>
-    ext.commands.filter((cmd) => cmd.enabled).map((cmd) => ({ ...cmd, extension_name: ext.extension_name })),
-  );
+
   // Categorize extensions for the available tab
   const categorizeExtensions = (exts: Extension[]) => {
     return {
@@ -74,65 +62,6 @@ export function Extensions() {
         searchText,
       ),
     };
-  };
-  // Categorize extensions for the available tab
-  const categorizeProviders = (providers: any[]) => {
-    const connected = providers.filter(
-      (provider) =>
-        provider.settings &&
-        Object.entries(provider.settings).every(
-          ([key, defaultValue]) =>
-            !['KEY', 'SECRET', 'PASSWORD', 'TOKEN'].some((this_key) => key.endsWith(this_key)) ||
-            (['KEY', 'SECRET', 'PASSWORD', 'TOKEN'].some((this_key) => key.endsWith(this_key)) &&
-              agentData?.settings[key] &&
-              agentData?.settings[key] === 'HIDDEN'),
-        ),
-    );
-    return agentData && agentData.settings
-      ? {
-          // Connected providers have all their settings fields present with non-default values
-          connectedProviders: connected,
-          // Available providers are those that have settings but at least one field is missing or has default value
-          availableProviders: providers.filter((provider) => !connected.includes(provider)),
-        }
-      : {
-          connectedProviders: [],
-          availableProviders: [],
-        };
-  };
-
-  const handleToggleCommand = async (commandName: string, enabled: boolean) => {
-    try {
-      const result = await axios.patch(
-        searchParams.get('mode') === 'company'
-          ? `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/companies/${activeCompany?.id}/command`
-          : `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/agent/${agent_name}/command`,
-
-        {
-          command_name: commandName,
-          enable: enabled,
-        },
-        {
-          headers: {
-            Authorization: getCookie('jwt'),
-          },
-        },
-      );
-
-      if (result.status === 200) {
-        if (searchParams.get('mode') === 'company') {
-          mutateCompany();
-        } else {
-          mutateAgent();
-        }
-      }
-    } catch (error) {
-      console.error('Failed to toggle command:', error);
-      setError({
-        type: 'error',
-        message: 'Failed to toggle command. Please try again.',
-      });
-    }
   };
 
   const handleSaveSettings = async (extensionName: string, settings: Record<string, string>) => {
@@ -181,44 +110,10 @@ export function Extensions() {
             ext.description.toLowerCase().includes(text.toLowerCase()),
         );
   }
-  const filterCommands = useCallback(
-    (commands) => {
-      return searchText
-        ? commands
-        : commands.filter(
-            (cmd) =>
-              cmd.friendly_name.toLowerCase().includes(searchText.toLowerCase()) ||
-              cmd.description.toLowerCase().includes(searchText.toLowerCase()),
-          );
-    },
-    [searchText],
-  );
 
   const { connectedExtensions, availableExtensions } = categorizeExtensions(extensions);
-  const { connectedProviders, availableProviders } = categorizeProviders(Object.values(providerData));
   return (
     <div className='space-y-6'>
-      <div className='flex items-center gap-2'>
-        {/* {activeCompany?.my_role >= 2 && (
-            <>
-              <Switch
-                id='company-mode'
-                checked={searchParams.get('mode') === 'company'}
-                onCheckedChange={(checked) => {
-                  const params = new URLSearchParams(searchParams);
-                  if (checked) {
-                    params.set('mode', 'company');
-                  } else {
-                    params.delete('mode');
-                  }
-                  router.push(`${pathname}?${params.toString()}`);
-                }}
-              />
-              <Label htmlFor='company-mode'>Company Mode</Label>
-            </>
-          )} */}
-      </div>
-
       <div className='grid gap-4'>
         <p className='text-sm text-muted-foreground'>
           Manage your connected third-party extensions that grant your agent additional capabilities through abilities.

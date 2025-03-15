@@ -7,7 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import { getCookie } from 'cookies-next';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   LuBrain as Brain,
@@ -165,7 +165,6 @@ export const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({ value, o
 
 const Training = (): React.ReactElement => {
   const searchParams = useSearchParams();
-  const pathname = usePathname();
   const { data: company } = useCompany();
   const [userPersona, setUserPersona] = useState<string>('');
   const [companyPersona, setCompanyPersona] = useState<string>('');
@@ -181,7 +180,6 @@ const Training = (): React.ReactElement => {
   const apiKey = getCookie('jwt') || '';
   const apiServer = process.env.NEXT_PUBLIC_AGIXT_SERVER as string;
   const agentName = getCookie('agixt-agent') || process.env.NEXT_PUBLIC_AGIXT_AGENT || DEFAULT_AGENT;
-  const router = useRouter();
   useEffect(() => {
     if (activeCompany?.id || searchParams.get('mode') !== 'company') {
       fetchCompanyData();
@@ -347,24 +345,6 @@ const Training = (): React.ReactElement => {
 
   return (
     <div className='max-w-screen-lg mx-auto space-y-6'>
-      {/* {activeCompany?.my_role >= 2 && (
-        <div className='flex items-center gap-2 mx-4 my-4'>
-          <Switch
-            id='company-mode'
-            checked={searchParams.get('mode') === 'company'}
-            onCheckedChange={(checked) => {
-              const params = new URLSearchParams(searchParams);
-              if (checked) {
-                params.set('mode', 'company');
-              } else {
-                params.delete('mode');
-              }
-              router.push(`${pathname}?${params.toString()}`);
-            }}
-          />
-          <Label htmlFor='company-mode'>Company Mode</Label>
-        </div>
-      )} */}
       <Card>
         <CardHeader>
           <CardTitle className='flex items-center gap-2'>
