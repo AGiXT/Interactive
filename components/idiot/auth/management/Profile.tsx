@@ -6,7 +6,6 @@ import { mutate } from 'swr';
 import DynamicForm from '@/components/idiot/dynamic-form/DynamicForm';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import log from '../../next-log/log';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
 

@@ -2,7 +2,6 @@ import { useToast } from '@/hooks/useToast';
 import { useRouter } from 'next/navigation';
 import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
-import log from '../../idiot/next-log/log';
 import { useInteractiveConfig } from '../InteractiveConfigContext';
 import { createGraphQLClient } from './lib';
 
@@ -38,9 +37,7 @@ export function usePrompts(): SWRResponse<Prompt[]> & {
         const response = await client.request(query);
         return response.prompts || [];
       } catch (error) {
-        log(['GQL usePrompts() Error', error], {
-          client: 1,
-        });
+        console.error('Error fetching prompts:', error);
         return [];
       }
     },

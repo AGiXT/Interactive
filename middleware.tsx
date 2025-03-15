@@ -1,7 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { useAuth, useJWTQueryParam, useOAuth2 } from './components/idiot/auth/auth.middleware';
 import { getRequestedURI } from './components/idiot/auth/utils';
-import log from './components/idiot/next-log/log';
 
 export type MiddlewareHook = (req: NextRequest) => Promise<{
   activated: boolean;

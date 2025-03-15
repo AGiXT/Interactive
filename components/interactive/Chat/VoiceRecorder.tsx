@@ -3,7 +3,6 @@ import { LuMic as Mic, LuSquare as Square } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import log from '@/components/idiot/next-log/log';
 
 export interface VoiceRecorderProps {
   onSend: (message: string | object, uploadedFiles?: { [x: string]: string }) => Promise<void>;

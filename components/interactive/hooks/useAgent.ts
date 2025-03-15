@@ -4,7 +4,6 @@ import { useContext } from 'react';
 import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
 import { useCompanies } from '../../idiot/auth/hooks/useUser';
-import log from '../../idiot/next-log/log';
 import { InteractiveConfigContext } from '../InteractiveConfigContext';
 import { chainMutations, createGraphQLClient } from './lib';
 
@@ -104,9 +103,7 @@ export function useAgent(
           return toReturn;
         }
       } catch (error) {
-        log(['GQL useAgent() Error', error], {
-          client: 1,
-        });
+        console.error('Error fetching agent:', error);
         return { agent: null, commands: [], extensions: [] };
       }
     },

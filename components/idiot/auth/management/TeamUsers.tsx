@@ -8,7 +8,6 @@ import { getCookie } from 'cookies-next';
 import { Check, Mail, MoreHorizontal, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useContext } from 'react';
-import log from '../../next-log/log';
 import useSWR from 'swr';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

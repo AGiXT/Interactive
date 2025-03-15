@@ -1,6 +1,5 @@
 import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
-import log from '../../idiot/next-log/log';
 import { createGraphQLClient } from './lib';
 
 export const CommandArgValueSchema = z.object({
@@ -25,9 +24,7 @@ export function useCommandArgs(commandName: string): SWRResponse<CommandArgs | n
         const response = await client.request<CommandArgs>(query, { commandName });
         return CommandArgSchema.parse(response);
       } catch (error) {
-        log(['GQL useCommandArgs() Error', error], {
-          client: 1,
-        });
+        console.error('Error fetching command args:', error);
         return null;
       }
     },

@@ -8,7 +8,6 @@ import { useAuthentication } from '../Router';
 import { Profile } from './Profile';
 import { DynamicFormFieldValueTypes } from '@/components/idiot/dynamic-form/DynamicForm';
 import { Button } from '@/components/ui/button';
-import log from '../../next-log/log';
 
 export type ManageProps = {
   userDataSWRKey?: string;

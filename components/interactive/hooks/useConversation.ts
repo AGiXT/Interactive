@@ -3,7 +3,6 @@ import useSWR, { SWRResponse } from 'swr';
 // Import all types from the centralized schema file
 import { RoleSchema, UserSchema } from '@/components/idiot/auth/hooks/useUser';
 import { z } from 'zod';
-import log from '../../idiot/next-log/log';
 import { createGraphQLClient } from './lib';
 
 export const ConversationMetadataSchema = z.object({
@@ -80,9 +79,7 @@ export function useConversations(): SWRResponse<ConversationEdge[]> {
           .array(ConversationEdgeSchema)
           .parse(response.conversations.edges.filter((conv) => !conv.name.startsWith('PROMPT_TEST')));
       } catch (error) {
-        log(['GQL useConversations() Error', error], {
-          client: 1,
-        });
+        console.error('Error fetching conversations:', error);
         return [];
       }
     },

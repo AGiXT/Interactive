@@ -6,7 +6,6 @@ import deepMerge from '@/lib/objects';
 import { useRouter } from 'next/navigation';
 import { ReactNode, useCallback, useMemo } from 'react';
 import OAuth2Login from 'react-simple-oauth2-login';
-import log from '../../next-log/log';
 import providers from './OAuthProviders';
 
 export type OAuthProps = {

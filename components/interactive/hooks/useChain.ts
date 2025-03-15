@@ -1,6 +1,5 @@
 import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
-import log from '../../idiot/next-log/log';
 import { createGraphQLClient } from './lib';
 
 export const ChainStepPromptSchema = z.object({
@@ -40,9 +39,7 @@ export function useChain(chainName?: string): SWRResponse<Chain | null> {
         const validated = ChainSchema.parse(response.chain);
         return validated;
       } catch (error) {
-        log(['GQL useChain() Error', error], {
-          client: 1,
-        });
+        console.error('Error fetching chain:', error);
         return null;
       }
     },
@@ -62,9 +59,7 @@ export function useChains(): SWRResponse<Chain[]> {
         const validated = z.array(ChainsSchema).parse(response.chains);
         return validated;
       } catch (error) {
-        log(['GQL useChains() Error', error], {
-          client: 1,
-        });
+        console.error('Error fetching chains:', error);
         return [];
       }
     },

@@ -1,6 +1,5 @@
 import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
-import log from '../../idiot/next-log/log';
 import { createGraphQLClient } from './lib';
 
 export const ProviderSettingSchema = z.object({
@@ -30,9 +29,7 @@ export function useProvider(providerName?: string): SWRResponse<Provider | null>
         const validated = ProviderSchema.parse(response);
         return validated.provider;
       } catch (error) {
-        log(['GQL useProvider() Error', error], {
-          client: 1,
-        });
+        console.error('Error fetching provider:', error);
         return null;
       }
     },
@@ -52,9 +49,7 @@ export function useProviders(): SWRResponse<Provider[]> {
         const validated = z.array(ProviderSchema).parse(response.providers);
         return validated;
       } catch (error) {
-        log(['GQL useProviders() Error', error], {
-          client: 1,
-        });
+        console.error('Error fetching providers:', error);
         return [];
       }
     },

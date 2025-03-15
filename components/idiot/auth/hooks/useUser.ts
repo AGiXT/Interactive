@@ -4,7 +4,6 @@ import axios from 'axios';
 import { getCookie } from 'cookies-next';
 import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
-import log from '../../next-log/log';
 
 export const CompanySchema = z.object({
   agents: z.array(
@@ -82,9 +81,7 @@ export function useCompany(id?: string): SWRResponse<Company | null> {
           return targetCompany;
         }
       } catch (error) {
-        log(['GQL useCompany() Error', error], {
-          client: 3,
-        });
+        console.error('Error fetching company:', error);
         return null;
       }
     },
@@ -125,9 +122,7 @@ export function useUser(): SWRResponse<User | null> {
         const response = await client.request<{ user: User }>(query);
         return UserSchema.parse(response.user);
       } catch (error) {
-        log(['GQL useUser() Error', error], {
-          client: 1,
-        });
+        console.error('Error fetching user:', error);
         return {
           companies: [],
           email: '',
