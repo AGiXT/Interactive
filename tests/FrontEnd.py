@@ -517,28 +517,15 @@ class FrontEndTest:
                 "The user enters an input to prompt the default agent, since no advanced settings have been configured, this will use the default A G I X T thought process.",
                 lambda: self.page.fill(
                     "#message",
-                    "Tell me a fictional story about a man named John Doe. Include the word 'extravagant' at least twice.",
+                    "Can you show be a basic 'hello world' Python example?",
                 ),
             )
             await self.test_action(
                 "When the user hits send, or the enter key, the message is sent to the agent and it begins thinking.",
                 lambda: self.page.click("#send-message"),
             )
-            # A refetch of conversation after the rename is done needs to be added so this loads on the new page.
-            return None
-            while not await self.page.locator(
-                ":has-text('Conversation renamed')"
-            ).count():
-                logging.info(f"No rename found yet, waiting 5s.")
-                await asyncio.sleep(5)
-            logging.info(
-                str(
-                    await self.page.locator(":has-text('Conversation renamed')").count()
-                )
-                + "conversation rename detected, continuing."
-            )
 
-            await asyncio.sleep(2)
+            await asyncio.sleep(90)
 
             await self.take_screenshot(
                 "When the agent finishes thinking, the agent responds alongside providing its thought process and renaming the conversation contextually."
