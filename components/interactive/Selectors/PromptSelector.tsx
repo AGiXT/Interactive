@@ -4,8 +4,7 @@ import usePathname from '@/components/idiot/auth/hooks/usePathname';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRouter, useSearchParams } from 'next/navigation';
-import React, { useContext, useEffect } from 'react';
-import { InteractiveConfigContext } from '../InteractiveConfigContext';
+import React, { useEffect } from 'react';
 import { usePrompts } from '../hooks/usePrompt';
 
 export default function PromptSelector({
@@ -17,7 +16,6 @@ export default function PromptSelector({
   value?: string | null;
   onChange?: (value: string | null) => void;
 }): React.JSX.Element {
-  const state = useContext(InteractiveConfigContext);
   const { data: promptData, error } = usePrompts();
   const searchParams = useSearchParams();
   const router = useRouter();

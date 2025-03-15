@@ -1,8 +1,6 @@
 'use client';
 
 import MarkdownBlock from '@/components/interactive/Chat/Message/MarkdownBlock';
-import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
-import { useCompany } from '@/components/idiot/auth/hooks/useUser';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,23 +22,6 @@ import { LuUnlink as Unlink } from 'react-icons/lu';
 import { useAgent } from '../hooks/useAgent';
 import { useProviders } from '../hooks/useProvider';
 
-// Types remain the same
-type Command = {
-  friendly_name: string;
-  description: string;
-  command_name: string;
-  command_args: Record<string, string>;
-  enabled?: boolean;
-  extension_name?: string;
-};
-
-type Extension = {
-  extension_name: string;
-  description: string;
-  settings: string[];
-  commands: Command[];
-};
-
 type ErrorState = {
   type: 'success' | 'error';
   message: string;
@@ -52,12 +33,10 @@ interface ExtensionSettings {
 }
 
 export function Providers() {
-  const { agent } = useInteractiveConfig();
   const { data: agentData, mutate } = useAgent(true);
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [error, setError] = useState<ErrorState>(null);
-  const agent_name = (getCookie('agixt-agent') || process.env.NEXT_PUBLIC_AGIXT_AGENT) ?? agent;
-  const { data: activeCompany } = useCompany();
+  const agent_name = getCookie('agixt-agent') || process.env.NEXT_PUBLIC_AGIXT_AGENT;
   const { data: providerData } = useProviders();
 
   // Filter connected providers
