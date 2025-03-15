@@ -69,7 +69,6 @@ const generateSearchParamConfig = (searchParams: URLSearchParams): InteractiveCo
   removeUndefined({
     agent: searchParams.get('agent') || undefined,
     agixt: undefined,
-    openai: undefined,
     overrides: {
       mode: (searchParams.get('mode') as 'prompt' | 'chain' | 'command') || undefined,
       prompt: searchParams.get('prompt') || undefined,

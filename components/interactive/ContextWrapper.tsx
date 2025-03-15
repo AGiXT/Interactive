@@ -1,6 +1,5 @@
 'use client';
 import React, { useState, ReactNode, useEffect } from 'react';
-import OpenAI from 'openai';
 import { getCookie } from 'cookies-next';
 import { InteractiveConfigContext, InteractiveConfigDefault, InteractiveConfig } from './InteractiveConfigContext';
 import AGiXTSDK from '@/lib/sdk';
@@ -50,11 +49,6 @@ export default function InteractiveConfigContextWrapper({
     );
   }
   const agixt: AGiXTSDK = new AGiXTSDK();
-  const openai: OpenAI = new OpenAI({
-    apiKey: apiKey.replace('Bearer ', ''),
-    baseURL: agixtServer + '/v1',
-    dangerouslyAllowBrowser: true,
-  });
   // Used to determine whether to render the app or not (populates with any fetch errors from tryFetch calls).
   const [InteractiveConfigState, setInteractiveConfigState] = useState<InteractiveConfig>({
     // Default state and initializes the SDK
@@ -62,17 +56,16 @@ export default function InteractiveConfigContextWrapper({
     ...initialState,
     // Overridden in context provider.
     agixt: agixt,
-    openai: openai,
     mutate: null,
   } as InteractiveConfig);
 
-  log([`Context Wrapper initializing AGiXTSDK and OpenAI with baseUri ${agixtServer} and apiKey ${apiKey}.`], {
+  log([`Context Wrapper initializing AGiXTSDK with baseUri ${agixtServer} and apiKey ${apiKey}.`], {
     client: 1,
   });
 
   return (
     <InteractiveConfigContext.Provider
-      value={{ ...InteractiveConfigState, agixt: agixt, openai: openai, mutate: setInteractiveConfigState }}
+      value={{ ...InteractiveConfigState, agixt: agixt, mutate: setInteractiveConfigState }}
     >
       {children}
     </InteractiveConfigContext.Provider>
