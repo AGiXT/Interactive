@@ -1,5 +1,4 @@
 'use client';
-import OpenAI from 'openai';
 import { Context, createContext, useContext } from 'react';
 import AGiXTSDK from '@/lib/sdk';
 
@@ -36,7 +35,6 @@ export type Overrides = {
 export type InteractiveConfig = {
   agent: string;
   agixt: AGiXTSDK;
-  openai?: OpenAI;
   overrides?: Overrides;
   mutate?: (InteractiveConfig) => void | ((previous: InteractiveConfig) => InteractiveConfig);
 };

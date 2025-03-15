@@ -1,7 +1,6 @@
 const InteractiveConfigDefault = {
   agent: process.env.NEXT_PUBLIC_AGIXT_AGENT || 'XT',
   agixt: null,
-  openai: null,
   overrides: {
     mode: 'prompt',
     prompt: 'Think About It',
