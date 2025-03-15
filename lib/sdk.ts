@@ -1,5 +1,6 @@
 import axios, { AxiosRequestConfig } from 'axios';
-import { getCookie } from 'cookies-next';
+import { getCookie, setCookie } from 'cookies-next';
+import { get } from 'http';
 
 export default class AGiXTSDK {
   private baseUri: string;
@@ -647,5 +648,28 @@ export default class AGiXTSDK {
 
   async getConversationsWithIds() {
     return this.request<{ conversations_with_ids: any }>('get', '/api/conversations').then((r) => r.conversations_with_ids);
+  }
+
+  async chatCompletions(messages: any[]) {
+    const completionResponse = await axios.post(
+      `${this.baseUri}/v1/chat/completions`,
+      {
+        messages: messages,
+        model: getCookie('agixt-agent'),
+        user: getCookie('agixt-conversation'),
+      },
+      {
+        headers: this.headers,
+      },
+    );
+    if (completionResponse.status === 200) {
+      const chatCompletion = completionResponse.data;
+      // Set the conversation ID in the cookie
+      const conversationId = chatCompletion.id;
+      setCookie('agixt-conversation', conversationId, { domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN });
+      return chatCompletion;
+    } else {
+      throw 'Failed to get response from the agent';
+    }
   }
 }
