@@ -2,6 +2,7 @@ import React, { ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import CodeBlock from './Markdown/CodeBlock';
+import LatexBlock from './Markdown/LatexBlock';
 import MarkdownHeading from './Markdown/Heading';
 import MarkdownLink from './Markdown/Link';
 import MarkdownImage from './Markdown/Image';
@@ -123,6 +124,17 @@ export default function MarkdownBlock({ content, chatItem, setLoading }: Markdow
               },
               img({ src, alt }) {
                 return <MarkdownImage src={src} alt={alt} />;
+              },
+              code({ node, inline, className, children, ...props }) {
+                const match = /language-(\w+)/.exec(className || '');
+                if (match && match[1] === 'latex') {
+                  return <LatexBlock>{String(children).replace(/\n$/, '')}</LatexBlock>;
+                }
+                return inline ? (
+                  <span className='inline p-1 mx-1 font-mono rounded-lg text-muted-foreground bg-muted'>{children}</span>
+                ) : (
+                  <CodeBlock inline={false} fileName="">{String(children)}</CodeBlock>
+                );
               },
             }}
           >
