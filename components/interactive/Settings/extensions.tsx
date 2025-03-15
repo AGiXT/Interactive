@@ -193,11 +193,7 @@ export function Extensions() {
     },
     [searchText],
   );
-  useEffect(() => {
-    if (!searchParams.get('tab')) {
-      router.push(`${pathname}?tab=extensions`);
-    }
-  }, [searchParams]);
+
   const { connectedExtensions, availableExtensions } = categorizeExtensions(extensions);
   const { connectedProviders, availableProviders } = categorizeProviders(Object.values(providerData));
   return (
