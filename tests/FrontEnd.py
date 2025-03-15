@@ -61,9 +61,7 @@ class FrontEndTest:
         self.popup = None
         self.playwright = None
         self.screenshots_with_actions = []
-        self.agixt = (
-            AGiXTSDK(base_uri="https://api.agixt.dev") if is_desktop() else AGiXTSDK()
-        )
+        self.agixt = AGiXTSDK(base_uri="https://api.agixt.dev")
         self.agixt.register_user(
             email=f"{uuid.uuid4()}@example.com", first_name="Test", last_name="User"
         )
