@@ -8,7 +8,6 @@ import { getCookie } from 'cookies-next';
 import { Check, Mail, MoreHorizontal, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useContext } from 'react';
-import log from '../../next-log/log';
 import useSWR from 'swr';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -456,7 +455,6 @@ export const Team = () => {
       setResponseMessage(error.response?.data?.detail || 'Failed to send invitation');
     }
   };
-  log(['Invitations Data', invitationsData], { client: 3 });
   return (
     <div className='space-y-6'>
       <h4 className='text-md font-medium'>{activeCompany?.name} Current Users</h4>

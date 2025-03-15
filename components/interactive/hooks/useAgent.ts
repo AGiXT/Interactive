@@ -4,7 +4,6 @@ import { useContext } from 'react';
 import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
 import { useCompanies } from '../../idiot/auth/hooks/useUser';
-import log from '../../idiot/next-log/log';
 import { InteractiveConfigContext } from '../InteractiveConfigContext';
 import { chainMutations, createGraphQLClient } from './lib';
 
@@ -68,9 +67,6 @@ export function useAgent(
   if (!searchName && companies?.length) {
     foundEarly = getDefaultAgent();
   }
-  log([`GQL useAgent() SEARCH NAME: ${searchName}`], {
-    client: 3,
-  });
   const swrHook = useSWR<{ agent: Agent | null; commands: string[]; extensions: any[] }>(
     [`/agent?name=${searchName}`, companies, withSettings],
     async (): Promise<{ agent: Agent | null; commands: string[]; extensions: any[] }> => {
@@ -78,21 +74,12 @@ export function useAgent(
         if (withSettings) {
           const client = createGraphQLClient();
           const query = AgentSchema.toGQL('query', 'GetAgent', { name: searchName });
-          log(['GQL useAgent() Query', query], {
-            client: 3,
-          });
           const response = await client.request<{ agent: Agent }>(query, { name: searchName });
-          log(['GQL useAgent() Response', response], {
-            client: 3,
-          });
           return AgentSchema.parse(response.agent);
         } else {
           const toReturn = { agent: foundEarly, commands: [], extensions: [] };
           if (companies?.length && !toReturn.agent) {
             for (const company of companies) {
-              log(['GQL useAgent() Checking Company', company], {
-                client: 3,
-              });
               const agent = company.agents.find((a) => a.name === searchName);
               if (agent) {
                 toReturn.agent = agent;
@@ -100,15 +87,9 @@ export function useAgent(
             }
           }
           if (!toReturn.agent) {
-            log(['GQL useAgent() Agent Not Found, Using Default', toReturn], {
-              client: 3,
-            });
             toReturn.agent = getDefaultAgent();
           }
           if (toReturn.agent) {
-            log(['GQL useAgent() Agent Found, Getting Commands', toReturn], {
-              client: 3,
-            });
             toReturn.extensions = (
               await axios.get(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/agent/${toReturn.agent.name}/extensions`, {
                 headers: {
@@ -117,18 +98,12 @@ export function useAgent(
               })
             ).data.extensions;
             toReturn.commands = await state.agixt.getCommands(toReturn.agent.name);
-          } else {
-            log(['GQL useAgent() Did Not Get Agent', toReturn], {
-              client: 3,
-            });
           }
 
           return toReturn;
         }
       } catch (error) {
-        log(['GQL useAgent() Error', error], {
-          client: 1,
-        });
+        console.error('Error fetching agent:', error);
         return { agent: null, commands: [], extensions: [] };
       }
     },

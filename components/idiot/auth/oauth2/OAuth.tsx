@@ -6,7 +6,6 @@ import deepMerge from '@/lib/objects';
 import { useRouter } from 'next/navigation';
 import { ReactNode, useCallback, useMemo } from 'react';
 import OAuth2Login from 'react-simple-oauth2-login';
-import log from '../../next-log/log';
 import providers from './OAuthProviders';
 
 export type OAuthProps = {
@@ -16,7 +15,6 @@ export default function OAuth({ overrides }: OAuthProps): ReactNode {
   const router = useRouter();
   const oAuthProviders = useMemo(() => deepMerge(providers, overrides) as typeof providers, [providers, overrides]);
   const { mutate } = useAgent();
-  log(['OAuth Providers: ', oAuthProviders], { client: 3 });
   const onOAuth2 = useCallback(
     (response: any) => {
       mutate();

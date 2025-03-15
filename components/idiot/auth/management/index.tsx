@@ -8,7 +8,6 @@ import { useAuthentication } from '../Router';
 import { Profile } from './Profile';
 import { DynamicFormFieldValueTypes } from '@/components/idiot/dynamic-form/DynamicForm';
 import { Button } from '@/components/ui/button';
-import log from '../../next-log/log';
 
 export type ManageProps = {
   userDataSWRKey?: string;
@@ -27,7 +26,6 @@ export default function Manage({
 }: ManageProps): ReactNode {
   const [responseMessage, setResponseMessage] = useState('');
   const [active, setActive] = useState<ActivePage>('Profile');
-  log(['Menu Items', MENU_ITEMS], { client: 3 });
   type User = {
     missing_requirements?: {
       [key: string]: {

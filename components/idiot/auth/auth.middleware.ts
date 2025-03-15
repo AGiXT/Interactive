@@ -14,14 +14,12 @@ export const useAuth: MiddlewareHook = async (req) => {
   const requestedURI = getRequestedURI(req);
   const authMode = getAuthMode();
 
-  console.log('Requested: ' + requestedURI);
   if (authMode) {
     const queryParams = getQueryParams(req);
     if (requestedURI.endsWith('/user/logout')) {
       return toReturn;
     }
     if (queryParams['verify_email'] && queryParams['email']) {
-      console.log('VERIFYING EMAIL: ', queryParams['email'], queryParams['verify_email']);
       await fetch(`${process.env.AGIXT_SERVER}/v1/user/verify/email`, {
         method: 'POST',
         body: JSON.stringify({
@@ -33,10 +31,8 @@ export const useAuth: MiddlewareHook = async (req) => {
         },
       });
     }
-    console.log('-Query Params-');
-    console.log(queryParams);
+
     if (queryParams.invitation_id && queryParams.email) {
-      console.log(`DETECTED INVITE - ${process.env.AUTH_WEB}/register`);
       const cookieArray = [
         generateCookieString('email', queryParams.email, (86400).toString()),
         generateCookieString('invitation', queryParams.invitation_id, (86400).toString()),
@@ -57,8 +53,6 @@ export const useAuth: MiddlewareHook = async (req) => {
       !process.env.PRIVATE_ROUTES?.split(',').some((path) => req.nextUrl.pathname.startsWith(path)) &&
       !req.nextUrl.pathname.startsWith('/user')
     ) {
-      console.log('Private routes: ', process.env.PRIVATE_ROUTES?.split(','));
-      console.log('Public route: ', req.nextUrl.pathname);
       return toReturn;
     }
     if (req.nextUrl.pathname.startsWith('/user/close')) {
@@ -69,23 +63,12 @@ export const useAuth: MiddlewareHook = async (req) => {
     if (jwt) {
       try {
         const response = await verifyJWT(jwt);
-        console.log('Response Status: ', response.status);
         const responseJSON = await response.json();
-        console.log(responseJSON);
         if (response.status === 402) {
-          console.log('- NO SUBSCRIPTION GUARD CLAUSE INVOKED -');
           // Payment Required
           // No body = no stripe ID present for user.
           // Body = that is the session ID for the user to get a new subscription.
           if (!requestedURI.startsWith(`${process.env.AUTH_WEB}/subscribe`)) {
-            console.log(
-              `Payment required. Redirecting to: ${process.env.AUTH_WEB}/subscribe${
-                responseJSON.detail.customer_session.client_secret
-                  ? '?customer_session=' + responseJSON.detail.customer_session.client_secret
-                  : ''
-              }`,
-            );
-
             toReturn.response = NextResponse.redirect(
               new URL(
                 `${process.env.AUTH_WEB}/subscribe${
@@ -98,14 +81,12 @@ export const useAuth: MiddlewareHook = async (req) => {
             toReturn.activated = true;
           }
         } else if (responseJSON?.missing_requirements || response.status === 403) {
-          console.log('- MISSING REQUIREMENTS GUARD CLAUSE INVOKED -');
           // Forbidden (Missing Values for User)
           if (!requestedURI.startsWith(`${process.env.AUTH_WEB}/manage`)) {
             toReturn.response = NextResponse.redirect(new URL(`${process.env.AUTH_WEB}/manage`));
             toReturn.activated = true;
           }
         } else if (response.status === 502) {
-          console.log('- SERVER DOWN GUARD CLAUSE INVOKED -');
           const cookieArray = [generateCookieString('href', requestedURI, (86400).toString())];
           toReturn.activated = true;
           toReturn.response = NextResponse.redirect(new URL(`${process.env.AUTH_WEB}/down`, req.url), {
@@ -115,7 +96,6 @@ export const useAuth: MiddlewareHook = async (req) => {
             },
           });
         } else if (response.status >= 500 && response.status < 600) {
-          console.log('- SERVER ERROR GUARD CLAUSE INVOKED -');
           // Internal Server Error
           // This should not delete the JWT.
           console.error(
@@ -125,7 +105,6 @@ export const useAuth: MiddlewareHook = async (req) => {
           toReturn.response = NextResponse.redirect(new URL(`${process.env.AUTH_WEB}/error`, req.url));
           toReturn.activated = true;
         } else if (response.status !== 200) {
-          console.log('- UNKNOWN RESPONSE CODE GUARD CLAUSE INVOKED -');
           // @ts-expect-error NextJS' types are wrong.
           toReturn.response.headers.set('Set-Cookie', [
             generateCookieString('jwt', '', (0).toString()),
@@ -138,16 +117,9 @@ export const useAuth: MiddlewareHook = async (req) => {
           jwt.length > 0 &&
           !['/user/manage'].includes(req.nextUrl.pathname)
         ) {
-          console.log('- AUTHED USER TO UNAUTHED PATH GUARD CLAUSE INVOKED -');
-          console.log(
-            `Detected authenticated user attempting to visit non-management page. Redirecting to ${process.env.AUTH_WEB}/manage...`,
-          );
           toReturn.response = NextResponse.redirect(new URL(`${process.env.AUTH_WEB}/manage`));
           toReturn.activated = true;
-        } else {
-          console.log('JWT is valid and no guard clauses tripped.');
         }
-        console.log('JWT is valid (or server was unable to verify it).');
       } catch (exception) {
         if (exception instanceof TypeError && exception.cause instanceof AggregateError) {
           console.error(
@@ -173,26 +145,6 @@ export const useAuth: MiddlewareHook = async (req) => {
             exception,
           );
         }
-        toReturn.activated = true;
-      }
-    } else {
-      console.log(
-        `${requestedURI} does ${requestedURI.startsWith(process.env.AUTH_WEB as string) ? '' : 'not '}start with ${process.env.AUTH_WEB}.`,
-      );
-
-      if (
-        authMode === AuthMode.MagicalAuth &&
-        requestedURI.startsWith(process.env.AUTH_WEB || '') &&
-        req.nextUrl.pathname !== '/user/manage'
-      ) {
-        console.log('Pathname: ' + req.nextUrl.pathname);
-      } else {
-        console.log(
-          `Detected unauthenticated user attempting to visit non-auth page, redirecting to authentication at ${process.env.AUTH_WEB}...`,
-        );
-        toReturn.response = NextResponse.redirect(new URL(process.env.AUTH_WEB as string), {
-          headers: { 'Set-Cookie': generateCookieString('href', requestedURI, (86400).toString()) },
-        });
         toReturn.activated = true;
       }
     }

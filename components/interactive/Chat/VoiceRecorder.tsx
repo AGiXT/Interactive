@@ -3,7 +3,6 @@ import { LuMic as Mic, LuSquare as Square } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import log from '@/components/idiot/next-log/log';
 
 export interface VoiceRecorderProps {
   onSend: (message: string | object, uploadedFiles?: { [x: string]: string }) => Promise<void>;
@@ -190,7 +189,6 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onSend, disabled }
     (event: KeyboardEvent) => {
       // Check if both Left Ctrl and Backquote are currently pressed
       if (event.getModifierState('Control') && event.code === 'Backquote' && !isRecording && !event.repeat) {
-        log(['Starting recording...'], { client: 1 });
         setPtt(true);
         startRecording();
       }
@@ -202,7 +200,6 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onSend, disabled }
     (event: KeyboardEvent) => {
       // Stop recording when either key is released
       if (['ControlLeft', 'Backquote'].includes(event.code) && ptt) {
-        log(['Stopping recording...'], { client: 1 });
         stopRecording();
         setPtt(false);
       }

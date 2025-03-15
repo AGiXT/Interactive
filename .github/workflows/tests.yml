@@ -14,7 +14,7 @@ on:
       front-end-image:
         type: string
         description: 'Front end image to run'
-        default: 'ghcr.io/AGiXT/interactive:main'
+        default: 'ghcr.io/agixt/interactive:main'
         required: true
       front-end-port:
         type: string
@@ -58,36 +58,6 @@ jobs:
     outputs:
       digest: ${{ steps.dockerBuild.outputs.digest }}
     services:
-      agixt:
-        image: ghcr.io/josh-xt/agixt:main
-        credentials:
-          username: josh-xt
-          password: ${{ secrets.GHCR_PAT }}
-        ports:
-          - '7437:7437'
-        options: >-
-          --health-cmd "curl -f http://localhost:7437"
-          --health-interval 10s
-          --health-timeout 15s
-          --health-retries 10
-          --health-start-period 5m
-        env:
-          DATABASE_TYPE: sqlite
-          DATABASE_NAME: agixt
-          AGIXT_API_KEY: just-a-test
-          AGIXT_URI: http://agixt:7437
-          APP_URI: http://localhost:3437
-          AGENT_NAME: XT
-          WORKING_DIRECTORY: /agixt/WORKSPACE
-          TOKENIZERS_PARALLELISM: 'false'
-          UVICORN_WORKERS: 10
-          LOG_LEVEL: INFO
-          TZ: America/New_York
-          SEED_DATA: true
-          EZLOCALAI_URI: https://api.ezlocal.ai/v1/
-          EZLOCALAI_API_KEY: "n0ne"
-          EZLOCALAI_MAX_TOKENS: "32000"
-          EZLOCALAI_VOICE: "HAL9000"
       front-end:
         image: ${{ inputs.front-end-image }}
         ports:
@@ -102,7 +72,7 @@ jobs:
           mode: production
           NEXT_TELEMETRY_DISABLED: 1
           AGIXT_AGENT: XT
-          AGIXT_FOOTER_MESSAGE: 'AGiXT 2024'
+          AGIXT_FOOTER_MESSAGE: 'AGiXT 2025'
           APP_DESCRIPTION: 'XT is an advanced artificial intelligence agent orchestration agent.'
           APP_NAME: XT
           AGIXT_FILE_UPLOAD_ENABLED: true
@@ -114,7 +84,8 @@ jobs:
           INTERACTIVE_MODE: chat
           ALLOW_EMAIL_SIGN_IN: true
           APP_URI: http://localhost:${{ inputs.front-end-port }}
-          AGIXT_SERVER: http://localhost:7437
+          AGIXT_SERVER: https://api.agixt.dev
+          MICROSOFT_CLIENT_ID: "22dca179-bed1-4cad-8983-6add92b06acb"
           LOG_VERBOSITY_SERVER: 3
           TZ: America/New_York
     steps:
@@ -145,9 +116,6 @@ jobs:
             echo "artifact-file=${notebook}/*.pdf"  >> "$GITHUB_ENV"
           fi
 
-      - name: Check AGiXT logs
-        run: docker logs ${{ job.services.agixt.id }} --follow &
-
       - name: Check front-end logs
         run: docker logs ${{ job.services.front-end.id }} --follow &
 
@@ -177,8 +145,6 @@ jobs:
           BRANCH_NAME=$(echo ${{ github.ref }} | awk -F'/' '{print $NF}')
           if [ "${{ github.actor }}" == "Josh-XT" ]; then
             DISCORD_NAME="<@381837595522367488>"
-          elif [ "${{ github.actor }}" == "AGiXT" ]; then
-            DISCORD_NAME="<@329145730725838858>"
           elif [ "${{ github.actor }}" == "waiscodes" ]; then
             DISCORD_NAME="<@670762167037067304>"
           elif [ "${{ github.actor }}" == "birdup000" ]; then
