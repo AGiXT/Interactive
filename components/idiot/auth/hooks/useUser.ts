@@ -64,18 +64,9 @@ export function useCompany(id?: string): SWRResponse<Company | null> {
         if (id) {
           return companies?.find((c) => c.id === id) || null;
         } else {
-          log(['GQL useCompany() Companies', companies], {
-            client: 1,
-          });
           const agentName = getCookie('agixt-agent');
-          log(['GQL useCompany() AgentName', agentName], {
-            client: 1,
-          });
           const targetCompany =
             companies?.find((c) => (agentName ? c.agents.some((a) => a.name === agentName) : c.primary)) || null;
-          log(['GQL useCompany() Company', targetCompany], {
-            client: 1,
-          });
           if (!targetCompany) return null;
           targetCompany.extensions = (
             await axios.get(
@@ -88,9 +79,6 @@ export function useCompany(id?: string): SWRResponse<Company | null> {
               },
             )
           ).data.extensions;
-          log(['GQL useCompany() Company With Extensions', targetCompany], {
-            client: 3,
-          });
           return targetCompany;
         }
       } catch (error) {
@@ -134,13 +122,7 @@ export function useUser(): SWRResponse<User | null> {
       if (!getCookie('jwt')) return null;
       try {
         const query = UserSchema.toGQL('query', 'GetUser');
-        log(['GQL useUser() Query', query], {
-          client: 3,
-        });
         const response = await client.request<{ user: User }>(query);
-        log(['GQL useUser() Response', response], {
-          client: 3,
-        });
         return UserSchema.parse(response.user);
       } catch (error) {
         log(['GQL useUser() Error', error], {

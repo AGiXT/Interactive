@@ -27,7 +27,6 @@ export default function Manage({
 }: ManageProps): ReactNode {
   const [responseMessage, setResponseMessage] = useState('');
   const [active, setActive] = useState<ActivePage>('Profile');
-  log(['Menu Items', MENU_ITEMS], { client: 3 });
   type User = {
     missing_requirements?: {
       [key: string]: {

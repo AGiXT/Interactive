@@ -111,7 +111,6 @@ export default function DynamicForm({
       }
     });
     setEditedState(initialState);
-    log(['Setting initial dynamic form state', initialState], { client: 2 });
   }, [fields, toUpdate]); // Depend on `fields` to re-initialize state when `fields` prop changes
 
   return (

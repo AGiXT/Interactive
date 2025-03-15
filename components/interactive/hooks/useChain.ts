@@ -36,17 +36,8 @@ export function useChain(chainName?: string): SWRResponse<Chain | null> {
     async (): Promise<Chain | null> => {
       try {
         const query = ChainSchema.toGQL('query', 'GetChain', { chainName: chainName });
-        log(['GQL useChain() Query', query], {
-          client: 3,
-        });
         const response = await client.request<{ chain: Chain }>(query, { chainName: chainName });
-        log(['GQL useChain() Response', response], {
-          client: 3,
-        });
         const validated = ChainSchema.parse(response.chain);
-        log(['GQL useChain() Validated', validated], {
-          client: 3,
-        });
         return validated;
       } catch (error) {
         log(['GQL useChain() Error', error], {
@@ -67,17 +58,8 @@ export function useChains(): SWRResponse<Chain[]> {
     async (): Promise<Chain[]> => {
       try {
         const query = ChainsSchema.toGQL('query', 'GetChains');
-        log(['GQL useChains() Query', query], {
-          client: 3,
-        });
         const response = await client.request<{ chains: Chain[] }>(query);
-        log(['GQL useChains() Response', response], {
-          client: 3,
-        });
         const validated = z.array(ChainsSchema).parse(response.chains);
-        log(['GQL useChains() Validated', validated], {
-          client: 3,
-        });
         return validated;
       } catch (error) {
         log(['GQL useChains() Error', error], {

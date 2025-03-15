@@ -55,9 +55,6 @@ export const useDocsPublicAccess: MiddlewareHook = async (req) => {
 };
 
 export default async function Middleware(req: NextRequest): Promise<NextResponse> {
-  log([`MIDDLEWARE INVOKED AT ${req.nextUrl.pathname}`], {
-    server: 1,
-  });
   const hooks = [useNextAPIBypass, useDocsPublicAccess, useOAuth2, useJWTQueryParam, useAuth];
   for (const hook of hooks) {
     const hookResult = await hook(req);

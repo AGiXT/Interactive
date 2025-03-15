@@ -20,7 +20,6 @@ import ChatLog from './ChatLog';
 
 export async function getAndFormatConversastion(state): Promise<any[]> {
   const rawConversation = await state.agixt.getConversation('', state.overrides.conversation, 100, 1);
-  log(['Raw conversation: ', rawConversation], { client: 3 });
 
   // Create a map of activity messages for faster lookups
   const activityMessages = {};
@@ -155,7 +154,6 @@ export default function Chat({
       );
       if (completionResponse.status === 200) {
         const chatCompletion = completionResponse.data;
-        log(['RESPONSE: ', chatCompletion], { client: 1 });
 
         // Store conversation ID
         const conversationId = chatCompletion.id;
@@ -249,7 +247,6 @@ export default function Chat({
 
             // Create the new conversation
             const newConversation = await state.agixt.newConversation(state.agent, conversationName, conversationContent);
-            log(['New conversation:', newConversation], { client: 3 });
             const newConversationID = newConversation.id || '-';
             // Update the conversation list and navigate to the new conversation
             await mutate('/conversations');

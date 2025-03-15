@@ -75,9 +75,6 @@ export function useConversations(): SWRResponse<ConversationEdge[]> {
     async (): Promise<ConversationEdge[]> => {
       try {
         const query = z.object({ edges: ConversationEdgeSchema }).toGQL('query', 'GetConversations');
-        log(['GQL useConversations() Query', query], {
-          client: 3,
-        });
         const response = await client.request<{ conversations: { edges: ConversationEdge[] } }>(query);
         return z
           .array(ConversationEdgeSchema)

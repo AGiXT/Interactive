@@ -49,13 +49,7 @@ export function useProviders(): SWRResponse<Provider[]> {
       try {
         const query = ProviderSchema.toGQL('query', 'GetProviders');
         const response = await client.request<Provider[]>(query);
-        log(['GQL useProviders() Response', response], {
-          client: 3,
-        });
         const validated = z.array(ProviderSchema).parse(response.providers);
-        log(['GQL useProviders() Validated', validated], {
-          client: 3,
-        });
         return validated;
       } catch (error) {
         log(['GQL useProviders() Error', error], {

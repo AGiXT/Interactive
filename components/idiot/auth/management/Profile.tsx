@@ -98,7 +98,6 @@ export const Profile = ({
                 )
                 .catch((exception: any) => exception.response)
             ).data;
-            log(['Update Response', updateResponse], { client: 2 });
             setResponseMessage(updateResponse.detail.toString());
             await mutate('/user');
           }}

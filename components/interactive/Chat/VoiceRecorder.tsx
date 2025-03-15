@@ -190,7 +190,6 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onSend, disabled }
     (event: KeyboardEvent) => {
       // Check if both Left Ctrl and Backquote are currently pressed
       if (event.getModifierState('Control') && event.code === 'Backquote' && !isRecording && !event.repeat) {
-        log(['Starting recording...'], { client: 1 });
         setPtt(true);
         startRecording();
       }
@@ -202,7 +201,6 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onSend, disabled }
     (event: KeyboardEvent) => {
       // Stop recording when either key is released
       if (['ControlLeft', 'Backquote'].includes(event.code) && ptt) {
-        log(['Stopping recording...'], { client: 1 });
         stopRecording();
         setPtt(false);
       }

@@ -16,7 +16,6 @@ export default function OAuth({ overrides }: OAuthProps): ReactNode {
   const router = useRouter();
   const oAuthProviders = useMemo(() => deepMerge(providers, overrides) as typeof providers, [providers, overrides]);
   const { mutate } = useAgent();
-  log(['OAuth Providers: ', oAuthProviders], { client: 3 });
   const onOAuth2 = useCallback(
     (response: any) => {
       mutate();
