@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import CodeBlock from './Markdown/CodeBlock';
 import LatexBlock from './Markdown/LatexBlock';
+import InlineLatex from './Markdown/InlineLaTeX';
 import MarkdownHeading from './Markdown/Heading';
 import MarkdownLink from './Markdown/Link';
 import MarkdownImage from './Markdown/Image';
@@ -134,6 +135,23 @@ export default function MarkdownBlock({ content, chatItem, setLoading }: Markdow
                   <span className='inline p-1 mx-1 font-mono rounded-lg text-muted-foreground bg-muted'>{children}</span>
                 ) : (
                   <CodeBlock inline={false} fileName="">{String(children)}</CodeBlock>
+                );
+              },
+              text({ children }) {
+                const text = String(children);
+                if (!text.includes('$')) return children;
+                
+                const parts = text.split(/(\$[^\$]+\$)/g);
+                return (
+                  <>
+                    {parts.map((part, i) => {
+                      if (part.startsWith('$') && part.endsWith('$')) {
+                        const latex = part.slice(1, -1);
+                        return <InlineLatex key={i}>{latex}</InlineLatex>;
+                      }
+                      return part;
+                    })}
+                  </>
                 );
               },
             }}
