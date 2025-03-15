@@ -651,12 +651,13 @@ export default class AGiXTSDK {
   }
 
   async chatCompletions(messages: any[]) {
+    const currentConversation = getCookie('agixt-conversation');
     const completionResponse = await axios.post(
       `${this.baseUri}/v1/chat/completions`,
       {
         messages: messages,
         model: getCookie('agixt-agent'),
-        user: getCookie('agixt-conversation'),
+        user: currentConversation,
       },
       {
         headers: this.headers,
@@ -664,9 +665,10 @@ export default class AGiXTSDK {
     );
     if (completionResponse.status === 200) {
       const chatCompletion = completionResponse.data;
-      // Set the conversation ID in the cookie
-      const conversationId = chatCompletion.id;
-      setCookie('agixt-conversation', conversationId, { domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN });
+      if (currentConversation !== chatCompletion.id) {
+        // Set the conversation ID in the cookie
+        setCookie('agixt-conversation', chatCompletion.id, { domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN });
+      }
       return chatCompletion;
     } else {
       throw 'Failed to get response from the agent';
