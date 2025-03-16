@@ -11,14 +11,10 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import OAuth from '@/components/auth/OAuth';
 
-export type RegisterProps = {
-  additionalFields?: string[];
-  userRegisterEndpoint?: string;
-};
-
-export default function Register({ additionalFields = [], userRegisterEndpoint = '/v1/user' }: RegisterProps): ReactNode {
+export default function Register(): ReactNode {
   const formRef = useRef(null);
   const router = useRouter();
+  const additionalFields = ['first_name', 'last_name'];
   const [captcha, setCaptcha] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [responseMessage, setResponseMessage] = useState('');
@@ -37,7 +33,7 @@ export default function Register({ additionalFields = [], userRegisterEndpoint =
     try {
       // TODO fix the stupid double submission.
       registerResponse = await axios
-        .post(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}${userRegisterEndpoint}`, {
+        .post(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user`, {
           ...formData,
         })
         .catch((exception: AxiosError) => {
