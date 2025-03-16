@@ -13,15 +13,6 @@ import {
   RiTwitterFill as Twitter,
 } from 'react-icons/ri';
 import { GiTesla } from 'react-icons/gi';
-import React, { useEffect } from 'react';
-
-export function Close() {
-  useEffect(() => {
-    window.close();
-  }, []);
-
-  return null;
-}
 
 export const providers = {
   Amazon: {
