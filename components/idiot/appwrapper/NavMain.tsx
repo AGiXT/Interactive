@@ -1,12 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { ChevronRightIcon } from '@radix-ui/react-icons';
 import {
   BookOpen,
   Bot,
   GraduationCap,
-  HelpCircle,
   Link as LuLink,
   Puzzle,
   Rocket,
@@ -19,7 +18,6 @@ import {
 } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { TbMessageCirclePlus } from 'react-icons/tb';
-
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   SidebarGroup,
@@ -34,7 +32,7 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-import { useCompany } from '../auth/hooks/useUser';
+import { useCompany } from '@/components/idiot/auth/hooks/useUser';
 import { getCookie } from 'cookies-next';
 
 type NestedItem = {
@@ -66,9 +64,7 @@ const docItems = [
   {
     title: 'Introduction',
     icon: BookOpen,
-    items: [
-      { title: 'Introduction', slug: '0-Introduction' }
-    ],
+    items: [{ title: 'Introduction', slug: '0-Introduction' }],
   },
   {
     title: 'Getting Started',
@@ -135,10 +131,10 @@ const docItems = [
 ];
 
 // Convert doc items to nav items with proper URLs
-const docNavItems = docItems.map(section => ({
+const docNavItems = docItems.map((section) => ({
   ...section,
   url: '/docs',
-  items: section.items.map(item => ({
+  items: section.items.map((item) => ({
     title: item.title,
     url: `/docs/${item.slug}`,
   })),
@@ -310,11 +306,9 @@ export function NavMain() {
                                 <SidebarMenuButton
                                   side='left'
                                   tooltip={subItem.title}
-                                  className={cn(
-                                    'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                                  )}
+                                  className={cn('hover:bg-sidebar-accent hover:text-sidebar-accent-foreground')}
                                 >
-                                  {subItem.icon && <subItem.icon className="h-4 w-4" />}
+                                  {subItem.icon && <subItem.icon className='h-4 w-4' />}
                                   <span>{subItem.title}</span>
                                   <ChevronRightIcon className='ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90' />
                                 </SidebarMenuButton>
@@ -326,11 +320,13 @@ export function NavMain() {
                                       <SidebarMenuSubButton asChild>
                                         <Link
                                           href={nestedItem.url}
-                                          className={cn('w-full', decodeURIComponent(pathname).replace(/\.md$/, '') === nestedItem.url && 'bg-muted')}
+                                          className={cn(
+                                            'w-full',
+                                            decodeURIComponent(pathname).replace(/\.md$/, '') === nestedItem.url &&
+                                              'bg-muted',
+                                          )}
                                         >
-                                          <span className='flex items-center gap-2'>
-                                            {nestedItem.title}
-                                          </span>
+                                          <span className='flex items-center gap-2'>{nestedItem.title}</span>
                                         </Link>
                                       </SidebarMenuSubButton>
                                     </SidebarMenuSubItem>

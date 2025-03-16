@@ -17,8 +17,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import SwitchDark from '@/components/idiot/theme/SwitchDark';
-import SwitchColorblind from '@/components/idiot/theme/SwitchColorblind';
 
 export const Timer = ({ loading, timer }: { loading: boolean; timer: number }) => {
   const tooltipMessage = loading
@@ -141,15 +139,6 @@ export const ResetConversation = ({ state, setCookie }: any) => {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-};
-
-export const ThemeToggles = (): ReactNode => {
-  return (
-    <div className='flex flex-col items-center'>
-      <SwitchDark />
-      <SwitchColorblind />
-    </div>
   );
 };
 

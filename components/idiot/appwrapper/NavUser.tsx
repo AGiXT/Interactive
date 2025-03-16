@@ -1,9 +1,8 @@
 'use client';
 
 import { CaretRightIcon, ComponentPlaceholderIcon } from '@radix-ui/react-icons';
-import { BadgeCheck, LogOut } from 'lucide-react';
-
-import { Appearances, Themes } from '@/components/idiot/appwrapper/UserMenu';
+import { BadgeCheck, LogOut, MoonIcon, LayoutGrid } from 'lucide-react';
+import { useTheme } from '@/components/idiot/theme/useTheme';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -13,6 +12,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
 } from '@/components/ui/dropdown-menu';
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/ui/sidebar';
 import { useRouter } from 'next/navigation';
@@ -26,6 +29,56 @@ const getGravatarUrl = (email?: string, size = 40): string => {
   return `https://www.gravatar.com/avatar/${hash}?s=${size}&d=404`;
 };
 
+export const Themes = () => {
+  const { themes, currentTheme, setTheme } = useTheme();
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger>
+        <MoonIcon className='w-4 h-4 mr-2' />
+        Themes
+      </DropdownMenuSubTrigger>
+      <DropdownMenuPortal>
+        <DropdownMenuSubContent>
+          <DropdownMenuLabel>Themes</DropdownMenuLabel>
+          {themes.map((theme) => (
+            <DropdownMenuItem
+              key={theme}
+              className={cn('capitalize', theme === currentTheme && 'bg-muted')}
+              onClick={() => setTheme(theme)}
+            >
+              {theme}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuSubContent>
+      </DropdownMenuPortal>
+    </DropdownMenuSub>
+  );
+};
+export const Appearances = () => {
+  const { appearances, appearance, setAppearance } = useAppearance();
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger>
+        <LayoutGrid className='w-4 h-4 mr-2' />
+        Appearances
+      </DropdownMenuSubTrigger>
+      <DropdownMenuPortal>
+        <DropdownMenuSubContent>
+          <DropdownMenuLabel>Appearances</DropdownMenuLabel>
+          {appearances.map((thisAppearance) => (
+            <DropdownMenuItem
+              key={thisAppearance}
+              className={cn('capitalize', thisAppearance === appearance && 'bg-muted')}
+              onClick={() => setAppearance(thisAppearance)}
+            >
+              {thisAppearance}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuSubContent>
+      </DropdownMenuPortal>
+    </DropdownMenuSub>
+  );
+};
 export function NavUser() {
   const { isMobile } = useSidebar('left');
   const router = useRouter();
