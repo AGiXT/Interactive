@@ -14,7 +14,7 @@ import useSWR, { mutate } from 'swr';
 import { UIProps } from '@/components/interactive/InteractiveAGiXT';
 import { InteractiveConfigContext, Overrides } from '@/components/interactive/InteractiveConfigContext';
 import { useConversations } from '@/components/interactive/hooks/useConversation';
-import ChatBar from '@/components/conversation/ChatInput';
+import ChatBar from '@/components/conversation/chat-input';
 import ChatLog from '@/components/conversation/ChatLog';
 
 export async function getAndFormatConversastion(state): Promise<any[]> {
