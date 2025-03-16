@@ -7,10 +7,33 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import useProducts from '@/components/idiot/auth/hooks/useProducts';
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import useSWR from 'swr';
+
+// Create a custom SWR hook for a specific endpoint
+export function useProducts() {
+  return useSWR(
+    '/products',
+    async () =>
+      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+        ? (
+            await axios.get(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/products`, {
+              headers: {
+                Authorization: getCookie('jwt'),
+              },
+            })
+          ).data
+            .map((x: any) => ({ ...x }))
+            .sort((a: any, b: any) => (a.last_name > b.last_name ? 1 : -1))
+        : [],
+    {
+      fallbackData: [],
+    },
+  );
+}
+
 // const defaultPricingData = [
 //   {
 //     name: 'Free',
