@@ -1,6 +1,6 @@
 import React from 'react';
 import 'katex/dist/katex.min.css';
-import Latex from 'react-latex-next';
+import katex from 'katex';
 
 interface LaTeXProps {
   children: string;
@@ -8,12 +8,17 @@ interface LaTeXProps {
 }
 
 export default function LaTeX({ children, display = false }: LaTeXProps) {
-  // If display mode, wrap in $$ for block equations
-  const formula = display ? `$$${children}$$` : `$${children}$`;
-  
+  const html = katex.renderToString(children, {
+    displayMode: display,
+    throwOnError: false,
+    trust: true,
+    strict: false
+  });
+
   return (
-    <span className={display ? 'block my-4 text-center' : 'inline'}>
-      <Latex>{formula}</Latex>
-    </span>
+    <span 
+      className={display ? 'block my-4 text-center' : 'inline'}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   );
 }

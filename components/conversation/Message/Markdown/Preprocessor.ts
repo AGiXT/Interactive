@@ -9,14 +9,17 @@ type Segment = {
   content: string;
 };
 
-function reprocess(processed: Segment[], rule: any, type: BlockType) {
+function reprocess(processed: Segment[], rule: any, type: BlockType, keepDelimiters = false) {
   return processed
     .map((value) => {
       if (value.type === undefined) {
-        const result = rule(value.content).map((value: string, index: number) => ({
-          type: index % 2 === 1 ? type : undefined,
-          content: value,
-        }));
+        const result = rule(value.content).map((value: string, index: number) => {
+          const isContent = index % 2 === 1;
+          return {
+            type: isContent ? type : undefined,
+            content: isContent && keepDelimiters ? `$$${value}$$` : value,
+          };
+        });
         if (result.length % 2 !== 1) {
           throw new Error(`Unterminated ${type} detected in content: ${value.content}!`);
         }
@@ -40,7 +43,7 @@ function processLaTeX(text: string): Segment[] {
   let processed: Segment[] = [{ content: text }];
   
   // First process display math ($$) to avoid conflicts with inline math
-  processed = reprocess(processed, (content: string) => splitUnEscaped(content, '$$'), 'latex-display');
+  processed = reprocess(processed, (content: string) => splitUnEscaped(content, '$$'), 'latex-display', true);
   
   // Then process inline math ($)
   processed = reprocess(processed, (content: string) => splitUnEscaped(content, '$'), 'latex');
