@@ -12,7 +12,7 @@ import {
   SendMessage,
   Timer,
   UploadFiles,
-} from '@/components/conversation/Adornments';
+} from '@/components/layout/Adornments';
 import { Textarea } from '@/components/ui/textarea';
 import { DropZone } from '@/components/dropzone/DropZone';
 import { Button } from '@/components/ui/button';
