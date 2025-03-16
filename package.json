@@ -6,7 +6,7 @@
     "basic:bitch": "rm -rf ./.next && next dev -p 3000",
     "build": "rm -rf ./.next && next build",
     "clean-build": "rm -rf ./.next & rm -rf ./node_nodules && npm install && npm run build && npm start",
-    "compile": "tsc --jsx react-jsx --project tsconfig.compile.json && shx mkdir -p ./dist/style && npx postcss ./app/globals.css -o ./dist/style/globals.css",
+    "compile": "tsc --jsx react-jsx --project tsconfig.compile.json",
     "start": "next start -p 3437",
     "docker": "docker-compose down && docker-compose pull && docker-compose build && docker-compose up -d",
     "lint": "next lint",
@@ -51,8 +51,7 @@
     "./Selector/Command": "./dist/components/Selectors/CommandSelector.js",
     "./Context": "./dist/types/InteractiveConfigContext.js",
     "./Context/Wrapper": "./dist/components/ContextWrapper.js",
-    "./Config/Hooks": "./dist/config/Hooks.js",
-    "./Style/Global": "./dist/style/globals.css"
+    "./Config/Hooks": "./dist/config/Hooks.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
