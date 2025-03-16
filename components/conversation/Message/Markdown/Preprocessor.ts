@@ -1,11 +1,14 @@
 export type MarkdownBlockProps = {
   children: string;
 };
-type BlockType = 'codeblock' | 'code' | undefined;
+
+type BlockType = 'codeblock' | 'code' | 'latex' | 'latex-display' | undefined;
+
 type Segment = {
   type?: BlockType;
   content: string;
 };
+
 function reprocess(processed: Segment[], rule: any, type: BlockType) {
   return processed
     .map((value) => {
@@ -24,14 +27,38 @@ function reprocess(processed: Segment[], rule: any, type: BlockType) {
     })
     .flat();
 }
+
 function splitUnEscaped(text: string, delimiter: string) {
   return text
     .replaceAll('\\' + delimiter, '´')
     .split(delimiter)
     .map((section) => section.replaceAll('´', '\\' + delimiter));
 }
+
+// Function to handle escaped dollar signs and LaTeX blocks
+function processLaTeX(text: string): Segment[] {
+  let processed: Segment[] = [{ content: text }];
+  
+  // First process display math ($$) to avoid conflicts with inline math
+  processed = reprocess(processed, (content: string) => splitUnEscaped(content, '$$'), 'latex-display');
+  
+  // Then process inline math ($)
+  processed = reprocess(processed, (content: string) => splitUnEscaped(content, '$'), 'latex');
+  
+  return processed;
+}
+
 export default function textToMarkdown(text: string) {
-  // Only split code on code blocks (not inline code)
-  // const splitCode = reprocess(splitCodeBlocks, (content: string) => splitUnEscaped(content, '`'), 'code');
-  return reprocess([{ content: text }], (content: string) => splitUnEscaped(content, '```'), 'codeblock');
+  // Process code blocks first
+  let processed = reprocess([{ content: text }], (content: string) => splitUnEscaped(content, '```'), 'codeblock');
+  
+  // Then process LaTeX for non-code segments
+  processed = processed.map((segment) => {
+    if (segment.type === undefined) {
+      return processLaTeX(segment.content);
+    }
+    return [segment];
+  }).flat();
+  
+  return processed;
 }
