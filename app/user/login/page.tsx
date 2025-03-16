@@ -80,7 +80,7 @@ export const MissingAuthenticator = () => {
   );
 };
 
-export default function Login({ searchParams }: { searchParams: any }): ReactNode {
+export default function Login({ searchParams }: { searchParams: { otp_uri?: string } }): ReactNode {
   const [responseMessage, setResponseMessage] = useState('');
   const [captcha, setCaptcha] = useState<string | null>(null);
 
@@ -122,7 +122,9 @@ export default function Login({ searchParams }: { searchParams: any }): ReactNod
       console.error(exception);
     }
   };
-  const otp_uri = searchParams.otp_uri;
+
+  const otp_uri = searchParams?.otp_uri || '';
+
   return (
     <AuthCard title='Login' description='Please login to your account.' showBackButton>
       <form onSubmit={submitForm} className='flex flex-col gap-4'>
@@ -137,7 +139,7 @@ export default function Login({ searchParams }: { searchParams: any }): ReactNod
               <QRCode
                 size={256}
                 style={{ height: 'auto', maxWidth: '100%', width: '100%' }}
-                value={otp_uri ?? ''}
+                value={otp_uri}
                 viewBox={`0 0 256 256`}
               />
             </div>
