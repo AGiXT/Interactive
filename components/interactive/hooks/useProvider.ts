@@ -1,6 +1,6 @@
 import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
-import { createGraphQLClient } from './lib';
+import { createGraphQLClient } from '@/components/interactive/hooks/lib';
 
 export const ProviderSettingSchema = z.object({
   name: z.string().min(1),

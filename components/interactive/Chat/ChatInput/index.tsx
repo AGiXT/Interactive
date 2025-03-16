@@ -3,9 +3,16 @@
 import React, { ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { setCookie } from 'cookies-next';
 import { BiCollapseVertical } from 'react-icons/bi';
-import { InteractiveConfigContext } from '../../InteractiveConfigContext';
-import { VoiceRecorder } from '../VoiceRecorder';
-import { ListUploadedFiles, OverrideSwitches, ResetConversation, SendMessage, Timer, UploadFiles } from './Adornments';
+import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
+import { VoiceRecorder } from '@/components/interactive/Chat/VoiceRecorder';
+import {
+  ListUploadedFiles,
+  OverrideSwitches,
+  ResetConversation,
+  SendMessage,
+  Timer,
+  UploadFiles,
+} from '@/components/interactive/Chat/ChatInput/Adornments';
 import { Textarea } from '@/components/ui/textarea';
 import { DropZone } from '@/components/dropzone/DropZone';
 import { Button } from '@/components/ui/button';

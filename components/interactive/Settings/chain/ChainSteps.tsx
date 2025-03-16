@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { PlusCircle as LuPlusCircle } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
-import { useChain } from '../../hooks/useChain';
-import ChainStep from './ChainStep';
+import { useChain } from '@/components/interactive/hooks/useChain';
+import ChainStep from '@/components/interactive/Settings/chain/ChainStep';
 
 export default function ChainSteps() {
   const searchParams = useSearchParams();

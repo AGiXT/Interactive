@@ -8,12 +8,12 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import 'katex/dist/katex.min.css';
 import Latex from 'react-latex-next';
 import { useTheme } from '@/components/theme/themes';
-import MarkdownBlock from '../MarkdownBlock';
-import { DataTable } from '../data-table';
-import { createColumns } from '../data-table/data-table-columns';
-import Mermaid from './Code/Mermaid';
-import { parseXSVData } from './Code/ParseXSVData';
-import TabPanel from './TabPanel';
+import MarkdownBlock from '@/components/interactive/Chat/Message/MarkdownBlock';
+import { DataTable } from '@/components/interactive/Chat/Message/data-table';
+import { createColumns } from '@/components/interactive/Chat/Message/data-table/data-table-columns';
+import Mermaid from '@/components/interactive/Chat/Message/Markdown/Code/Mermaid';
+import { parseXSVData } from '@/components/interactive/Chat/Message/Markdown/Code/ParseXSVData';
+import TabPanel from '@/components/interactive/Chat/Message/Markdown/TabPanel';
 
 const fileExtensions: Record<string, string> = {
   '': 'txt',

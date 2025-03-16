@@ -5,12 +5,12 @@ import React, { ReactNode, useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
-import MarkdownBlock from '../Message/MarkdownBlock';
-import formatDate from '../Message/formatDate';
+import MarkdownBlock from '@/components/interactive/Chat/Message/MarkdownBlock';
+import formatDate from '@/components/interactive/Chat/Message/formatDate';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
-import { severities } from './Severtities.tsx';
+import { severities } from '@/components/interactive/Chat/Activity/Severtities';
 
 export function getTimeDifference(timestamp1, timestamp2) {
   // Convert timestamps to Date objects

@@ -7,9 +7,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Check, Download, Pencil, Plus, Trash2 } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { ChainSelector } from '../../Selectors/ChainSelector';
-import { useChain } from '../../hooks/useChain';
-import ChainSteps from './ChainSteps';
+import { ChainSelector } from '@/components/interactive/Selectors/ChainSelector';
+import { useChain } from '@/components/interactive/hooks/useChain';
+import ChainSteps from '@/components/interactive/Settings/chain/ChainSteps';
 
 export default function ChainPanel({ showCreateDialog, setShowCreateDialog }) {
   const [renaming, setRenaming] = useState(false);

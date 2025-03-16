@@ -1,6 +1,6 @@
 import { Plus, Unlink, Wrench, Power, PowerOff } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import MarkdownBlock from '../Chat/Message/MarkdownBlock';
+import MarkdownBlock from '@/components/interactive/Chat/Message/MarkdownBlock';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Dialog,

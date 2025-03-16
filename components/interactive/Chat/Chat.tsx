@@ -11,11 +11,11 @@ import { Badge, Check, Download, Paperclip, Pencil, Plus, Trash2, Upload } from 
 import { useRouter } from 'next/navigation';
 import { useContext, useEffect, useState } from 'react';
 import useSWR, { mutate } from 'swr';
-import { UIProps } from '../InteractiveAGiXT';
-import { InteractiveConfigContext, Overrides } from '../InteractiveConfigContext';
-import { useConversations } from '../hooks/useConversation';
-import ChatBar from './ChatInput';
-import ChatLog from './ChatLog';
+import { UIProps } from '@/components/interactive/InteractiveAGiXT';
+import { InteractiveConfigContext, Overrides } from '@/components/interactive/InteractiveConfigContext';
+import { useConversations } from '@/components/interactive/hooks/useConversation';
+import ChatBar from '@/components/interactive/Chat/ChatInput';
+import ChatLog from '@/components/interactive/Chat/ChatLog';
 
 export async function getAndFormatConversastion(state): Promise<any[]> {
   const rawConversation = await state.agixt.getConversation('', state.overrides.conversation, 100, 1);

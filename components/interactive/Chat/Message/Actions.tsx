@@ -12,10 +12,10 @@ import { Loader2, Volume2 } from 'lucide-react';
 import { useContext, useRef, useState } from 'react';
 import { LuCopy, LuDownload, LuPen as LuEdit, LuGitFork, LuThumbsDown, LuThumbsUp, LuTrash2 } from 'react-icons/lu';
 import { mutate } from 'swr';
-import { InteractiveConfigContext } from '../../InteractiveConfigContext';
-import { useConversations } from '../../hooks/useConversation';
-import JRGDialog from './Dialog';
-import { ChatItem } from './Message';
+import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
+import { useConversations } from '@/components/interactive/hooks/useConversation';
+import JRGDialog from '@/components/interactive/Chat/Message/Dialog';
+import { ChatItem } from '@/components/interactive/Chat/Message/Message';
 
 export type MessageProps = {
   chatItem: { role: string; message: string; timestamp: string; rlhf?: { positive: boolean; feedback: string } };

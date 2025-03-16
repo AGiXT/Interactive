@@ -7,11 +7,11 @@ import { Card } from '@/components/ui/card';
 import { Check, Download, Pencil, Plus, Save, Trash2, Upload } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { usePrompt } from '../../hooks/usePrompt';
-import PromptSelector from '../../Selectors/PromptSelector';
-import { AutoResizeTextarea } from '../training';
-import NewPromptDialog from './PromptDialog';
-import PromptTest from './PromptTest';
+import { usePrompt } from '@/components/interactive/hooks/usePrompt';
+import PromptSelector from '@/components/interactive/Selectors/PromptSelector';
+import { AutoResizeTextarea } from '@/components/interactive/Settings/training';
+import NewPromptDialog from '@/components/interactive/Settings/prompt/PromptDialog';
+import PromptTest from '@/components/interactive/Settings/prompt/PromptTest';
 
 export default function PromptPanel() {
   const searchParams = useSearchParams();

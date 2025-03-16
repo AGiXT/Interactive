@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRouter, useSearchParams } from 'next/navigation';
 import React from 'react';
-import { useChains } from '../hooks/useChain';
+import { useChains } from '@/components/interactive/hooks/useChain';
 
 export function ChainSelector({
   value,

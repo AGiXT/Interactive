@@ -2,9 +2,9 @@
 
 import { Table } from '@tanstack/react-table';
 import { LuX as X } from 'react-icons/lu';
-import { DataTableViewOptions } from './data-table-view-options';
-import { DataTableFilter } from './data-table-filter';
-import { DataTableExport } from './data-table-export';
+import { DataTableViewOptions } from '@/components/interactive/Chat/Message/data-table/data-table-view-options';
+import { DataTableFilter } from '@/components/interactive/Chat/Message/data-table/data-table-filter';
+import { DataTableExport } from '@/components/interactive/Chat/Message/data-table/data-table-export';
 import { Button } from '@/components/ui/button';
 
 interface DataTableToolbarProps<TData> {

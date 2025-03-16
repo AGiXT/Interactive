@@ -4,7 +4,7 @@ import axios from 'axios';
 import { getCookie } from 'cookies-next';
 import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
-import { useAgent } from '../hooks/useAgent';
+import { useAgent } from '@/components/interactive/hooks/useAgent';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';

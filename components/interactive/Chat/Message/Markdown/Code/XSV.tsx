@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, ReactNode, useContext } from 'react';
 import { LuLightbulb as LightBulbIcon } from 'react-icons/lu';
-import { InteractiveConfigContext } from '../../../../InteractiveConfigContext';
+import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
 
 interface Column {
   field: string;
@@ -34,8 +34,8 @@ export const RendererXSV = ({
   const [columns, setColumns] = useState<Column[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
-  const [sortConfig, setSortConfig] = useState<{column: string; direction: 'asc' | 'desc'} | null>(null);
-  const [filters, setFilters] = useState<{[key: string]: string}>({});
+  const [sortConfig, setSortConfig] = useState<{ column: string; direction: 'asc' | 'desc' } | null>(null);
+  const [filters, setFilters] = useState<{ [key: string]: string }>({});
 
   const context = useContext(InteractiveConfigContext);
 
@@ -70,7 +70,7 @@ export const RendererXSV = ({
             width: Math.max(160, header.length * 10),
             flex: 1,
             headerName: header,
-          }))
+          })),
         );
 
         // Process data rows
@@ -80,14 +80,14 @@ export const RendererXSV = ({
             const rowData = hasIdColumn
               ? {
                   id: row[0],
-                  ...Object.fromEntries(dataColumns.map((header, i) => [header, row[i + 1] || '']))
+                  ...Object.fromEntries(dataColumns.map((header, i) => [header, row[i + 1] || ''])),
                 }
               : {
                   id: index,
-                  ...Object.fromEntries(dataColumns.map((header, i) => [header, row[i] || '']))
+                  ...Object.fromEntries(dataColumns.map((header, i) => [header, row[i] || ''])),
                 };
             return rowData;
-          })
+          }),
         );
       }
     }
@@ -145,7 +145,7 @@ export const RendererXSV = ({
         accessorKey: column.field,
         header: column.headerName,
       })),
-    [filteredColumns]
+    [filteredColumns],
   );
 
   // Handle sorting
@@ -153,15 +153,15 @@ export const RendererXSV = ({
     setSortConfig(
       sortConfig?.column === columnField && sortConfig.direction === 'asc'
         ? { column: columnField, direction: 'desc' }
-        : { column: columnField, direction: 'asc' }
+        : { column: columnField, direction: 'asc' },
     );
   };
 
   // Handle filter change
   const handleFilterChange = (columnField: string, value: string) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
-      [columnField]: value
+      [columnField]: value,
     }));
   };
 
@@ -170,12 +170,10 @@ export const RendererXSV = ({
     let result = [...rows];
 
     // Apply filters
-    Object.keys(filters).forEach(columnField => {
+    Object.keys(filters).forEach((columnField) => {
       const filterValue = filters[columnField].toLowerCase();
       if (filterValue) {
-        result = result.filter(row =>
-          String(row[columnField]).toLowerCase().includes(filterValue)
-        );
+        result = result.filter((row) => String(row[columnField]).toLowerCase().includes(filterValue));
       }
     });
 
@@ -184,7 +182,7 @@ export const RendererXSV = ({
       result.sort((a, b) => {
         const aValue = String(a[sortConfig.column]);
         const bValue = String(b[sortConfig.column]);
-        
+
         if (sortConfig.direction === 'asc') {
           return aValue.localeCompare(bValue);
         } else {
@@ -214,23 +212,25 @@ export const RendererXSV = ({
                           className='flex items-center gap-1 hover:text-foreground/70 focus:outline-none group w-full'
                         >
                           <span>{column.headerName}</span>
-                          <span className={`ml-1 transition-colors ${sortConfig?.column === column.field ? 'text-foreground' : 'text-foreground/50 group-hover:text-foreground/70'}`}>
+                          <span
+                            className={`ml-1 transition-colors ${sortConfig?.column === column.field ? 'text-foreground' : 'text-foreground/50 group-hover:text-foreground/70'}`}
+                          >
                             {sortConfig?.column === column.field ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '↕'}
                           </span>
                         </button>
-                        <div className="relative">
+                        <div className='relative'>
                           <input
-                            type="text"
-                            className="w-full rounded border border-input bg-background px-2 py-1 text-xs transition-colors hover:border-accent focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                            type='text'
+                            className='w-full rounded border border-input bg-background px-2 py-1 text-xs transition-colors hover:border-accent focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring'
                             placeholder={`Filter...`}
                             value={filters[column.field] || ''}
                             onChange={(e) => handleFilterChange(column.field, e.target.value)}
                           />
                           {filters[column.field] && (
                             <button
-                              className="absolute right-2 top-1/2 -translate-y-1/2 text-foreground/50 hover:text-foreground/70"
+                              className='absolute right-2 top-1/2 -translate-y-1/2 text-foreground/50 hover:text-foreground/70'
                               onClick={() => handleFilterChange(column.field, '')}
-                              aria-label="Clear filter"
+                              aria-label='Clear filter'
                             >
                               ×
                             </button>
@@ -256,7 +256,7 @@ export const RendererXSV = ({
           </div>
           <div className='flex flex-wrap gap-4 items-center justify-between border-t border-border pt-4 text-sm'>
             <div className='flex items-center gap-2'>
-              <label className="text-muted-foreground">Show:</label>
+              <label className='text-muted-foreground'>Show:</label>
               <select
                 className='border rounded px-2 py-1 bg-background hover:bg-accent/50 focus:outline-none'
                 value={pageSize}
@@ -268,8 +268,9 @@ export const RendererXSV = ({
                   </option>
                 ))}
               </select>
-              <span className="text-muted-foreground">
-                {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, filteredRows.length)} of {filteredRows.length}
+              <span className='text-muted-foreground'>
+                {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, filteredRows.length)} of{' '}
+                {filteredRows.length}
               </span>
             </div>
             <div className='flex items-center gap-2'>
@@ -280,7 +281,7 @@ export const RendererXSV = ({
               >
                 ←
               </button>
-              <span className="text-muted-foreground">
+              <span className='text-muted-foreground'>
                 Page {currentPage} of {Math.ceil(filteredRows.length / pageSize)}
               </span>
               <button

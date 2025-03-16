@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useMemo, useRef } from 'react';
-import MarkdownBlock from './MarkdownBlock';
-import formatDate from './formatDate';
+import MarkdownBlock from '@/components/interactive/Chat/Message/MarkdownBlock';
+import formatDate from '@/components/interactive/Chat/Message/formatDate';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { MessageActions } from './Actions';
+import { MessageActions } from '@/components/interactive/Chat/Message/Actions';
 import { formatTimeAgo } from '@/lib/time-ago';
-import AudioPlayer from './Audio';
+import AudioPlayer from '@/components/interactive/Chat/Message/Audio';
 
 export type ChatItem = {
   id: string;

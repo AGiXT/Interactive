@@ -11,10 +11,10 @@ import { ArrowDown, ArrowUp, Save, X } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
-import { ChainSelector } from '../../Selectors/ChainSelector';
-import { CommandSelector } from '../../Selectors/CommandSelector';
-import PromptSelector from '../../Selectors/PromptSelector';
-import { type ChainStepPrompt, useChain, useChains } from '../../hooks/useChain';
+import { ChainSelector } from '@/components/interactive/Selectors/ChainSelector';
+import { CommandSelector } from '@/components/interactive/Selectors/CommandSelector';
+import PromptSelector from '@/components/interactive/Selectors/PromptSelector';
+import { type ChainStepPrompt, useChain, useChains } from '@/components/interactive/hooks/useChain';
 
 const ignoreArgs = [
   'prompt_name',

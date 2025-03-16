@@ -3,7 +3,7 @@
 import { ReactNode } from 'react';
 import { CheckCircle as LuCheckCircle } from 'lucide-react';
 import { LuPaperclip, LuSend, LuArrowUp, LuLoader, LuTrash2 } from 'react-icons/lu';
-import { OverrideSwitch } from '../OverrideSwitch';
+import { OverrideSwitch } from '@/components/interactive/Chat/OverrideSwitch';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipBasic, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';

@@ -1,12 +1,12 @@
 import React, { ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import CodeBlock from './Markdown/CodeBlock';
-import MarkdownHeading from './Markdown/Heading';
-import MarkdownLink from './Markdown/Link';
-import MarkdownImage from './Markdown/Image';
-import { RendererXSV } from './Markdown/Code/XSV';
-import textToMarkdown from './Markdown/Preprocessor';
+import CodeBlock from '@/components/interactive/Chat/Message/Markdown/CodeBlock';
+import MarkdownHeading from '@/components/interactive/Chat/Message/Markdown/Heading';
+import MarkdownLink from '@/components/interactive/Chat/Message/Markdown/Link';
+import MarkdownImage from '@/components/interactive/Chat/Message/Markdown/Image';
+import { RendererXSV } from '@/components/interactive/Chat/Message/Markdown/Code/XSV';
+import textToMarkdown from '@/components/interactive/Chat/Message/Markdown/Preprocessor';
 
 export type MarkdownBlockProps = {
   content: string;
@@ -45,7 +45,7 @@ export default function MarkdownBlock({ content, chatItem, setLoading }: Markdow
       rowLine
         .split('|')
         .map((cell) => cell.trim())
-        .filter(Boolean)
+        .filter(Boolean),
     );
 
     return { headers, rows };
@@ -103,16 +103,12 @@ export default function MarkdownBlock({ content, chatItem, setLoading }: Markdow
                   // Headers row
                   tableData.headers.join(','),
                   // Data rows
-                  ...tableData.rows.map(row => row.join(','))
+                  ...tableData.rows.map((row) => row.join(',')),
                 ];
 
                 return (
-                  <div className="my-4">
-                    <RendererXSV
-                      xsvData={xsvData}
-                      separator=","
-                      setLoading={setLoading}
-                    />
+                  <div className='my-4'>
+                    <RendererXSV xsvData={xsvData} separator=',' setLoading={setLoading} />
                   </div>
                 );
               },

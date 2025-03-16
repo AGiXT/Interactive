@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/useToast';
 import { useState } from 'react';
-import { usePrompts } from '../../hooks/usePrompt';
+import { usePrompts } from '@/components/interactive/hooks/usePrompt';
 
 interface PromptDialogProps {
   open: boolean;

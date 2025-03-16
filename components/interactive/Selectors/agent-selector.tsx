@@ -14,7 +14,7 @@ import { setCookie } from 'cookies-next';
 import { Check, ChevronsUpDown, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { FaRobot } from 'react-icons/fa';
-import { Agent, useAgent, useAgents } from '../hooks/useAgent';
+import { Agent, useAgent, useAgents } from '@/components/interactive/hooks/useAgent';
 
 export function AgentSelector() {
   const { isMobile } = useSidebar('left');

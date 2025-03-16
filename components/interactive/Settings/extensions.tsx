@@ -4,8 +4,8 @@ import axios from 'axios';
 import { getCookie } from 'cookies-next';
 import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
-import { useAgent } from '../hooks/useAgent';
-import Extension from './extension';
+import { useAgent } from '@/components/interactive/hooks/useAgent';
+import Extension from '@/components/interactive/Settings/extension';
 import { ConnectedServices } from '@/components/idiot/auth/management/ConnectedServices';
 import { useCompany } from '@/components/idiot/auth/hooks/useUser';
 

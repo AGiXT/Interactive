@@ -11,7 +11,7 @@ import {
   TorusWalletAdapter,
   LedgerWalletAdapter,
 } from '@solana/wallet-adapter-wallets';
-import { WalletModal } from './wallet-modal';
+import { WalletModal } from '@/components/wais/wallet/wallet-modal';
 
 interface WalletProviderProps {
   children: ReactNode;

@@ -9,10 +9,10 @@ import { DotsHorizontalIcon } from '@radix-ui/react-icons';
 import dayjs from 'dayjs';
 import { usePathname, useRouter } from 'next/navigation';
 import { useContext } from 'react';
-import { Command, CommandInput, CommandItem, CommandList } from '../../ui/command';
-import { Dialog, DialogClose, DialogContent, DialogTrigger } from '../../ui/dialog';
-import { Conversation, useConversations } from '../hooks/useConversation';
-import { InteractiveConfigContext } from '../InteractiveConfigContext';
+import { Command, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Dialog, DialogClose, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Conversation, useConversations } from '@/components/interactive/hooks/useConversation';
+import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
 
 export function ChatHistory() {
   const state = useContext(InteractiveConfigContext);
