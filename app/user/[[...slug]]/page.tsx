@@ -1,16 +1,5 @@
 import AuthRouter from '@/components/auth/Router';
 
 export default function UserRouter(props: any) {
-  return (
-    <AuthRouter
-      {...props}
-      corePagesConfig={{
-        register: {
-          props: {
-            additionalFields: ['first_name', 'last_name'],
-          },
-        },
-      }}
-    />
-  );
+  return <AuthRouter {...props} />;
 }

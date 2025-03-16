@@ -10,7 +10,6 @@ import { setCookie } from 'cookies-next';
 import { LuUser } from 'react-icons/lu';
 import OAuth from '@/components/auth/OAuth';
 import { providers as oAuth2Providers } from '@/components/auth/OAuth';
-import { useAuthentication } from '@/components/auth/Router';
 import AuthCard from '@/components/auth/AuthCard';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -18,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert } from '@/components/ui/alert';
 
+const authServer = `${process.env.NEXT_PUBLIC_AGIXT_SERVER}`;
 const schema = z.object({
   email: z.string().email({ message: 'Please enter a valid E-Mail address.' }),
   redirectTo: z.string().optional(),
@@ -39,7 +39,6 @@ export default function Identify({
   oAuthOverrides = {},
 }): ReactNode {
   const router = useRouter();
-  const authConfig = useAuthentication();
   const pathname = usePathname();
   const {
     register,
@@ -52,7 +51,7 @@ export default function Identify({
 
   const onSubmit: SubmitHandler<FormData> = async (formData) => {
     try {
-      const existsResponse = await axios.get(`${authConfig.authServer}${identifyEndpoint}?email=${formData.email}`);
+      const existsResponse = await axios.get(`${authServer}${identifyEndpoint}?email=${formData.email}`);
       setCookie('email', formData.email, { domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN });
       router.push(`${pathname}${existsResponse.data ? redirectToOnExists : redirectToOnNotExists}`);
     } catch (exception) {

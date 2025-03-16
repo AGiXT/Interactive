@@ -2,7 +2,6 @@
 
 import { getCookie } from 'cookies-next';
 import React, { Suspense } from 'react';
-import { useAuthentication } from '@/components/auth/Router';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
 import { LuCheck as CheckIcon, LuMinus as MinusIcon } from 'react-icons/lu';
@@ -241,8 +240,6 @@ declare global {
 }
 
 export default function Subscribe({ searchParams }: { searchParams: any }): JSX.Element {
-  const authConfig = useAuthentication();
-
   return (
     <>
       <div className='mb-4'>
@@ -261,7 +258,7 @@ export default function Subscribe({ searchParams }: { searchParams: any }): JSX.
           </AlertDescription>
         </Alert>
       </div>
-      {authConfig.subscribe.heading && <h2 className='text-3xl'>{authConfig.subscribe.heading}</h2>}
+      <h2 className='text-3xl'>Please Subscribe to Access The Application</h2>
       {process.env.NEXT_PUBLIC_STRIPE_PRICING_TABLE_ID ? (
         <Suspense fallback={<p>Loading pricing...</p>}>
           <h1>Subscribe</h1>

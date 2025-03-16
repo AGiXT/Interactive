@@ -15,18 +15,15 @@ import {
 } from 'react-icons/ri';
 import { GiTesla } from 'react-icons/gi';
 import React, { useEffect } from 'react';
-import { useAuthentication } from '@/components/auth/Router';
 
 export type CloseProps = {};
 
 export function Close() {
-  const authConfig = useAuthentication();
-
   useEffect(() => {
     window.close();
   }, []);
 
-  return authConfig.close.heading ? <h2 className='text-3xl'>{authConfig.close.heading}</h2> : null;
+  return null;
 }
 
 export const providers = {

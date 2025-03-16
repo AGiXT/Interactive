@@ -3,11 +3,9 @@
 import React, { FormEvent, ReactNode, useState } from 'react';
 import axios, { AxiosError } from 'axios';
 import { getCookie } from 'cookies-next';
-import { useRouter } from 'next/navigation';
 import QRCode from 'react-qr-code';
 import ReCAPTCHA from 'react-google-recaptcha';
 import { LuCheck as Check, LuCopy as Copy } from 'react-icons/lu';
-import { useAuthentication } from '@/components/auth/Router';
 import AuthCard from '@/components/auth/AuthCard';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -90,13 +88,11 @@ export default function Login({
   userLoginEndpoint = '/v1/login',
 }: { searchParams: any } & LoginProps): ReactNode {
   const [responseMessage, setResponseMessage] = useState('');
-  const authConfig = useAuthentication();
-  const router = useRouter();
   const [captcha, setCaptcha] = useState<string | null>(null);
 
   const submitForm = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
-    if (authConfig.recaptchaSiteKey && !captcha) {
+    if (process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && !captcha) {
       setResponseMessage('Please complete the reCAPTCHA.');
       return;
     }
@@ -104,7 +100,7 @@ export default function Login({
     const formData = Object.fromEntries(new FormData((event.currentTarget as HTMLFormElement) ?? undefined));
     try {
       const response = await axios
-        .post(`${authConfig.authServer}${userLoginEndpoint}`, {
+        .post(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}${userLoginEndpoint}`, {
           ...formData,
           referrer: getCookie('href') ?? window.location.href.split('?')[0],
         })
@@ -162,10 +158,10 @@ export default function Login({
         <Label htmlFor='token'>Multi-Factor Code</Label>
         <OTPInput name='token' id='token' />
         <MissingAuthenticator />
-        {authConfig.recaptchaSiteKey && (
+        {process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && (
           <div className='my-3'>
             <ReCAPTCHA
-              sitekey={authConfig.recaptchaSiteKey}
+              sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
               onChange={(token: string | null) => {
                 setCaptcha(token);
               }}

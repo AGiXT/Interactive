@@ -1,5 +1,5 @@
 'use client';
-import React, { ReactNode, useContext, useEffect } from 'react';
+import React, { ReactNode, useEffect } from 'react';
 import { notFound } from 'next/navigation';
 import User, { IdentifyProps } from '@/components/auth/Identify';
 import Login, { LoginProps } from '@/components/auth/Login';
@@ -10,7 +10,6 @@ import { deleteCookie } from 'cookies-next';
 import { useRouter } from 'next/navigation';
 import Subscribe, { SubscribeProps } from '@/components/auth/Subscribe';
 import { Button } from '@/components/ui/button';
-import deepMerge from '@/lib/trash';
 import { createContext } from 'react';
 
 type RouterPageProps = {
@@ -27,10 +26,7 @@ export type AuthenticationConfig = {
   subscribe: RouterPageProps & { props?: SubscribeProps };
   logout: RouterPageProps & { props: LogoutProps };
   error: RouterPageProps & { props?: ErrorPageProps };
-  authServer: string;
   appName: string;
-  authBaseURI: string;
-  recaptchaSiteKey?: string;
 };
 
 export type ErrorPageProps = {
@@ -67,7 +63,6 @@ export type LogoutProps = { redirectTo?: string };
 
 export function Logout({ redirectTo = '/' }: LogoutProps): ReactNode {
   const router = useRouter();
-  const authConfig = useAuthentication();
 
   useEffect(() => {
     deleteCookie('jwt', { domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN });
@@ -77,20 +72,8 @@ export function Logout({ redirectTo = '/' }: LogoutProps): ReactNode {
   }, [router, redirectTo]);
 
   // Moved the conditional rendering here, after all hooks are called
-  if (!authConfig.logout.heading) {
-    return null;
-  }
-
-  return <h1 className='text-3xl'>{authConfig.logout.heading}</h1>;
+  return null;
 }
-
-export const useAuthentication = () => {
-  const context = useContext(AuthenticationContext);
-  if (context === undefined) {
-    throw new Error('useAuthentication must be used within an AuthenticationProvider');
-  }
-  return context;
-};
 
 const pageConfigDefaults: AuthenticationConfig = {
   identify: {
@@ -108,6 +91,9 @@ const pageConfigDefaults: AuthenticationConfig = {
   register: {
     path: '/register',
     heading: 'Welcome, Please Register',
+    props: {
+      additionalFields: ['first_name', 'last_name'],
+    },
   },
   close: {
     path: '/close',
@@ -126,16 +112,12 @@ const pageConfigDefaults: AuthenticationConfig = {
     path: '/error',
     heading: 'Error',
   },
-  appName: process.env.NEXT_PUBLIC_APP_NAME,
-  authBaseURI: `${process.env.NEXT_PUBLIC_APP_URI}/user`;
-  authServer: process.env.NEXT_PUBLIC_AGIXT_SERVER,
-  recaptchaSiteKey: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
+  appName: process.env.NEXT_PUBLIC_APP_NAME || 'AGiXT',
 };
 
 export default function AuthRouter({
   params,
   searchParams,
-  corePagesConfig = pageConfigDefaults,
   additionalPages = {},
 }: {
   params: { slug?: string[] };
@@ -143,25 +125,23 @@ export default function AuthRouter({
   corePagesConfig?: AuthenticationConfig;
   additionalPages: { [key: string]: ReactNode };
 }) {
-  corePagesConfig = deepMerge(pageConfigDefaults, corePagesConfig);
-
   const pages = {
-    [corePagesConfig.identify.path]: <User {...corePagesConfig.identify.props} />,
-    [corePagesConfig.login.path]: <Login searchParams={searchParams} {...corePagesConfig.login.props} />,
-    [corePagesConfig.manage.path]: <Manage {...corePagesConfig.manage.props} />,
-    [corePagesConfig.register.path]: <Register {...corePagesConfig.register.props} />,
-    [corePagesConfig.close.path]: <Close {...corePagesConfig.close.props} />,
-    [corePagesConfig.subscribe.path]: <Subscribe searchParams={searchParams} {...corePagesConfig.subscribe.props} />,
-    [corePagesConfig.logout.path]: <Logout {...corePagesConfig.logout.props} />,
-    [corePagesConfig.error.path]: <ErrorPage {...corePagesConfig.error.props} />,
+    [pageConfigDefaults.identify.path]: <User {...pageConfigDefaults.identify.props} />,
+    [pageConfigDefaults.login.path]: <Login searchParams={searchParams} {...pageConfigDefaults.login.props} />,
+    [pageConfigDefaults.manage.path]: <Manage {...pageConfigDefaults.manage.props} />,
+    [pageConfigDefaults.register.path]: <Register {...pageConfigDefaults.register.props} />,
+    [pageConfigDefaults.close.path]: <Close {...pageConfigDefaults.close.props} />,
+    [pageConfigDefaults.subscribe.path]: <Subscribe searchParams={searchParams} {...pageConfigDefaults.subscribe.props} />,
+    [pageConfigDefaults.logout.path]: <Logout {...pageConfigDefaults.logout.props} />,
+    [pageConfigDefaults.error.path]: <ErrorPage {...pageConfigDefaults.error.props} />,
     ...additionalPages,
   };
 
   const path = params.slug ? `/${params.slug.join('/')}` : '/';
-  if (path in pages || path.startsWith(corePagesConfig.close.path)) {
+  if (path in pages || path.startsWith(pageConfigDefaults.close.path)) {
     return (
-      <AuthenticationContext.Provider value={{ ...pageConfigDefaults, ...corePagesConfig }}>
-        {path.startsWith(corePagesConfig.close.path) ? pages[corePagesConfig.close.path] : pages[path.toString()]}
+      <AuthenticationContext.Provider value={{ ...pageConfigDefaults }}>
+        {path.startsWith(pageConfigDefaults.close.path) ? pages[pageConfigDefaults.close.path] : pages[path.toString()]}
       </AuthenticationContext.Provider>
     );
   } else {
