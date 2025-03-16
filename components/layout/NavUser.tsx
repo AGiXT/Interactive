@@ -23,6 +23,36 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useUser } from '@/components/idiot/auth/hooks/useUser';
 import md5 from 'md5';
 import { cn } from '@/lib/utils';
+import { setCookie, getCookie } from 'cookies-next';
+import { useEffect, useState } from 'react';
+
+const defaultThemes = ['icons', 'labels'];
+
+export const useAppearance = (customAppearances?: string[], initialAppearance?: string) => {
+  const [appearances] = useState(() => {
+    return Array.from(new Set([...defaultThemes, ...(customAppearances ?? [])]));
+  });
+
+  const [appearance, setAppearance] = useState(() => {
+    const cookieValue = getCookie('appearance');
+    return cookieValue?.toString() ?? initialAppearance ?? 'labels';
+  });
+
+  useEffect(() => {
+    document.body.classList.remove(...appearances);
+    setCookie('appearance', appearance, {
+      expires: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
+    });
+    document.body.classList.add(appearance);
+  }, [appearance, appearances]);
+
+  return {
+    appearances,
+    appearance,
+    setAppearance,
+  };
+};
 
 const getGravatarUrl = (email?: string, size = 40): string => {
   if (!email) return '';
