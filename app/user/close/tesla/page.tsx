@@ -1,10 +1,5 @@
-'use client';
-import { useEffect } from 'react';
+import { Close } from '@/components/auth/OAuth';
 
-export default function Close() {
-  useEffect(() => {
-    window.close();
-  }, []);
-
-  return null;
+export default function ClosePage() {
+  return <Close />;
 }
