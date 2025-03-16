@@ -13,7 +13,6 @@ import { useContext, useRef, useState } from 'react';
 import { LuCopy, LuDownload, LuPen as LuEdit, LuGitFork, LuThumbsDown, LuThumbsUp, LuTrash2 } from 'react-icons/lu';
 import { mutate } from 'swr';
 import { InteractiveConfigContext } from '../../InteractiveConfigContext';
-import { useConversations } from '../../hooks/useConversation';
 import JRGDialog from './Dialog';
 import { ChatItem } from './Message';
 
@@ -40,7 +39,6 @@ export function MessageActions({
   setUpdatedMessage: (value: string) => void;
 }) {
   const state = useContext(InteractiveConfigContext);
-  const { data: convData } = useConversations();
   const { toast } = useToast();
   const [vote, setVote] = useState(chatItem.rlhf ? (chatItem.rlhf.positive ? 1 : -1) : 0);
   const [open, setOpen] = useState(false);
@@ -52,7 +50,7 @@ export function MessageActions({
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const handleTTS = async () => {
-    if (!state.overrides.conversation) return;
+    if (!state?.overrides?.conversation) return;
 
     setIsLoadingAudio(true);
     try {
@@ -144,7 +142,7 @@ export function MessageActions({
                     {
                       method: 'POST',
                       headers: {
-                        Authorization: getCookie('jwt'),
+                        Authorization: `${getCookie('jwt')}`,
                       },
                     },
                   );
@@ -218,22 +216,24 @@ export function MessageActions({
                   }}
                   title='Edit Message'
                   onConfirm={async () => {
+                    if (!state?.agixt || !state?.overrides?.conversation) return;
                     await state.agixt.updateConversationMessage(
-                      convData?.find((item) => item.id === state.overrides.conversation).name,
+                      state.overrides.conversation,
                       chatItem.id,
                       updatedMessage,
                     );
                     mutate('/conversation/' + state.overrides.conversation);
                   }}
                   content={
-                    <Textarea
-                      value={updatedMessage}
-                      onChange={(event) => {
-                        setUpdatedMessage(event.target.value);
-                      }}
-                    />
+                    <div style={{ width: '70%', maxWidth: 'none' }}>
+                      <Textarea
+                        value={updatedMessage}
+                        onChange={(event) => {
+                          setUpdatedMessage(event.target.value);
+                        }}
+                      />
+                    </div>
                   }
-                  className='w-[70%] max-w-none'
                 />
                 <TooltipContent>Edit Message</TooltipContent>
               </Tooltip>
@@ -249,8 +249,9 @@ export function MessageActions({
                     ButtonProps={{ variant: 'ghost', size: 'icon', children: <LuTrash2 /> }}
                     title='Delete Message'
                     onConfirm={async () => {
+                      if (!state?.agixt || !state?.overrides?.conversation) return;
                       await state.agixt.deleteConversationMessage(
-                        convData?.find((item) => item.id === state.overrides.conversation).name,
+                        state.overrides.conversation,
                         chatItem.id,
                       );
                       mutate('/conversation/' + state.overrides.conversation);
@@ -282,6 +283,7 @@ export function MessageActions({
                 <Button
                   onClick={() => {
                     setOpen(false);
+                    if (!state?.agixt || !state?.overrides?.conversation) return;
                     if (vote === 1) {
                       state.agixt.addConversationFeedback(
                         true,

@@ -9,92 +9,138 @@ import axios from 'axios';
 import { getCookie } from 'cookies-next';
 import { Badge, Check, Download, Paperclip, Pencil, Plus, Trash2, Upload } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useContext, useEffect, useState } from 'react';
-import useSWR, { mutate } from 'swr';
+import { useContext, useEffect, useState, ForwardRefExoticComponent, RefAttributes, ReactNode } from 'react';
+import useSWR, { mutate as swrMutate } from 'swr';
 import { UIProps } from '../InteractiveAGiXT';
-import { InteractiveConfigContext, Overrides } from '../InteractiveConfigContext';
-import { useConversations } from '../hooks/useConversation';
+import { InteractiveConfigContext, Overrides, InteractiveConfig } from '../InteractiveConfigContext';
 import ChatBar from './ChatInput';
 import ChatLog from './ChatLog';
+import { LucideProps } from 'lucide-react';
 
-export async function getAndFormatConversastion(state): Promise<any[]> {
-  const rawConversation = await state.agixt.getConversation('', state.overrides.conversation, 100, 1);
+interface ConversationMessage {
+  role: string;
+  message: string;
+  timestamp: string;
+}
 
-  // Create a map of activity messages for faster lookups
-  const activityMessages = {};
-  const formattedConversation = [];
+interface Conversation {
+  id: string;
+  conversation_name: string;
+  created_at: string;
+  attachment_count: number;
+}
 
-  // First pass: identify and store all activities
-  rawConversation.forEach((message) => {
-    const messageType = message.message.split(' ')[0];
-    if (!messageType.startsWith('[SUBACTIVITY]')) {
-      formattedConversation.push({ ...message, children: [] });
-      activityMessages[message.id] = formattedConversation[formattedConversation.length - 1];
-    }
-  });
+export async function getAndFormatConversastion(state: InteractiveConfig): Promise<any[]> {
+  if (!state?.agixt || !state?.overrides?.conversation) return [];
 
-  // Second pass: handle subactivities
-  rawConversation.forEach((currentMessage) => {
-    const messageType = currentMessage.message.split(' ')[0];
-    if (messageType.startsWith('[SUBACTIVITY]')) {
-      try {
-        // Try to extract parent ID
-        const parent = messageType.split('[')[2].split(']')[0];
-        let foundParent = false;
+  try {
+    const rawConversation = await state.agixt.getConversation('', state.overrides.conversation, 100, 1);
 
-        // Look for the parent in our activity map
-        if (activityMessages[parent]) {
-          activityMessages[parent].children.push({ ...currentMessage, children: [] });
-          foundParent = true;
-        } else {
-          // If no exact match, try to find it in children
-          for (const activity of formattedConversation) {
-            const targetInChildren = activity.children.find((child) => child.id === parent);
-            if (targetInChildren) {
-              targetInChildren.children.push({ ...currentMessage, children: [] });
-              foundParent = true;
-              break;
+    // Create a map of activity messages for faster lookups
+    const activityMessages: { [key: string]: any } = {};
+    const formattedConversation: any[] = [];
+
+    // First pass: identify and store all activities
+    rawConversation.forEach((message: any) => {
+      const messageType = message.message.split(' ')[0];
+      if (!messageType.startsWith('[SUBACTIVITY]')) {
+        formattedConversation.push({ ...message, children: [] });
+        activityMessages[message.id] = formattedConversation[formattedConversation.length - 1];
+      }
+    });
+
+    // Second pass: handle subactivities
+    rawConversation.forEach((currentMessage: any) => {
+      const messageType = currentMessage.message.split(' ')[0];
+      if (messageType.startsWith('[SUBACTIVITY]')) {
+        try {
+          // Try to extract parent ID
+          const parent = messageType.split('[')[2].split(']')[0];
+          let foundParent = false;
+
+          // Look for the parent in our activity map
+          if (activityMessages[parent]) {
+            activityMessages[parent].children.push({ ...currentMessage, children: [] });
+            foundParent = true;
+          } else {
+            // If no exact match, try to find it in children
+            for (const activity of formattedConversation) {
+              const targetInChildren = activity.children.find((child: any) => child.id === parent);
+              if (targetInChildren) {
+                targetInChildren.children.push({ ...currentMessage, children: [] });
+                foundParent = true;
+                break;
+              }
             }
           }
-        }
 
-        // If still not found, add to the last activity as a fallback
-        if (!foundParent && formattedConversation.length > 0) {
-          const lastActivity = formattedConversation[formattedConversation.length - 1];
-          lastActivity.children.push({ ...currentMessage, children: [] });
-        }
-      } catch (error) {
-        // If parsing fails, add to the last activity as a fallback
-        if (formattedConversation.length > 0) {
-          const lastActivity = formattedConversation[formattedConversation.length - 1];
-          lastActivity.children.push({ ...currentMessage, children: [] });
-        } else {
-          // If no activities exist yet, convert this subactivity to an activity
-          formattedConversation.push({ ...currentMessage, children: [] });
+          // If still not found, add to the last activity as a fallback
+          if (!foundParent && formattedConversation.length > 0) {
+            const lastActivity = formattedConversation[formattedConversation.length - 1];
+            lastActivity.children.push({ ...currentMessage, children: [] });
+          }
+        } catch (error) {
+          // If parsing fails, add to the last activity as a fallback
+          if (formattedConversation.length > 0) {
+            const lastActivity = formattedConversation[formattedConversation.length - 1];
+            lastActivity.children.push({ ...currentMessage, children: [] });
+          } else {
+            // If no activities exist yet, convert this subactivity to an activity
+            formattedConversation.push({ ...currentMessage, children: [] });
+          }
         }
       }
-    }
-  });
+    });
 
-  return formattedConversation;
+    return formattedConversation;
+  } catch (error) {
+    console.error("Error formatting conversation", error);
+    return [];
+  }
 }
 
 const conversationSWRPath = '/conversation/';
+interface ChatProps extends Omit<UIProps, 'onSend' | 'showChatThemeToggles'> {
+  showChatThemeToggles?: boolean;
+  onSend: (messageTextBody: string, messageAttachedFiles?: Record<string, string>) => Promise<string | undefined>;
+}
 export default function Chat({
-  showChatThemeToggles,
+  showChatThemeToggles = false,
   alternateBackground,
   enableFileUpload,
   enableVoiceInput,
   showOverrideSwitchesCSV,
-}: Overrides & UIProps): React.JSX.Element {
+  onSend
+}: ChatProps): React.JSX.Element {
   const [loading, setLoading] = useState(false);
   const state = useContext(InteractiveConfigContext);
-  const { data: conversations, isLoading: isLoadingConversations } = useConversations();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const router = useRouter();
+
+  useEffect(() => {
+    const fetchConversations = async () => {
+      if (!state?.agixt) return;
+
+      try {
+        const conversationData = await state.agixt.getConversations(true);
+        setConversations(conversationData.map((conv: any) => ({
+          id: conv.id || conv.conversation_name,
+          conversation_name: conv.conversation_name,
+          created_at: conv.created_at,
+          attachment_count: conv.attachment_count
+        })));
+      } catch (error) {
+        console.error('Error fetching conversations:', error);
+      }
+    };
+
+    fetchConversations();
+  }, [state?.agixt]);
 
   // Find the current conversation
-  const currentConversation = conversations?.find((conv) => conv.id === state.overrides.conversation);
+  const currentConversation = conversations?.find((conv: any) => conv.id === state?.overrides?.conversation);
   const conversation = useSWR(
-    conversationSWRPath + state.overrides.conversation,
+    conversationSWRPath + state?.overrides?.conversation,
     async () => {
       return await getAndFormatConversastion(state);
     },
@@ -105,27 +151,30 @@ export default function Chat({
   );
   const { data: activeCompany } = useCompany();
   useEffect(() => {
-    if (Array.isArray(state.overrides.conversation)) {
-      state.mutate((oldState) => ({
+    if (Array.isArray(state?.overrides?.conversation) && state?.mutate) {
+      state.mutate((oldState: any) => {
+        return {
         ...oldState,
-        overrides: { ...oldState.overrides, conversation: oldState.overrides.conversation[0] },
-      }));
+        overrides: { ...oldState.overrides, conversation: state?.overrides?.conversation[0] }
+      }});
     }
-  }, [state.overrides.conversation]);
-  async function chat(messageTextBody, messageAttachedFiles): Promise<string> {
-    const messages = [];
+  }, [state?.overrides?.conversation, state?.mutate]);
+  async function handleSend(messageTextBody: string, messageAttachedFiles?: Record<string, string>): Promise<string | undefined> {
+    if (!state?.agixt || !state?.overrides?.conversation) return;
+
+    const messages: any[] = [];
 
     messages.push({
       role: 'user',
       content: [
         { type: 'text', text: messageTextBody },
-        ...Object.entries(messageAttachedFiles).map(([fileName, fileContent]: [string, string]) => ({
+        ...(messageAttachedFiles ? Object.entries(messageAttachedFiles).map(( [fileName, fileContent]) => ({
           type: `${fileContent.split(':')[1].split('/')[0]}_url`,
           file_name: fileName,
           [`${fileContent.split(':')[1].split('/')[0]}_url`]: {
             url: fileContent,
           },
-        })), // Spread operator to include all file contents
+        })) : []), // Spread operator to include all file contents
       ],
       ...(activeCompany?.id ? { company_id: activeCompany?.id } : {}),
       ...(getCookie('agixt-create-image') ? { create_image: getCookie('agixt-create-image') } : {}),
@@ -136,9 +185,12 @@ export default function Chat({
 
     setLoading(true);
     await new Promise((resolve) => setTimeout(resolve, 100));
-    mutate(conversationSWRPath + state.overrides.conversation);
+    if (state?.overrides?.conversation) {
+      swrMutate(conversationSWRPath + state.overrides.conversation);
+    }
+    let completionResponse: any;
     try {
-      const completionResponse = await axios.post(
+      completionResponse = await axios.post(
         `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/chat/completions`,
         {
           messages: messages,
@@ -151,60 +203,62 @@ export default function Chat({
           },
         },
       );
-      if (completionResponse.status === 200) {
-        const chatCompletion = completionResponse.data;
+      if (completionResponse?.status === 200 && completionResponse?.data?.choices && completionResponse?.data?.choices[0]?.message?.content) {
+        const chatCompletion = completionResponse?.data;
 
         // Store conversation ID
-        const conversationId = chatCompletion.id;
-
+        const conversationId = chatCompletion?.id;
+        if (state?.mutate && conversationId) {
         // Update conversation state
-        state.mutate((oldState) => ({
+        state.mutate((oldState: any) => {
+          return {
           ...oldState,
-          overrides: {
-            ...oldState.overrides,
-            conversation: conversationId,
-          },
-        }));
+          overrides: { ...oldState.overrides, conversation: conversationId },
+        }});
+
 
         // Push route after state is updated
         router.push(`/chat/${conversationId}`);
 
         // Refresh data after updating conversation
-        setLoading(false);
+
 
         // Trigger proper mutations
-        mutate(conversationSWRPath + conversationId);
-        mutate('/conversation');
-        mutate('/user');
+        swrMutate(conversationSWRPath + conversationId);
+        swrMutate('/conversation');
+        swrMutate('/user');
+        setLoading(false);
 
-        if (chatCompletion?.choices[0]?.message.content.length > 0) {
-          return chatCompletion.choices[0].message.content;
-        } else {
-          throw 'Failed to get response from the agent';
-        }
+        return chatCompletion.choices[0].message.content;
       } else {
         throw 'Failed to get response from the agent';
       }
-    } catch (error) {
+    } else {
+        throw 'Failed to get response from the agent';
+    }
+
+    } catch (error: any) {
       setLoading(false);
       toast({
         title: 'Error',
         description: 'Failed to get response from the agent',
         duration: 5000,
+        variant: 'destructive',
       });
+      return undefined;
     }
   }
   // Function to handle importing a conversation
   const handleImportConversation = async () => {
     // Create a file input element
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = '.json';
+    const fileInputEl = document.createElement('input');
+    fileInputEl.type = 'file';
+    fileInputEl.accept = '.json';
 
     // Handle file selection
-    fileInput.onchange = async (event) => {
+    fileInputEl.onchange = async (event: any) => {
       try {
-        const file = event.target.files[0];
+        const file = (event.target as HTMLInputElement).files?.[0];
         if (!file) return;
 
         // Extract the file name without extension to use as part of the conversation name
@@ -212,10 +266,10 @@ export default function Chat({
 
         // Read the file content
         const reader = new FileReader();
-        reader.onload = async (e) => {
+        reader.onload = async (e: any) => {
           try {
             // Parse the JSON content
-            const content = JSON.parse(e.target.result);
+            const content = JSON.parse(e.target.result as string);
 
             // Use the name from the JSON if available, otherwise use filename
             const baseName = content.name || fileName;
@@ -223,16 +277,16 @@ export default function Chat({
             const conversationName = `${baseName}_${timestamp}`;
 
             // Format the conversation content
-            let conversationContent = [];
+            let conversationContent: ConversationMessage[] = [];
             if (content.messages && Array.isArray(content.messages)) {
-              conversationContent = content.messages.map((msg) => ({
+              conversationContent = content.messages.map((msg: any) => ({
                 role: msg.role || 'user',
                 message: msg.content || msg.message || '',
                 timestamp: msg.timestamp || new Date().toISOString(),
               }));
             } else if (content.conversation_history && Array.isArray(content.conversation_history)) {
               // Alternative format that might be used
-              conversationContent = content.conversation_history.map((msg) => ({
+              conversationContent = content.conversation_history.map((msg: any) => ({
                 role: msg.role || 'user',
                 message: msg.message || msg.content || '',
                 timestamp: msg.timestamp || new Date().toISOString(),
@@ -245,26 +299,28 @@ export default function Chat({
             }
 
             // Create the new conversation
-            const newConversation = await state.agixt.newConversation(state.agent, conversationName, conversationContent);
-            const newConversationID = newConversation.id || '-';
-            // Update the conversation list and navigate to the new conversation
-            await mutate('/conversations');
+            if (state?.agixt) {
+              const newConversation = await state.agixt.newConversation(getCookie('agixt-agent') as string, conversationName, conversationContent);
+              const newConversationID = newConversation?.id || '-';
+              // Update the conversation list and navigate to the new conversation
+              swrMutate('/conversations');
 
-            // Set the new conversation as active
-            state.mutate((oldState) => ({
-              ...oldState,
-              overrides: { ...oldState.overrides, conversation: conversationName },
-            }));
+              // Set the new conversation as active
+              state?.mutate((oldState: any) => ({
+                ...oldState,
+                overrides: { ...oldState.overrides, conversation: conversationName },
+              }));
 
-            // Navigate to the new conversation
-            router.push(`/chat/${newConversationID}`);
+              // Navigate to the new conversation
+              router.push(`/chat/${newConversationID}`);
 
-            toast({
-              title: 'Success',
-              description: 'Conversation imported successfully',
-              duration: 3000,
-            });
-          } catch (error) {
+              toast({
+                title: 'Success',
+                description: 'Conversation imported successfully',
+                duration: 3000,
+              });
+            }
+          } catch (error: any) {
             console.error('Error processing file:', error);
             toast({
               title: 'Error',
@@ -275,7 +331,9 @@ export default function Chat({
           }
         };
 
-        reader.readAsText(file);
+        if (file) {
+          reader.readAsText(file);
+        }
       } catch (error) {
         console.error('Error importing conversation:', error);
         toast({
@@ -288,19 +346,21 @@ export default function Chat({
     };
 
     // Trigger the file input click
-    fileInput.click();
+    fileInputEl.click();
   };
   // Fix for the handleDeleteConversation function
   const handleDeleteConversation = async (): Promise<void> => {
+    if (!state?.agixt || !currentConversation) return;
     try {
       await state.agixt.deleteConversation(currentConversation?.id || '-');
+      if (!state?.overrides?.conversation) return;
 
       // Properly invalidate both the conversation list and the specific conversation cache
-      await mutate('/conversations'); // Assuming this is the key used in useConversations()
-      await mutate(conversationSWRPath + state.overrides.conversation);
+      swrMutate('/conversations'); // Assuming this is the key used in useConversations()
+      swrMutate(conversationSWRPath + state.overrides.conversation);
 
       // Update the state
-      state.mutate((oldState) => ({
+      state?.mutate((oldState: any) => ({
         ...oldState,
         overrides: { ...oldState.overrides, conversation: '-' },
       }));
@@ -324,12 +384,13 @@ export default function Chat({
   };
 
   const handleRenameConversation = async (newName: string): Promise<void> => {
+    if (!state?.agixt || !currentConversation) return;
     try {
-      await state.agixt.renameConversation(state.agent, currentConversation?.id || '-', newName);
+      await state.agixt.renameConversation(getCookie('agixt-agent') as string, currentConversation?.id || '-', newName);
 
       // Properly invalidate both the conversation list and the specific conversation
-      await mutate('/conversations'); // Assuming this is the key used in useConversations()
-      await mutate(conversationSWRPath + state.overrides.conversation);
+      swrMutate('/conversations'); // Assuming this is the key used in useConversations()
+      swrMutate(conversationSWRPath + state.overrides.conversation);
 
       toast({
         title: 'Success',
@@ -347,15 +408,16 @@ export default function Chat({
   };
 
   const handleExportConversation = async (): Promise<void> => {
+    if (!state?.agixt || !currentConversation) return;
     // Get the full conversation content
     const conversationContent = await state.agixt.getConversation('', currentConversation?.id || '-');
 
     // Format the conversation for export
     const exportData = {
-      name: currentConversation?.name || 'New',
+      name: currentConversation?.conversation_name || 'New',
       id: currentConversation?.id || '-',
       created_at: currentConversation?.created_at || new Date().toISOString(),
-      messages: conversationContent.map((msg) => ({
+      messages: conversationContent.map((msg: any) => ({
         role: msg.role,
         content: msg.message,
         timestamp: msg.timestamp,
@@ -368,28 +430,29 @@ export default function Chat({
       type: 'application/json',
     });
     element.href = URL.createObjectURL(file);
-    element.download = `${currentConversation?.name || 'New'}_${new Date().toISOString().split('T')[0]}.json`;
+    element.download = `${currentConversation?.conversation_name || 'New'}_${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
   };
   const [newName, setNewName] = useState('');
-  const router = useRouter();
 
   useEffect(() => {
-    mutate(conversationSWRPath + state.overrides.conversation);
-  }, [state.overrides.conversation]);
+    swrMutate(conversationSWRPath + state?.overrides?.conversation);
+  }, [state?.overrides?.conversation, swrMutate, conversationSWRPath]);
   useEffect(() => {
     if (!loading) {
       setTimeout(() => {
-        mutate(conversationSWRPath + state.overrides.conversation);
+        if (state?.overrides?.conversation) {
+          swrMutate(conversationSWRPath + state.overrides.conversation);
+        }
       }, 1000);
     }
-  }, [loading, state.overrides.conversation]);
+  }, [loading, state?.overrides?.conversation, swrMutate, conversationSWRPath]);
   const [renaming, setRenaming] = useState(false);
   useEffect(() => {
     if (renaming) {
-      setNewName(currentConversation?.name || '');
+      setNewName(currentConversation?.conversation_name || '');
     }
   }, [renaming, currentConversation]);
   useEffect(() => {
@@ -406,7 +469,7 @@ export default function Chat({
               {renaming ? (
                 <Input value={newName} onChange={(e) => setNewName(e.target.value)} className='w-full' />
               ) : (
-                <h4>{currentConversation?.name}</h4>
+                <h4>{currentConversation?.conversation_name}</h4>
               )}
               {currentConversation && currentConversation.attachment_count > 0 && (
                 <Badge className='gap-1'>
@@ -418,58 +481,62 @@ export default function Chat({
           }
           <SidebarGroupLabel>Conversation Functions</SidebarGroupLabel>
           <SidebarMenu>
-            {[
-              {
-                title: 'New Conversation',
-                icon: Plus,
-                func: () => {
-                  router.push('/chat');
+            {
+              [
+                {
+                  title: 'New Conversation',
+                  icon: Plus,
+                  func: () => {
+                    router.push('/chat');
+                  },
+                  disabled: renaming,
+                  visible: true
                 },
-                disabled: renaming,
-              },
-              {
-                title: renaming ? 'Save Name' : 'Rename Conversation',
-                icon: renaming ? Check : Pencil,
-                func: renaming
-                  ? () => {
+                {
+                  title: 'Rename Conversation',
+                  icon: Pencil,
+                  func: () => {
+                    if (newName) {
                       handleRenameConversation(newName);
                       setRenaming(false);
                     }
-                  : () => setRenaming(true),
-                disabled: false,
-              },
-              {
-                title: 'Import Conversation',
-                icon: Upload,
-                func: () => {
-                  handleImportConversation();
+                  },
+                  disabled: false,
+                  visible: true
                 },
-                disabled: renaming,
-              },
-              {
-                title: 'Export Conversation',
-                icon: Download,
-                func: () => handleExportConversation(),
-                disabled: renaming,
-              },
-              {
-                title: 'Delete Conversation',
-                icon: Trash2,
-                func: () => {
-                  handleDeleteConversation();
+                {
+                  title: 'Import Conversation',
+                  icon: Upload,
+                  func: handleImportConversation,
+                  disabled: renaming,
+                  visible: true
                 },
-                disabled: renaming,
-              },
-            ].map(
-              (item) =>
-                item.visible !== false && (
+                {
+                  title: 'Export Conversation',
+                  icon: Download,
+                  func: handleExportConversation,
+                  disabled: renaming,
+                  visible: true
+                },
+                {
+                  title: 'Delete Conversation',
+                  icon: Trash2,
+                  func: handleDeleteConversation,
+                  disabled: renaming,
+                  visible: true
+                },
+              ].map(
+              (item) => {
+                const menuItem = item as { title: string; icon: ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>; func: () => void; disabled: boolean; visible?: boolean };
+                return (menuItem.visible !== false) ? (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton side='left' tooltip={item.title} onClick={item.func} disabled={item.disabled}>
                       {item.icon && <item.icon />}
                       <span>{item.title}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                ),
+                ) : null;
+              }
             )}
           </SidebarMenu>
         </SidebarGroup>
@@ -481,7 +548,7 @@ export default function Chat({
         loading={loading}
       />
       <ChatBar
-        onSend={chat}
+        onSend={handleSend}
         disabled={loading}
         showChatThemeToggles={showChatThemeToggles}
         enableFileUpload={enableFileUpload}

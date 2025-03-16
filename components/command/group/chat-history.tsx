@@ -1,16 +1,49 @@
 'use client';
 
 import dayjs from 'dayjs';
-import { useCallback } from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCommandMenu } from '../command-menu-context';
-import { useConversations } from '@/interactive/hooks/useConversation';
 import { CommandGroup, CommandItem } from '@/components/ui/command';
+import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
+
+interface Conversation {
+  id: string;
+  name: string;
+  updatedAt: string;
+  summary?: unknown;
+}
 
 export function ChatHistoryGroup() {
   const router = useRouter();
-  const { data: conversationData, isLoading } = useConversations();
+  const state = useContext(InteractiveConfigContext);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { setOpen, currentSubPage } = useCommandMenu();
+
+  useEffect(() => {
+    const fetchConversations = async () => {
+      if (!state?.agixt) return;
+
+      try {
+        setIsLoading(true);
+        const conversationData = await state.agixt.getConversations(true);
+        const formattedConversations = conversationData.map(conv => ({
+          id: conv.id || conv.conversation_name,
+          name: conv.conversation_name,
+          updatedAt: new Date().toISOString(), // The SDK doesn't provide updatedAt, so we use current time
+          summary: conv.conversation_name
+        }));
+        setConversations(formattedConversations);
+      } catch (error) {
+        console.error('Error fetching conversations:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchConversations();
+  }, [state?.agixt]);
 
   const onSelect = useCallback(
     (id: string) => {
@@ -22,10 +55,10 @@ export function ChatHistoryGroup() {
 
   if (currentSubPage !== 'chat-history') return null;
 
-  if (!conversationData || !conversationData.length || isLoading) return null;
+  if (!conversations.length || isLoading) return null;
 
   // Filter out conversations with name '-' and take only the first 5
-  const recentConversations = conversationData.filter((conversation) => conversation.name !== '-').slice(0, 5);
+  const recentConversations = conversations.filter((conversation) => conversation.name !== '-').slice(0, 5);
 
   return (
     <CommandGroup heading='Recent Chats'>

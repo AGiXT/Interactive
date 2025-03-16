@@ -1,9 +1,8 @@
-import { chainMutations, createGraphQLClient } from '@/components/interactive/hooks/lib';
-import '@/components/idiot/zod2gql/zod2gql';
 import axios from 'axios';
 import { getCookie } from 'cookies-next';
-import useSWR, { SWRResponse } from 'swr';
+import { useContext, useEffect, useState } from 'react';
 import { z } from 'zod';
+import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
 
 export const CompanySchema = z.object({
   agents: z.array(
@@ -20,78 +19,67 @@ export const CompanySchema = z.object({
   name: z.string().min(1),
   primary: z.boolean(),
   roleId: z.number().int().positive(),
-  // users: z.array(
-  //   z.object({
-  //     email: z.string().email(),
-  //     firstName: z.string().min(1),
-  //     id: z.string().uuid(),
-  //     lastName: z.string().min(1),
-  //   }),
-  // ),
+  extensions: z.array(z.unknown()).optional()
 });
 
 export type Company = z.infer<typeof CompanySchema>;
-/**
- * Hook to fetch and manage company data
- * @returns SWR response containing array of companies
- */
-export function useCompanies(): SWRResponse<Company[]> {
-  const userHook = useUser();
-  const { data: user } = userHook;
 
-  const swrHook = useSWR<Company[]>(['/companies', user], () => user?.companies || [], { fallbackData: [] });
-
-  const originalMutate = swrHook.mutate;
-  swrHook.mutate = chainMutations(userHook, originalMutate);
-
-  return swrHook;
+export function useCompanies() {
+  const { data: user } = useUser();
+  return { data: user?.companies || [] };
 }
 
-/**
- * Hook to fetch and manage specific company data
- * @param id - Optional company ID to fetch
- * @returns SWR response containing company data or null
- */
-export function useCompany(id?: string): SWRResponse<Company | null> {
-  const companiesHook = useCompanies();
-  const { data: companies } = companiesHook;
-  const swrHook = useSWR<Company | null>(
-    [`/company?id=${id}`, companies, getCookie('jwt')],
-    async (): Promise<Company | null> => {
-      if (!getCookie('jwt')) return null;
+export function useCompany(id?: string) {
+  const { data: companies } = useCompanies();
+  const state = useContext(InteractiveConfigContext);
+  const [company, setCompany] = useState<Company | null>(null);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    const fetchCompany = async () => {
+      if (!getCookie('jwt')) return;
+      
       try {
         if (id) {
-          return companies?.find((c) => c.id === id) || null;
+          const foundCompany = companies?.find((c) => c.id === id);
+          setCompany(foundCompany || null);
         } else {
           const agentName = getCookie('agixt-agent');
-          const targetCompany =
-            companies?.find((c) => (agentName ? c.agents.some((a) => a.name === agentName) : c.primary)) || null;
-          if (!targetCompany) return null;
-          targetCompany.extensions = (
-            await axios.get(
-              `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/companies/${targetCompany.id}/extensions`,
+          let targetCompany = companies?.find((c) => 
+            agentName ? c.agents.some((a) => a.name === agentName) : c.primary
+          ) || null;
+          
+          if (!targetCompany) {
+            setCompany(null);
+            return;
+          }
 
+          try {
+            const extensionsResponse = await axios.get(
+              `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/companies/${targetCompany.id}/extensions`,
               {
                 headers: {
                   Authorization: getCookie('jwt'),
                 },
-              },
-            )
-          ).data.extensions;
-          return targetCompany;
+              }
+            );
+            targetCompany = { ...targetCompany, extensions: extensionsResponse.data.extensions };
+          } catch (extensionsError) {
+            console.error("Error fetching extensions:", extensionsError);
+          }
+          setCompany(targetCompany);
         }
       } catch (error) {
         console.error('Error fetching company:', error);
-        return null;
+        setError(error as Error);
+        setCompany(null);
       }
-    },
-    { fallbackData: null },
-  );
+    };
 
-  const originalMutate = swrHook.mutate;
-  swrHook.mutate = chainMutations(companiesHook, originalMutate);
+    fetchCompany();
+  }, [id, companies, state?.agixt]);
 
-  return swrHook;
+  return { data: company, error };
 }
 
 export const RoleSchema = z.enum(['user', 'system', 'assistant', 'function']);
@@ -106,40 +94,31 @@ export const UserSchema = z.object({
 
 export type User = z.infer<typeof UserSchema>;
 
-/**
- * Hook to fetch and manage current user data
- * @returns SWR response containing user data
- */
-export function useUser(): SWRResponse<User | null> {
-  const client = createGraphQLClient();
+export function useUser() {
+  const state = useContext(InteractiveConfigContext);
+  const [user, setUser] = useState<User | null>(null);
+  const [error, setError] = useState<Error | null>(null);
 
-  return useSWR<User | null>(
-    ['/user', getCookie('jwt')],
-    async (): Promise<User | null> => {
-      if (!getCookie('jwt')) return null;
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (!getCookie('jwt') || !state?.agixt) return;
+
       try {
-        const query = UserSchema.toGQL('query', 'GetUser');
-        const response = await client.request<{ user: User }>(query);
-        return UserSchema.parse(response.user);
+        const userData = await state.agixt.getUser();
+        setUser(UserSchema.parse(userData));
       } catch (error) {
         console.error('Error fetching user:', error);
-        return {
-          companies: [],
-          email: '',
-          firstName: '',
-          id: '',
-          lastName: '',
-        };
+        setError(error as Error);
+        setUser(null);
       }
-    },
-    {
-      fallbackData: {
-        companies: [],
-        email: '',
-        firstName: '',
-        id: '',
-        lastName: '',
-      },
-    },
-  );
+    };
+
+    fetchUser();
+  }, [state?.agixt]);
+
+  return { 
+    data: user, 
+    error,
+    isLoading: !user && !error
+  };
 }
