@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
-import PromptPanel from '@/components/interactive/Settings/prompt/PromptPanel';
-import NewPromptDialog from '@/components/interactive/Settings/prompt/PromptDialog';
+import PromptPanel from '@/components/prompt/PromptPanel';
+import NewPromptDialog from '@/components/prompt/PromptDialog';
 
 export default function PromptPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -14,7 +14,7 @@ export default function PromptPage() {
   const router = useRouter();
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className='container mx-auto p-6 space-y-6'>
       <PromptPanel
         showCreateDialog={showCreateDialog}
         setShowCreateDialog={setShowCreateDialog}

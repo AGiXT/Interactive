@@ -1,24 +1,5 @@
 import { NextRequest } from 'next/server';
 
-export const AuthMode = {
-  None: 0,
-  GTAuth: 1,
-  MagicalAuth: 2,
-};
-export const getAuthMode = (): number => {
-  let authMode = AuthMode.None;
-  if (process.env.NEXT_PUBLIC_AUTH_WEB && process.env.NEXT_PUBLIC_AGIXT_SERVER) {
-    if (process.env.APP_URI && process.env.NEXT_PUBLIC_AUTH_WEB.startsWith(process.env.APP_URI)) {
-      authMode = AuthMode.MagicalAuth;
-      if (!process.env.NEXT_PUBLIC_AUTH_WEB.endsWith('/user')) {
-        throw new Error('Invalid AUTH_WEB. For Magical Auth implementations, AUTH_WEB must point to APP_URI/user.');
-      }
-    } else {
-      authMode = AuthMode.GTAuth;
-    }
-  }
-  return authMode;
-};
 export const generateCookieString = (key: string, value: string, age: string): string =>
   `${key}=${value}; Domain=${process.env.NEXT_PUBLIC_COOKIE_DOMAIN}; Path=/; Max-Age=${age}; SameSite=strict;`;
 

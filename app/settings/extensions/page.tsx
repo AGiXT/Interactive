@@ -1,5 +1,5 @@
-import { Extensions } from '@/components/interactive/Settings/extensions';
-import { SidebarPage } from '@/components/idiot/appwrapper/SidebarPage';
+import { Extensions } from '@/components/agent/extensions';
+import { SidebarPage } from '@/components/layout/SidebarPage';
 
 export default function ExtensionsPage() {
   return (

@@ -1,5 +1,5 @@
-import { Abilities } from '@/components/interactive/Settings/abilities';
-import { SidebarPage } from '@/components/idiot/appwrapper/SidebarPage';
+import { Abilities } from '@/components/agent/abilities';
+import { SidebarPage } from '@/components/layout/SidebarPage';
 
 export default function AbilitiesPage() {
   return (

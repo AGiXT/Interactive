@@ -1,7 +1,7 @@
 'use client';
 import React, { ReactNode, useMemo } from 'react';
-import Chat from './Chat/Chat';
-import { Overrides } from './InteractiveConfigContext';
+import Chat from '@/components/conversation/conversation';
+import { Overrides } from '@/components/interactive/InteractiveConfigContext';
 
 export type FormProps = {
   fieldOverrides?: { [key: string]: ReactNode };

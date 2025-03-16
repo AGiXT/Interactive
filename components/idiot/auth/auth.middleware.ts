@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AuthMode, getAuthMode, getJWT, verifyJWT, generateCookieString, getQueryParams, getRequestedURI } from './utils';
+import { getJWT, verifyJWT, generateCookieString, getQueryParams, getRequestedURI } from '@/components/idiot/auth/utils';
 
 export type MiddlewareHook = (req: NextRequest) => Promise<{
   activated: boolean;
@@ -12,25 +12,22 @@ export const useAuth: MiddlewareHook = async (req) => {
     response: NextResponse.redirect(new URL(process.env.AUTH_WEB as string), { headers: {} }),
   };
   const requestedURI = getRequestedURI(req);
-  const authMode = getAuthMode();
 
-  if (authMode) {
-    const queryParams = getQueryParams(req);
-    if (requestedURI.endsWith('/user/logout')) {
-      return toReturn;
-    }
-    if (queryParams['verify_email'] && queryParams['email']) {
-      await fetch(`${process.env.AGIXT_SERVER}/v1/user/verify/email`, {
-        method: 'POST',
-        body: JSON.stringify({
-          email: queryParams['email'],
-          code: queryParams['verify_email'],
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-    }
+  const queryParams = getQueryParams(req);
+  if (requestedURI.endsWith('/user/logout')) {
+    return toReturn;
+  }
+  if (queryParams['verify_email'] && queryParams['email']) {
+    await fetch(`${process.env.AGIXT_SERVER}/v1/user/verify/email`, {
+      method: 'POST',
+      body: JSON.stringify({
+        email: queryParams['email'],
+        code: queryParams['verify_email'],
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
     if (queryParams.invitation_id && queryParams.email) {
       const cookieArray = [
@@ -112,7 +109,6 @@ export const useAuth: MiddlewareHook = async (req) => {
           ]);
           throw new Error(`Invalid token response, status ${response.status}, detail ${responseJSON.detail}.`);
         } else if (
-          authMode === AuthMode.MagicalAuth &&
           requestedURI.startsWith(process.env.AUTH_WEB || '') &&
           jwt.length > 0 &&
           !['/user/manage'].includes(req.nextUrl.pathname)

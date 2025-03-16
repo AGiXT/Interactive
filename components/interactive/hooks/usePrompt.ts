@@ -1,9 +1,9 @@
-import { useToast } from '@/hooks/useToast';
+import { useToast } from '@/components/layout/toast';
 import { useRouter } from 'next/navigation';
 import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
-import { useInteractiveConfig } from '../InteractiveConfigContext';
-import { createGraphQLClient } from './lib';
+import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
+import { createGraphQLClient } from '@/components/interactive/hooks/lib';
 
 export const PromptArgumentSchema = z.object({
   name: z.string(),

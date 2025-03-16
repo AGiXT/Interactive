@@ -1,12 +1,12 @@
 'use client';
 
-import { SidebarMain } from '@/components/idiot/appwrapper/SidebarHeader';
+import { SidebarPage } from '@/components/layout/SidebarPage';
 import { SidebarInset } from '@/components/ui/sidebar';
 
 export default function ChatLayout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarInset>
-      <SidebarMain>{children}</SidebarMain>
+      <SidebarPage title='Chat'>{children}</SidebarPage>
     </SidebarInset>
   );
 }

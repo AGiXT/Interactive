@@ -8,9 +8,10 @@ import { z } from 'zod';
 import { SubmitHandler, useForm } from 'react-hook-form';
 import { setCookie } from 'cookies-next';
 import { LuUser } from 'react-icons/lu';
-import OAuth from './oauth2/OAuth';
-import { useAuthentication } from './Router';
-import AuthCard from './AuthCard';
+import OAuth from '@/components/idiot/auth/OAuth';
+import { providers as oAuth2Providers } from '@/components/idiot/auth/OAuth';
+import { useAuthentication } from '@/components/idiot/auth/Router';
+import AuthCard from '@/components/idiot/auth/AuthCard';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -60,8 +61,8 @@ export default function Identify({
     }
   };
 
-  const showEmail = authConfig.authModes.basic || authConfig.authModes.magical;
-  const showOAuth = authConfig.authModes.oauth2;
+  const showEmail = process.env.NEXT_PUBLIC_ALLOW_EMAIL_SIGN_IN === 'true';
+  const showOAuth = Object.values(oAuth2Providers).some((provider) => !!provider.client_id);
 
   return (
     <AuthCard title='Welcome' description='Please choose an authentication method.'>

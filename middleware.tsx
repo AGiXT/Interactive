@@ -6,15 +6,6 @@ export type MiddlewareHook = (req: NextRequest) => Promise<{
   activated: boolean;
   response: NextResponse;
 }>;
-export const mergeConfigs = (obj1: any, obj2: any): any =>
-  Object.keys(obj2).reduce(
-    (acc, key) => ({
-      ...acc,
-      [key]:
-        typeof obj2[key] === 'object' && obj2[key] !== null && obj1[key] ? mergeConfigs(obj1[key], obj2[key]) : obj2[key],
-    }),
-    { ...obj1 },
-  );
 
 export const useNextAPIBypass: MiddlewareHook = async (req) => {
   const toReturn = {

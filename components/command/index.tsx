@@ -2,12 +2,12 @@
 
 import { DialogTitle } from '@radix-ui/react-dialog';
 
-import { ChatHistoryGroup } from './group/chat-history';
-import { NavigationGroup } from './group/navigation';
-import { WalletCommands } from './group/wallet';
-import { QuickActionsGroup } from './group/quick-actions';
-import { useCommandMenu } from './command-menu-context';
-import { ThemeGroup } from './group/theme';
+import { ChatHistoryGroup } from '@/components/command/group/chat-history';
+import { NavigationGroup } from '@/components/command/group/navigation';
+import { WalletCommands } from '@/components/command/group/wallet';
+import { QuickActionsGroup } from '@/components/command/group/quick-actions';
+import { useCommandMenu } from '@/components/command/command-menu-context';
+import { ThemeGroup } from '@/components/command/group/theme';
 import {
   Command,
   CommandDialog,

@@ -3,9 +3,9 @@ import { getCookie, setCookie } from 'cookies-next';
 import { useContext } from 'react';
 import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
-import { useCompanies } from '../../idiot/auth/hooks/useUser';
-import { InteractiveConfigContext } from '../InteractiveConfigContext';
-import { chainMutations, createGraphQLClient } from './lib';
+import { useCompanies } from '@/components/idiot/auth/useUser';
+import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
+import { chainMutations, createGraphQLClient } from '@/components/interactive/hooks/lib';
 
 export const AgentSchema = z.object({
   companyId: z.string().uuid(),

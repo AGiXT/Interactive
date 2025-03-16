@@ -7,8 +7,8 @@ import {
   LuSend as Send,
 } from 'react-icons/lu';
 import { BarChart3 } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 export function HowItWorks() {
   return (

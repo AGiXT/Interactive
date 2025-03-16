@@ -1,16 +1,16 @@
 'use client';
-import React, { ReactNode, useContext } from 'react';
+import React, { ReactNode, useContext, useEffect } from 'react';
 import { notFound } from 'next/navigation';
-import User, { IdentifyProps } from './Identify';
-import Login, { LoginProps } from './Login';
-import Manage, { ManageProps } from './management';
-import Register, { RegisterProps } from './Register';
-import Close, { CloseProps } from './oauth2/Close';
-import Logout, { LogoutProps } from './Logout';
-import Subscribe, { SubscribeProps } from './Subscribe';
-import ErrorPage, { ErrorPageProps } from './ErrorPage';
-import oAuth2Providers from './oauth2/OAuthProviders';
-import deepMerge from '@/lib/objects';
+import User, { IdentifyProps } from '@/components/idiot/auth/Identify';
+import Login, { LoginProps } from '@/components/idiot/auth/Login';
+import Manage, { ManageProps } from '@/components/idiot/auth/Profile';
+import Register, { RegisterProps } from '@/components/idiot/auth/Register';
+import { Close, CloseProps } from '@/components/idiot/auth/OAuth';
+import { deleteCookie } from 'cookies-next';
+import { useRouter } from 'next/navigation';
+import Subscribe, { SubscribeProps } from '@/components/idiot/auth/Subscribe';
+import { Button } from '@/components/ui/button';
+import deepMerge from '@/lib/trash';
 import { createContext } from 'react';
 
 type RouterPageProps = {
@@ -26,20 +26,63 @@ export type AuthenticationConfig = {
   close: RouterPageProps & { props?: CloseProps };
   subscribe: RouterPageProps & { props?: SubscribeProps };
   logout: RouterPageProps & { props: LogoutProps };
-  ou: RouterPageProps & { props?: OrganizationalUnitProps };
   error: RouterPageProps & { props?: ErrorPageProps };
-  authModes: {
-    basic: boolean;
-    oauth2: boolean;
-    magical: boolean;
-  };
   authServer: string;
   appName: string;
   authBaseURI: string;
   recaptchaSiteKey?: string;
 };
 
+export type ErrorPageProps = {
+  redirectTo?: string;
+};
+
+export function ErrorPage({ redirectTo = '/' }: ErrorPageProps) {
+  const router = useRouter();
+
+  const logout = () => {
+    router.push('/user/logout');
+  };
+
+  return (
+    <div className='flex min-h-[100svh] w-full flex-col items-center justify-center bg-background px-4 py-12 sm:px-6 lg:px-8'>
+      <div className='max-w-md mx-auto text-center'>
+        <h1 className='mt-4 text-3xl font-bold tracking-tight text-foreground sm:text-4xl'>Oops, something went wrong!</h1>
+        <p className='mt-4 text-muted-foreground'>
+          We&apos;re sorry, but an unexpected error has occurred. Please try again later or contact support if the issue
+          persists.
+        </p>
+        <div className='flex justify-center gap-4 mt-6'>
+          <Button onClick={() => router.back()}>Try again</Button>
+          <Button onClick={logout}>Logout</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const AuthenticationContext = createContext<AuthenticationConfig | undefined>(undefined);
+
+export type LogoutProps = { redirectTo?: string };
+
+export function Logout({ redirectTo = '/' }: LogoutProps): ReactNode {
+  const router = useRouter();
+  const authConfig = useAuthentication();
+
+  useEffect(() => {
+    deleteCookie('jwt', { domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN });
+    router.refresh();
+    router.replace(redirectTo);
+    router.refresh();
+  }, [router, redirectTo]);
+
+  // Moved the conditional rendering here, after all hooks are called
+  if (!authConfig.logout.heading) {
+    return null;
+  }
+
+  return <h1 className='text-3xl'>{authConfig.logout.heading}</h1>;
+}
 
 export const useAuthentication = () => {
   const context = useContext(AuthenticationContext);
@@ -86,11 +129,6 @@ const pageConfigDefaults: AuthenticationConfig = {
   appName: process.env.NEXT_PUBLIC_APP_NAME,
   authBaseURI: process.env.NEXT_PUBLIC_AUTH_WEB,
   authServer: process.env.NEXT_PUBLIC_AGIXT_SERVER,
-  authModes: {
-    basic: false,
-    oauth2: Object.values(oAuth2Providers).some((provider) => !!provider.client_id),
-    magical: process.env.NEXT_PUBLIC_ALLOW_EMAIL_SIGN_IN === 'true',
-  },
   recaptchaSiteKey: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
 };
 

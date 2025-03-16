@@ -4,13 +4,13 @@ import { getCookie } from 'cookies-next';
 import { useRouter } from 'next/navigation';
 import React, { FormEvent, ReactNode, useEffect, useState, useRef } from 'react';
 import { ReCAPTCHA } from 'react-google-recaptcha';
-import { useAuthentication } from './Router';
-import AuthCard from './AuthCard';
+import { useAuthentication } from '@/components/idiot/auth/Router';
+import AuthCard from '@/components/idiot/auth/AuthCard';
 import { toTitleCase } from '@/components/idiot/dynamic-form/DynamicForm';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import OAuth from './oauth2/OAuth';
+import OAuth from '@/components/idiot/auth/OAuth';
 
 export type RegisterProps = {
   additionalFields?: string[];
@@ -79,14 +79,15 @@ export default function Register({ additionalFields = [], userRegisterEndpoint =
     }
   }, []);
   useEffect(() => {
-    if (!submitted && formRef.current && authConfig.authModes.magical && additionalFields.length === 0) {
+    if (!submitted && formRef.current && additionalFields.length === 0) {
       setSubmitted(true);
       formRef.current.requestSubmit();
     }
   }, []);
   const [invite, setInvite] = useState<string | null>(null);
+  const showEmail = process.env.NEXT_PUBLIC_ALLOW_EMAIL_SIGN_IN === 'true';
   return (
-    <div className={additionalFields.length === 0 && authConfig.authModes.magical ? ' invisible' : ''}>
+    <div className={additionalFields.length === 0 && showEmail ? ' invisible' : ''}>
       <AuthCard
         title={invite !== null ? 'Accept Invitation to ' + (invite.replaceAll('+', ' ') || 'Company') : 'Sign Up'}
         description={`Welcome, please complete your registration. ${invite !== null ? 'You are ' : ''}${invite ? ' to ' + invite.replaceAll('+', ' ') + '.' : ''}${invite !== null ? '.' : ''}`}

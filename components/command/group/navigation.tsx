@@ -1,9 +1,9 @@
 import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { CommandItemComponent, CommandMenuGroup } from '../index';
-import { useCommandMenu } from '../command-menu-context';
+import { CommandItemComponent, CommandMenuGroup } from '@/components/command/index';
+import { useCommandMenu } from '@/components/command/command-menu-context';
 import { CommandGroup, CommandSeparator } from '@/components/ui/command';
-import { items } from '@/components/idiot/appwrapper/NavMain';
+import { items } from '@/components/layout/NavMain';
 
 export function NavigationGroup() {
   const router = useRouter();

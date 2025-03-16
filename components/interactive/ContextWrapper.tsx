@@ -1,6 +1,10 @@
 'use client';
 import React, { useState, ReactNode, useEffect } from 'react';
-import { InteractiveConfigContext, InteractiveConfigDefault, InteractiveConfig } from './InteractiveConfigContext';
+import {
+  InteractiveConfigContext,
+  InteractiveConfigDefault,
+  InteractiveConfig,
+} from '@/components/interactive/InteractiveConfigContext';
 import AGiXTSDK from '@/lib/sdk';
 
 export default function InteractiveConfigContextWrapper({
