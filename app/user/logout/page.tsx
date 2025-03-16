@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 
 export type LogoutProps = { redirectTo?: string };
 
-export function Logout({ redirectTo = '/' }: LogoutProps): ReactNode {
+export default function Logout({ redirectTo = '/' }: LogoutProps): ReactNode {
   const router = useRouter();
 
   useEffect(() => {
