@@ -128,8 +128,6 @@ export default function AgentPanel() {
 
         <CardContent className='space-y-2 pb-2'>
           <div className='grid grid-cols-[auto_1fr] gap-x-2 text-sm'>
-            <span className='font-medium text-muted-foreground'>Status:</span>
-
             <span className='font-medium text-muted-foreground'>Agent ID:</span>
             <span className='truncate' title={agentData?.agent?.id}>
               {agentData?.agent?.id}
