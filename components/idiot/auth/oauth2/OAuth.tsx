@@ -2,7 +2,7 @@
 
 import { useAgent } from '@/components/interactive/hooks/useAgent';
 import { Button } from '@/components/ui/button';
-import deepMerge from '@/lib/objects';
+import deepMerge from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { ReactNode, useCallback, useMemo } from 'react';
 import OAuth2Login from 'react-simple-oauth2-login';

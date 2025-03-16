@@ -6,8 +6,24 @@ import formatDate from '@/components/conversation/Message/formatDate';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { MessageActions } from '@/components/conversation/Message/Actions';
-import { formatTimeAgo } from '@/lib/time-ago';
 import AudioPlayer from '@/components/conversation/Message/Audio';
+import TimeAgo, { FormatStyleName } from 'javascript-time-ago';
+import en from 'javascript-time-ago/locale/en';
+
+TimeAgo.addDefaultLocale(en);
+
+const timeAgo = new TimeAgo('en-US');
+
+export const formatTimeAgo = (date: Date | string, style: FormatStyleName = 'twitter'): string => {
+  if (!date) return '';
+  try {
+    const parsedDate = typeof date === 'string' ? new Date(date) : date;
+    return timeAgo.format(parsedDate, style);
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return '';
+  }
+};
 
 export type ChatItem = {
   id: string;
