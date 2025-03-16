@@ -1,7 +1,7 @@
 import useSWR, { SWRResponse } from 'swr';
 
 // Import all types from the centralized schema file
-import { RoleSchema, UserSchema } from '@/components/idiot/auth/hooks/useUser';
+import { RoleSchema, UserSchema } from '@/components/idiot/auth/useUser';
 import { z } from 'zod';
 import { createGraphQLClient } from '@/components/interactive/hooks/lib';
 

@@ -3,7 +3,7 @@ import { getCookie, setCookie } from 'cookies-next';
 import { useContext } from 'react';
 import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
-import { useCompanies } from '@/components/idiot/auth/hooks/useUser';
+import { useCompanies } from '@/components/idiot/auth/useUser';
 import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
 import { chainMutations, createGraphQLClient } from '@/components/interactive/hooks/lib';
 

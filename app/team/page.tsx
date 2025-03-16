@@ -1,5 +1,5 @@
-import Team from '@/components/idiot/auth/management/Team';
-import TeamUsers from '@/components/idiot/auth/management/TeamUsers';
+import Team from '@/components/team/Team';
+import TeamUsers from '@/components/team/TeamUsers';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { SidebarPage } from '@/components/layout/SidebarPage';
 

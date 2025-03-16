@@ -20,21 +20,10 @@ export const CompanySchema = z.object({
   name: z.string().min(1),
   primary: z.boolean(),
   roleId: z.number().int().positive(),
-  // users: z.array(
-  //   z.object({
-  //     email: z.string().email(),
-  //     firstName: z.string().min(1),
-  //     id: z.string().uuid(),
-  //     lastName: z.string().min(1),
-  //   }),
-  // ),
 });
 
 export type Company = z.infer<typeof CompanySchema>;
-/**
- * Hook to fetch and manage company data
- * @returns SWR response containing array of companies
- */
+
 export function useCompanies(): SWRResponse<Company[]> {
   const userHook = useUser();
   const { data: user } = userHook;
@@ -47,11 +36,6 @@ export function useCompanies(): SWRResponse<Company[]> {
   return swrHook;
 }
 
-/**
- * Hook to fetch and manage specific company data
- * @param id - Optional company ID to fetch
- * @returns SWR response containing company data or null
- */
 export function useCompany(id?: string): SWRResponse<Company | null> {
   const companiesHook = useCompanies();
   const { data: companies } = companiesHook;
@@ -106,10 +90,6 @@ export const UserSchema = z.object({
 
 export type User = z.infer<typeof UserSchema>;
 
-/**
- * Hook to fetch and manage current user data
- * @returns SWR response containing user data
- */
 export function useUser(): SWRResponse<User | null> {
   const client = createGraphQLClient();
 

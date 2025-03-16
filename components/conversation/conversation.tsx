@@ -1,7 +1,7 @@
 'use client';
 
 import { SidebarContent } from '@/components/layout/SidebarContentManager';
-import { useCompany } from '@/components/idiot/auth/hooks/useUser';
+import { useCompany } from '@/components/idiot/auth/useUser';
 import { Input } from '@/components/ui/input';
 import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { toast } from '@/components/layout/toast';

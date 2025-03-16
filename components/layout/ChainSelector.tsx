@@ -1,6 +1,6 @@
 'use client';
 
-import usePathname from '@/components/idiot/auth/hooks/usePathname';
+import usePathname from '@/components/idiot/usePathname';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRouter, useSearchParams } from 'next/navigation';

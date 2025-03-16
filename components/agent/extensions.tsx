@@ -6,8 +6,8 @@ import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { useAgent } from '@/components/interactive/hooks/useAgent';
 import Extension from '@/components/agent/extension';
-import { ConnectedServices } from '@/components/idiot/auth/management/ConnectedServices';
-import { useCompany } from '@/components/idiot/auth/hooks/useUser';
+import { ConnectedServices } from '@/components/agent/ConnectedServices';
+import { useCompany } from '@/components/idiot/auth/useUser';
 
 // Types remain the same
 type Command = {

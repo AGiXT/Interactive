@@ -8,7 +8,7 @@ import { useAgent } from '@/components/interactive/hooks/useAgent';
 import { AgentDialog } from './AgentDialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useCompany } from '@/components/idiot/auth/hooks/useUser';
+import { useCompany } from '@/components/idiot/auth/useUser';
 import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';

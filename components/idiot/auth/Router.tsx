@@ -1,14 +1,15 @@
 'use client';
-import React, { ReactNode, useContext } from 'react';
+import React, { ReactNode, useContext, useEffect } from 'react';
 import { notFound } from 'next/navigation';
 import User, { IdentifyProps } from '@/components/idiot/auth/Identify';
 import Login, { LoginProps } from '@/components/idiot/auth/Login';
-import Manage, { ManageProps } from '@/components/idiot/auth/management';
+import Manage, { ManageProps } from '@/components/idiot/auth/Profile';
 import Register, { RegisterProps } from '@/components/idiot/auth/Register';
 import { Close, CloseProps } from '@/components/idiot/auth/OAuth';
-import Logout, { LogoutProps } from '@/components/idiot/auth/Logout';
+import { deleteCookie } from 'cookies-next';
+import { useRouter } from 'next/navigation';
 import Subscribe, { SubscribeProps } from '@/components/idiot/auth/Subscribe';
-import ErrorPage, { ErrorPageProps } from '@/components/idiot/auth/ErrorPage';
+import { Button } from '@/components/ui/button';
 import deepMerge from '@/lib/trash';
 import { createContext } from 'react';
 
@@ -32,7 +33,57 @@ export type AuthenticationConfig = {
   recaptchaSiteKey?: string;
 };
 
+export type ErrorPageProps = {
+  redirectTo?: string;
+};
+
+export function ErrorPage({ redirectTo = '/' }: ErrorPageProps) {
+  const router = useRouter();
+
+  const logout = () => {
+    router.push('/user/logout');
+  };
+
+  return (
+    <div className='flex min-h-[100svh] w-full flex-col items-center justify-center bg-background px-4 py-12 sm:px-6 lg:px-8'>
+      <div className='max-w-md mx-auto text-center'>
+        <h1 className='mt-4 text-3xl font-bold tracking-tight text-foreground sm:text-4xl'>Oops, something went wrong!</h1>
+        <p className='mt-4 text-muted-foreground'>
+          We&apos;re sorry, but an unexpected error has occurred. Please try again later or contact support if the issue
+          persists.
+        </p>
+        <div className='flex justify-center gap-4 mt-6'>
+          <Button onClick={() => router.back()}>Try again</Button>
+          <Button onClick={logout}>Logout</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const AuthenticationContext = createContext<AuthenticationConfig | undefined>(undefined);
+('use client');
+
+export type LogoutProps = { redirectTo?: string };
+
+export function Logout({ redirectTo = '/' }: LogoutProps): ReactNode {
+  const router = useRouter();
+  const authConfig = useAuthentication();
+
+  useEffect(() => {
+    deleteCookie('jwt', { domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN });
+    router.refresh();
+    router.replace(redirectTo);
+    router.refresh();
+  }, [router, redirectTo]);
+
+  // Moved the conditional rendering here, after all hooks are called
+  if (!authConfig.logout.heading) {
+    return null;
+  }
+
+  return <h1 className='text-3xl'>{authConfig.logout.heading}</h1>;
+}
 
 export const useAuthentication = () => {
   const context = useContext(AuthenticationContext);
