@@ -3,14 +3,14 @@ import { redirect } from 'next/navigation';
 import { Hero } from '@/components/home/hero';
 import { Features } from '@/components/home/features';
 import { HowItWorks } from '@/components/home/how-it-works';
-import PricingGrid from '@/components/auth/PricingTable';
+import Subscribe from '@/components/auth/Subscribe';
 import { Contact } from '@/components/home/contact';
 import { CallToAction } from '@/components/home/call-to-action';
 import { ThemeToggle } from '@/components/layout/themes';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
-export default function Home() {
+export default function Home(searchParams: { searchParams: { [key: string]: string | string[] | undefined } }) {
   if (cookies().has('jwt')) {
     redirect('/chat');
   }
@@ -48,7 +48,7 @@ export default function Home() {
 
         <CallToAction />
         <div className='flex flex-col items-center justify-center'>
-          <PricingGrid />
+          <Subscribe searchParams={searchParams} />
         </div>
         <Contact />
         <div className='flex flex-col items-center justify-center'>

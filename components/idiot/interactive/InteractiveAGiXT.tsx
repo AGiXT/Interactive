@@ -27,16 +27,14 @@ export type AGiXTInteractiveProps = {
 
 const InteractiveAGiXT = ({
   overrides = {
-    mode: (process.env.NEXT_PUBLIC_AGIXT_MODE && ['chain', 'prompt'].includes(process.env.NEXT_PUBLIC_AGIXT_MODE)
-      ? process.env.NEXT_PUBLIC_AGIXT_MODE
-      : 'prompt') as 'chain' | 'prompt',
+    mode: 'prompt',
   },
   uiConfig = {},
 }: AGiXTInteractiveProps): React.JSX.Element => {
   const uiConfigWithEnv = useMemo(
     () => ({
       showRLHF: process.env.NEXT_PUBLIC_AGIXT_RLHF === 'true',
-      showChatThemeToggles: process.env.NEXT_PUBLIC_AGIXT_SHOW_CHAT_THEME_TOGGLES === 'true',
+      showChatThemeToggles: false,
       footerMessage: process.env.NEXT_PUBLIC_AGIXT_FOOTER_MESSAGE || '',
       showOverrideSwitchesCSV: process.env.NEXT_PUBLIC_AGIXT_SHOW_OVERRIDE_SWITCHES || '',
       alternateBackground: 'primary' as 'primary' | 'secondary',

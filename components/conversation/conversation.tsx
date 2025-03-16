@@ -1,7 +1,7 @@
 'use client';
 
 import { SidebarContent } from '@/components/layout/SidebarContentManager';
-import { useCompany } from '@/components/auth/useUser';
+import { useCompany } from '@/components/idiot/useUser';
 import { Input } from '@/components/ui/input';
 import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { toast } from '@/components/layout/toast';
@@ -584,10 +584,7 @@ export default function Chat({
         loading={loading}
         setLoading={setLoading}
         showOverrideSwitchesCSV={showOverrideSwitchesCSV}
-        showResetConversation={
-          process.env.NEXT_PUBLIC_AGIXT_SHOW_CONVERSATION_BAR !== 'true' &&
-          process.env.NEXT_PUBLIC_AGIXT_CONVERSATION_MODE === 'uuid'
-        }
+        showResetConversation={false}
       />
     </>
   );

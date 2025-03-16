@@ -2,9 +2,8 @@
 
 import { useAgent } from '@/components/idiot/interactive/hooks/useAgent';
 import { Button } from '@/components/ui/button';
-import deepMerge from '@/lib/trash';
 import { useRouter } from 'next/navigation';
-import { ReactNode, useCallback, useMemo } from 'react';
+import { ReactNode, useCallback } from 'react';
 import OAuth2Login from 'react-simple-oauth2-login';
 import {
   RiGithubFill as GitHub,
@@ -14,20 +13,6 @@ import {
   RiTwitterFill as Twitter,
 } from 'react-icons/ri';
 import { GiTesla } from 'react-icons/gi';
-import React, { useEffect } from 'react';
-import { useAuthentication } from '@/components/auth/Router';
-
-export type CloseProps = {};
-
-export function Close() {
-  const authConfig = useAuthentication();
-
-  useEffect(() => {
-    window.close();
-  }, []);
-
-  return authConfig.close.heading ? <h2 className='text-3xl'>{authConfig.close.heading}</h2> : null;
-}
 
 export const providers = {
   Amazon: {
@@ -81,34 +66,21 @@ export const providers = {
 export type OAuthProps = {
   overrides?: any;
 };
-export default function OAuth({ overrides }: OAuthProps): ReactNode {
+export default function OAuth(): ReactNode {
   const router = useRouter();
-  const oAuthProviders = useMemo(() => deepMerge(providers, overrides) as typeof providers, [providers, overrides]);
   const { mutate } = useAgent();
   const onOAuth2 = useCallback(
     (response: any) => {
       mutate();
-      document.location.href = `${process.env.NEXT_PUBLIC_APP_URI}/chat`; // This should be fixed properly just low priority.
-
-      // const redirect = getCookie('href') ?? '/';
-      // deleteCookie('href');
-      // router.push(redirect);
+      document.location.href = `${process.env.NEXT_PUBLIC_APP_URI}/chat`;
     },
     [router],
   );
-  /*
-  // Eventually automatically launch if it's the only provider.
-  useEffect(() => {
-    if (Object.values(providers).filter((provider) => provider.client_id).length === 1) {
-      
-    }
-  }, []);
-  */
   return (
     <>
-      {Object.values(oAuthProviders).some((provider) => provider.client_id) &&
+      {Object.values(providers).some((provider) => provider.client_id) &&
         process.env.NEXT_PUBLIC_ALLOW_EMAIL_SIGN_IN === 'true' && <hr />}
-      {Object.entries(oAuthProviders).map(([key, provider]) => {
+      {Object.entries(providers).map(([key, provider]) => {
         return (
           provider.client_id && (
             <OAuth2Login
@@ -117,7 +89,7 @@ export default function OAuth({ overrides }: OAuthProps): ReactNode {
               responseType='code'
               clientId={provider.client_id}
               scope={provider.scope}
-              redirectUri={`${process.env.NEXT_PUBLIC_AUTH_WEB}/close/${key.replaceAll('.', '-').replaceAll(' ', '-').replaceAll('_', '-').toLowerCase()}`}
+              redirectUri={`${process.env.NEXT_PUBLIC_APP_URI}/user/close/${key.replaceAll('.', '-').replaceAll(' ', '-').replaceAll('_', '-').toLowerCase()}`}
               onSuccess={onOAuth2}
               onFailure={onOAuth2}
               extraParams={provider.params}

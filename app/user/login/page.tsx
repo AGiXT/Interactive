@@ -3,12 +3,10 @@
 import React, { FormEvent, ReactNode, useState } from 'react';
 import axios, { AxiosError } from 'axios';
 import { getCookie } from 'cookies-next';
-import { useRouter } from 'next/navigation';
 import QRCode from 'react-qr-code';
 import ReCAPTCHA from 'react-google-recaptcha';
 import { LuCheck as Check, LuCopy as Copy } from 'react-icons/lu';
-import { useAuthentication } from '@/components/auth/Router';
-import AuthCard from '@/components/auth/AuthCard';
+import AuthCard from '@/components/layout/AuthCard';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from '@/components/ui/input-otp';
@@ -82,21 +80,13 @@ export const MissingAuthenticator = () => {
   );
 };
 
-export type LoginProps = {
-  userLoginEndpoint?: string;
-};
-export default function Login({
-  searchParams,
-  userLoginEndpoint = '/v1/login',
-}: { searchParams: any } & LoginProps): ReactNode {
+export default function Login({ searchParams }: { searchParams: { otp_uri?: string } }): ReactNode {
   const [responseMessage, setResponseMessage] = useState('');
-  const authConfig = useAuthentication();
-  const router = useRouter();
   const [captcha, setCaptcha] = useState<string | null>(null);
 
   const submitForm = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
-    if (authConfig.recaptchaSiteKey && !captcha) {
+    if (process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && !captcha) {
       setResponseMessage('Please complete the reCAPTCHA.');
       return;
     }
@@ -104,7 +94,7 @@ export default function Login({
     const formData = Object.fromEntries(new FormData((event.currentTarget as HTMLFormElement) ?? undefined));
     try {
       const response = await axios
-        .post(`${authConfig.authServer}${userLoginEndpoint}`, {
+        .post(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/login`, {
           ...formData,
           referrer: getCookie('href') ?? window.location.href.split('?')[0],
         })
@@ -132,7 +122,9 @@ export default function Login({
       console.error(exception);
     }
   };
-  const otp_uri = searchParams.otp_uri;
+
+  const otp_uri = searchParams?.otp_uri || '';
+
   return (
     <AuthCard title='Login' description='Please login to your account.' showBackButton>
       <form onSubmit={submitForm} className='flex flex-col gap-4'>
@@ -147,7 +139,7 @@ export default function Login({
               <QRCode
                 size={256}
                 style={{ height: 'auto', maxWidth: '100%', width: '100%' }}
-                value={otp_uri ?? ''}
+                value={otp_uri}
                 viewBox={`0 0 256 256`}
               />
             </div>
@@ -162,10 +154,10 @@ export default function Login({
         <Label htmlFor='token'>Multi-Factor Code</Label>
         <OTPInput name='token' id='token' />
         <MissingAuthenticator />
-        {authConfig.recaptchaSiteKey && (
+        {process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && (
           <div className='my-3'>
             <ReCAPTCHA
-              sitekey={authConfig.recaptchaSiteKey}
+              sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
               onChange={(token: string | null) => {
                 setCaptcha(token);
               }}

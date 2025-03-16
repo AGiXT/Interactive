@@ -4,7 +4,6 @@ import { deleteCookie, getCookie } from 'cookies-next';
 import { ReactNode, useState } from 'react';
 import useSWR from 'swr';
 import { useRouter } from 'next/navigation';
-import { useAuthentication } from '@/components/auth/Router';
 import { DynamicFormFieldValueTypes } from '@/components/layout/dynamic-form/DynamicForm';
 import { Button } from '@/components/ui/button';
 import { mutate } from 'swr';
@@ -18,20 +17,14 @@ export const Profile = ({
   error,
   data,
   router,
-  authConfig,
-  userDataSWRKey,
   responseMessage,
-  userUpdateEndpoint,
   setResponseMessage,
 }: {
   isLoading: boolean;
   error: any;
   data: any;
   router: any;
-  authConfig: any;
-  userDataSWRKey: string;
   responseMessage: string;
-  userUpdateEndpoint: string;
   setResponseMessage: (message: string) => void;
 }) => {
   return (
@@ -79,14 +72,14 @@ export const Profile = ({
           readOnlyFields={['input_tokens', 'output_tokens']}
           additionalButtons={[
             <Button key='done' className='col-span-2' onClick={() => router.push('/chat')}>
-              Go to {authConfig.appName}
+              Go to {process.env.NEXT_PUBLIC_APP_NAME}
             </Button>,
           ]}
           onConfirm={async (data) => {
             const updateResponse = (
               await axios
                 .put(
-                  `${authConfig.authServer}${userUpdateEndpoint}`,
+                  `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user`,
                   {
                     ...Object.entries(data).reduce((acc, [key, value]) => {
                       return value ? { ...acc, [key]: value } : acc;
@@ -125,7 +118,7 @@ export const Profile = ({
                 const updateResponse = (
                   await axios
                     .put(
-                      `${authConfig.authServer}${userUpdateEndpoint}`,
+                      `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user`,
                       {
                         ...data,
                       },
@@ -141,7 +134,7 @@ export const Profile = ({
                 if (updateResponse.detail) {
                   setResponseMessage(updateResponse.detail.toString());
                 }
-                await mutate(userDataSWRKey);
+                await mutate('/user');
                 if (data.missing_requirements && Object.keys(data.missing_requirements).length === 0) {
                   const redirect = getCookie('href') ?? '/';
                   deleteCookie('href');
@@ -157,18 +150,7 @@ export const Profile = ({
   );
 };
 
-export type ManageProps = {
-  userDataSWRKey?: string;
-  userDataEndpoint?: string;
-  userUpdateEndpoint?: string;
-  userPasswordChangeEndpoint?: string;
-};
-
-export default function Manage({
-  userDataSWRKey = '/user',
-  userDataEndpoint = '/v1/user',
-  userUpdateEndpoint = '/v1/user',
-}: ManageProps): ReactNode {
+export default function Manage(): ReactNode {
   const [responseMessage, setResponseMessage] = useState('');
   type User = {
     missing_requirements?: {
@@ -180,10 +162,9 @@ export default function Manage({
     };
   };
   const router = useRouter();
-  const authConfig = useAuthentication();
-  const { data, error, isLoading } = useSWR<User, any, string>(userDataSWRKey, async () => {
+  const { data, error, isLoading } = useSWR<User, any, string>('/user', async () => {
     return (
-      await axios.get(`${authConfig.authServer}${userDataEndpoint}`, {
+      await axios.get(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user`, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: getCookie('jwt'),
@@ -197,14 +178,14 @@ export default function Manage({
     <div className='w-full'>
       <main className='flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 bg-transparent p-4 md:gap-8 md:p-10'>
         <div className='flex justify-between w-full max-w-6xl gap-2 mx-auto'>
-          {authConfig.manage.heading && <h2 className='text-3xl font-semibold'>{authConfig.manage.heading}</h2>}
+          <h2 className='text-3xl font-semibold'>Account Management</h2>
           <Button
             key='done'
             onClick={() => {
               router.push('/chat');
             }}
           >
-            Go to {authConfig.appName}
+            Go to {process.env.NEXT_PUBLIC_APP_NAME}
           </Button>
         </div>
         <Profile
@@ -213,10 +194,7 @@ export default function Manage({
             error,
             data,
             router,
-            authConfig,
-            userDataSWRKey,
             responseMessage,
-            userUpdateEndpoint,
             setResponseMessage,
           }}
         />

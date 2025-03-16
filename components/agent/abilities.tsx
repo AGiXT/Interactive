@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import MarkdownBlock from '@/components/conversation/Message/MarkdownBlock';
-import { useCompany } from '@/components/auth/useUser';
+import { useCompany } from '@/components/idiot/useUser';
 import { Input } from '@/components/ui/input';
 
 // Types remain the same

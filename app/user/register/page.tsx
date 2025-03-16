@@ -4,29 +4,23 @@ import { getCookie } from 'cookies-next';
 import { useRouter } from 'next/navigation';
 import React, { FormEvent, ReactNode, useEffect, useState, useRef } from 'react';
 import { ReCAPTCHA } from 'react-google-recaptcha';
-import { useAuthentication } from '@/components/auth/Router';
-import AuthCard from '@/components/auth/AuthCard';
+import AuthCard from '@/components/layout/AuthCard';
 import { toTitleCase } from '@/components/layout/dynamic-form/DynamicForm';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import OAuth from '@/components/auth/OAuth';
 
-export type RegisterProps = {
-  additionalFields?: string[];
-  userRegisterEndpoint?: string;
-};
-
-export default function Register({ additionalFields = [], userRegisterEndpoint = '/v1/user' }: RegisterProps): ReactNode {
+export default function Register(): ReactNode {
   const formRef = useRef(null);
   const router = useRouter();
+  const additionalFields = ['first_name', 'last_name'];
   const [captcha, setCaptcha] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [responseMessage, setResponseMessage] = useState('');
-  const authConfig = useAuthentication();
   const submitForm = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
-    if (authConfig.recaptchaSiteKey && !captcha) {
+    if (process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && !captcha) {
       setResponseMessage('Please complete the reCAPTCHA.');
       return;
     }
@@ -39,7 +33,7 @@ export default function Register({ additionalFields = [], userRegisterEndpoint =
     try {
       // TODO fix the stupid double submission.
       registerResponse = await axios
-        .post(`${authConfig.authServer}${userRegisterEndpoint}`, {
+        .post(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user`, {
           ...formData,
         })
         .catch((exception: AxiosError) => {
@@ -94,8 +88,6 @@ export default function Register({ additionalFields = [], userRegisterEndpoint =
         showBackButton
       >
         <form onSubmit={submitForm} className='flex flex-col gap-4' ref={formRef}>
-          {/* {authConfig.register.heading && <Typography variant='h2'>{authConfig.register.heading}</Typography>} */}
-
           <input type='hidden' id='email' name='email' value={getCookie('email')} />
           {additionalFields.length > 0 &&
             additionalFields.map((field) => (
@@ -104,14 +96,14 @@ export default function Register({ additionalFields = [], userRegisterEndpoint =
                 <Input key={field} id={field} name={field} type='text' required placeholder={toTitleCase(field)} />
               </div>
             ))}
-          {authConfig.recaptchaSiteKey && (
+          {process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && (
             <div
               style={{
                 margin: '0.8rem 0',
               }}
             >
               <ReCAPTCHA
-                sitekey={authConfig.recaptchaSiteKey}
+                sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
                 onChange={(token: string | null) => {
                   setCaptcha(token);
                 }}

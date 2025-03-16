@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/layout/toast';
-import { useCompany } from '@/components/auth/useUser';
+import { useCompany } from '@/components/idiot/useUser';
 
 export function AgentDialog({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
   const context = useInteractiveConfig();
