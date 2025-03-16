@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { Hero } from '@/components/home/hero';
 import { Features } from '@/components/home/features';
 import { HowItWorks } from '@/components/home/how-it-works';
-import PricingGrid from '@/components/auth/PricingTable';
+import PricingGrid from '@/components/auth/Subscribe';
 import { Contact } from '@/components/home/contact';
 import { CallToAction } from '@/components/home/call-to-action';
 import { ThemeToggle } from '@/components/layout/themes';
