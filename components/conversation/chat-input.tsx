@@ -14,7 +14,7 @@ import {
   UploadFiles,
 } from '@/components/layout/Adornments';
 import { Textarea } from '@/components/ui/textarea';
-import { DropZone } from '@/components/dropzone/DropZone';
+import { DropZone } from '@/components/layout/DropZone';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { TooltipBasic } from '@/components/ui/tooltip';
