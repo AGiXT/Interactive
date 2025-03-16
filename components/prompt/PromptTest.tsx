@@ -6,7 +6,7 @@ import { getCookie } from 'cookies-next';
 import { Loader2, Repeat, Send } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import MarkdownBlock from '@/components/conversation/Message/MarkdownBlock';
-import { toast } from '@/lib/useToast';
+import { toast } from '@/lib/toast';
 
 export default function PromptTest({
   promptName,

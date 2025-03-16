@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipBasic, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useToast } from '@/lib/useToast';
+import { useToast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 import clipboardCopy from 'clipboard-copy';
 import { getCookie } from 'cookies-next';

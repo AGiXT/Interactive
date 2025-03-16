@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { toast } from '@/lib/useToast';
+import { toast } from '@/lib/toast';
 import { useState } from 'react';
 import { usePrompts } from '@/components/interactive/hooks/usePrompt';
 

@@ -1,4 +1,4 @@
-import { useToast } from '@/lib/useToast';
+import { useToast } from '@/lib/toast';
 import { useRouter } from 'next/navigation';
 import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
