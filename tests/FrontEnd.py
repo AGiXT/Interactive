@@ -517,54 +517,19 @@ class FrontEndTest:
                 "The user enters an input to prompt the default agent, since no advanced settings have been configured, this will use the default A G I X T thought process.",
                 lambda: self.page.fill(
                     "#message",
-                    "Tell me a fictional story about a man named John Doe. Include the word 'extravagant' at least twice.",
+                    "Can you show be a basic 'hello world' Python example?",
                 ),
             )
             await self.test_action(
                 "When the user hits send, or the enter key, the message is sent to the agent and it begins thinking.",
                 lambda: self.page.click("#send-message"),
             )
-            # A refetch of conversation after the rename is done needs to be added so this loads on the new page.
-            return None
-            while not await self.page.locator(
-                ":has-text('Conversation renamed')"
-            ).count():
-                logging.info(f"No rename found yet, waiting 5s.")
-                await asyncio.sleep(5)
-            logging.info(
-                str(
-                    await self.page.locator(":has-text('Conversation renamed')").count()
-                )
-                + "conversation rename detected, continuing."
-            )
 
-            await asyncio.sleep(2)
+            await asyncio.sleep(90)
 
             await self.take_screenshot(
                 "When the agent finishes thinking, the agent responds alongside providing its thought process and renaming the conversation contextually."
             )
-
-            await self.test_action(
-                "The user can expand the thought process to see the thoughts, reflections and actions.",
-                lambda: self.page.locator(".agixt-activity")
-                .get_by_text("Completed Activities")
-                .click(),
-                lambda: self.page.locator(".agixt-activity")
-                .get_by_text("Completed Activities")
-                .scroll_into_view_if_needed(),
-            )
-            try:
-                await self.test_action(
-                    "The agent also provides a visualization of its thought process.",
-                    lambda: self.page.click(".agixt-activity-diagram"),
-                    lambda: self.page.locator(
-                        '.flowchart[id^="mermaid"]'
-                    ).scroll_into_view_if_needed(),
-                )
-            except Exception as e:
-                self.take_screenshot(
-                    "The agent did not provide a visualization of its thought process."
-                )
 
             # await self.test_action(
             #     "Record audio",
