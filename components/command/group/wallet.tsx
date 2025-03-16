@@ -5,7 +5,7 @@ import { Wallet as WalletIcon, Copy, SwitchCamera, LogOut } from 'lucide-react';
 import { CommandItemComponent } from '@/components/command/index';
 import { useCommandMenu } from '@/components/command/command-menu-context';
 import { CommandGroup } from '@/components/ui/command';
-import { useToast } from '@/lib/toast';
+import { useToast } from '@/components/layout/toast';
 
 const walletSubPages = ['wallet-list', 'wallet-connected'];
 

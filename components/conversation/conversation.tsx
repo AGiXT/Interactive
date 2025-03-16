@@ -4,7 +4,7 @@ import { SidebarContent } from '@/components/layout/SidebarContentManager';
 import { useCompany } from '@/components/idiot/auth/hooks/useUser';
 import { Input } from '@/components/ui/input';
 import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { toast } from '@/lib/toast';
+import { toast } from '@/components/layout/toast';
 import axios from 'axios';
 import { getCookie } from 'cookies-next';
 import { Badge, Check, Download, Paperclip, Pencil, Plus, Trash2, Upload } from 'lucide-react';

@@ -3,7 +3,6 @@ import path from 'path';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
-import { SidebarPage } from '@/components/layout/SidebarPage';
 import MarkdownBlock from '@/components/conversation/Message/MarkdownBlock';
 
 export default function DocPage({ params }: { params: { slug: string[] } }) {
