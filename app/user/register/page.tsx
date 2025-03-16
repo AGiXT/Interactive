@@ -4,7 +4,7 @@ import { getCookie } from 'cookies-next';
 import { useRouter } from 'next/navigation';
 import React, { FormEvent, ReactNode, useEffect, useState, useRef } from 'react';
 import { ReCAPTCHA } from 'react-google-recaptcha';
-import AuthCard from '@/components/auth/AuthCard';
+import AuthCard from '@/components/layout/AuthCard';
 import { toTitleCase } from '@/components/layout/dynamic-form/DynamicForm';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';

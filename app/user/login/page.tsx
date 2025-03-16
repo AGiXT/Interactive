@@ -6,7 +6,7 @@ import { getCookie } from 'cookies-next';
 import QRCode from 'react-qr-code';
 import ReCAPTCHA from 'react-google-recaptcha';
 import { LuCheck as Check, LuCopy as Copy } from 'react-icons/lu';
-import AuthCard from '@/components/auth/AuthCard';
+import AuthCard from '@/components/layout/AuthCard';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from '@/components/ui/input-otp';
@@ -80,13 +80,7 @@ export const MissingAuthenticator = () => {
   );
 };
 
-export type LoginProps = {
-  userLoginEndpoint?: string;
-};
-export default function Login({
-  searchParams,
-  userLoginEndpoint = '/v1/login',
-}: { searchParams: any } & LoginProps): ReactNode {
+export default function Login({ searchParams }: { searchParams: any }): ReactNode {
   const [responseMessage, setResponseMessage] = useState('');
   const [captcha, setCaptcha] = useState<string | null>(null);
 
@@ -100,7 +94,7 @@ export default function Login({
     const formData = Object.fromEntries(new FormData((event.currentTarget as HTMLFormElement) ?? undefined));
     try {
       const response = await axios
-        .post(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}${userLoginEndpoint}`, {
+        .post(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/login`, {
           ...formData,
           referrer: getCookie('href') ?? window.location.href.split('?')[0],
         })

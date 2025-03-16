@@ -2,9 +2,8 @@
 
 import { useAgent } from '@/components/idiot/interactive/hooks/useAgent';
 import { Button } from '@/components/ui/button';
-import deepMerge from '@/lib/trash';
 import { useRouter } from 'next/navigation';
-import { ReactNode, useCallback, useMemo } from 'react';
+import { ReactNode, useCallback } from 'react';
 import OAuth2Login from 'react-simple-oauth2-login';
 import {
   RiGithubFill as GitHub,
@@ -14,17 +13,7 @@ import {
   RiTwitterFill as Twitter,
 } from 'react-icons/ri';
 import { GiTesla } from 'react-icons/gi';
-import React, { useEffect } from 'react';
-
-export type CloseProps = {};
-
-export function Close() {
-  useEffect(() => {
-    window.close();
-  }, []);
-
-  return null;
-}
+import React from 'react';
 
 export const providers = {
   Amazon: {
@@ -78,9 +67,8 @@ export const providers = {
 export type OAuthProps = {
   overrides?: any;
 };
-export default function OAuth({ overrides }: OAuthProps): ReactNode {
+export default function OAuth(): ReactNode {
   const router = useRouter();
-  const oAuthProviders = useMemo(() => deepMerge(providers, overrides) as typeof providers, [providers, overrides]);
   const { mutate } = useAgent();
   const onOAuth2 = useCallback(
     (response: any) => {
@@ -103,9 +91,9 @@ export default function OAuth({ overrides }: OAuthProps): ReactNode {
   */
   return (
     <>
-      {Object.values(oAuthProviders).some((provider) => provider.client_id) &&
+      {Object.values(providers).some((provider) => provider.client_id) &&
         process.env.NEXT_PUBLIC_ALLOW_EMAIL_SIGN_IN === 'true' && <hr />}
-      {Object.entries(oAuthProviders).map(([key, provider]) => {
+      {Object.entries(providers).map(([key, provider]) => {
         return (
           provider.client_id && (
             <OAuth2Login

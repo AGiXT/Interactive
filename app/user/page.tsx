@@ -10,7 +10,7 @@ import { setCookie } from 'cookies-next';
 import { LuUser } from 'react-icons/lu';
 import OAuth from '@/components/auth/OAuth';
 import { providers as oAuth2Providers } from '@/components/auth/OAuth';
-import AuthCard from '@/components/auth/AuthCard';
+import AuthCard from '@/components/layout/AuthCard';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,19 +25,7 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-export type IdentifyProps = {
-  identifyEndpoint?: string;
-  redirectToOnExists?: string;
-  redirectToOnNotExists?: string;
-  oAuthOverrides?: any;
-};
-
-export default function Identify({
-  identifyEndpoint = '/v1/user/exists',
-  redirectToOnExists = '/login',
-  redirectToOnNotExists = '/register',
-  oAuthOverrides = {},
-}): ReactNode {
+export default function Identify(): ReactNode {
   const router = useRouter();
   const pathname = usePathname();
   const {
@@ -51,9 +39,9 @@ export default function Identify({
 
   const onSubmit: SubmitHandler<FormData> = async (formData) => {
     try {
-      const existsResponse = await axios.get(`${authServer}${identifyEndpoint}?email=${formData.email}`);
+      const existsResponse = await axios.get(`${authServer}/v1/user/exists?email=${formData.email}`);
       setCookie('email', formData.email, { domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN });
-      router.push(`${pathname}${existsResponse.data ? redirectToOnExists : redirectToOnNotExists}`);
+      router.push(`${pathname}${existsResponse.data ? '/login' : '/register'}`);
     } catch (exception) {
       const axiosError = exception as AxiosError;
       setError('email', { type: 'server', message: axiosError.message });
@@ -87,7 +75,7 @@ export default function Identify({
           </div>
         ) : null}
 
-        {showOAuth && <OAuth overrides={oAuthOverrides} />}
+        {showOAuth && <OAuth />}
       </form>
     </AuthCard>
   );
