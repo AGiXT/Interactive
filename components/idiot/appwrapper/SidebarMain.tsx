@@ -5,10 +5,12 @@ import { getCookie } from 'cookies-next';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
-import { AgentSelector } from '../../interactive/Selectors/agent-selector';
-import { ChatHistory } from '../../interactive/Layout/chat-history';
+import { AgentSelector } from '@/components/interactive/Selectors/agent-selector';
+import { ChatHistory } from '@/components/interactive/Layout/chat-history';
 import { NavMain } from '@/components/idiot/appwrapper/NavMain';
 import { NavUser } from '@/components/idiot/appwrapper/NavUser';
+import { useUser } from '@/components/idiot/auth/hooks/useUser';
+import { ViewVerticalIcon } from '@radix-ui/react-icons';
 import {
   Sidebar,
   SidebarContent,
@@ -18,9 +20,19 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from '@/components/ui/sidebar';
-import { ToggleSidebar } from './ToggleSidebar';
-import { useUser } from '../auth/hooks/useUser';
+
+export function ToggleSidebar({ side }: { side: 'left' | 'right' }) {
+  const { toggleSidebar } = useSidebar(side);
+
+  return (
+    <SidebarMenuButton onClick={toggleSidebar}>
+      <ViewVerticalIcon className='w-7 h-7' />
+      <span>Toggle Sidebar</span>
+    </SidebarMenuButton>
+  );
+}
 
 export function SidebarMain({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [hasStarted, setHasStarted] = useState(false);

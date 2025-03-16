@@ -50,12 +50,3 @@ export function SidebarContent({ children, title = 'Context Sidebar' }: SidebarC
 
   return null;
 }
-
-// Hook for consuming title in other components
-export function useSidebarTitle() {
-  const context = useContext(SidebarContentManager);
-  if (!context) {
-    throw new Error('useSidebarTitle must be used within a SidebarContentProvider');
-  }
-  return context.title;
-}
