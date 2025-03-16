@@ -1,6 +1,6 @@
 'use client';
 
-import { SidebarContent } from '@/components/idiot/appwrapper/SidebarContentManager';
+import { SidebarContent } from '@/components/appwrapper/SidebarContentManager';
 import { useCompany } from '@/components/idiot/auth/hooks/useUser';
 import { Input } from '@/components/ui/input';
 import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';

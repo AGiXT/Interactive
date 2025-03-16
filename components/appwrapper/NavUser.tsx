@@ -2,7 +2,7 @@
 
 import { CaretRightIcon, ComponentPlaceholderIcon } from '@radix-ui/react-icons';
 import { BadgeCheck, LogOut, MoonIcon, LayoutGrid } from 'lucide-react';
-import { useTheme } from '@/components/idiot/theme/useTheme';
+import { useTheme } from '@/components/theme/useTheme';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -19,8 +19,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/ui/sidebar';
 import { useRouter } from 'next/navigation';
-import { Skeleton } from '../../ui/skeleton';
-import { useUser } from '../auth/hooks/useUser';
+import { Skeleton } from '../ui/skeleton';
+import { useUser } from '../idiot/auth/hooks/useUser';
 import md5 from 'md5';
 
 const getGravatarUrl = (email?: string, size = 40): string => {

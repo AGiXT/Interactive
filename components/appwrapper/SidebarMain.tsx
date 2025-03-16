@@ -7,8 +7,8 @@ import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 import { AgentSelector } from '@/components/interactive/Selectors/agent-selector';
 import { ChatHistory } from '@/components/interactive/Layout/chat-history';
-import { NavMain } from '@/components/idiot/appwrapper/NavMain';
-import { NavUser } from '@/components/idiot/appwrapper/NavUser';
+import { NavMain } from '@/components/appwrapper/NavMain';
+import { NavUser } from '@/components/appwrapper/NavUser';
 import { useUser } from '@/components/idiot/auth/hooks/useUser';
 import { ViewVerticalIcon } from '@radix-ui/react-icons';
 import {

@@ -1,6 +1,6 @@
 'use client';
 
-import IconButton from '@/components/idiot/theme/IconButton';
+import IconButton from '@/components/theme/IconButton';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -36,75 +36,79 @@ export default function PromptPanel() {
   }, [renaming, searchParams]);
 
   return (
-    <div className="space-y-6">
-      <Card className="p-6">
-        <h2 className="text-2xl font-bold mb-6">Prompt Management</h2>
-        
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Select Prompt</label>
-            <div className="flex gap-2 items-center">
+    <div className='space-y-6'>
+      <Card className='p-6'>
+        <h2 className='text-2xl font-bold mb-6'>Prompt Management</h2>
+
+        <div className='space-y-4'>
+          <div className='space-y-2'>
+            <label className='text-sm font-medium'>Select Prompt</label>
+            <div className='flex gap-2 items-center'>
               {renaming ? (
-                <Input value={newName} onChange={(e) => setNewName(e.target.value)} className="flex-1" />
+                <Input value={newName} onChange={(e) => setNewName(e.target.value)} className='flex-1' />
               ) : (
-                <div className="flex-1">
+                <div className='flex-1'>
                   <PromptSelector />
                 </div>
               )}
               <Button
-                variant="outline"
-                size="sm"
-                onClick={renaming ? () => {
-                  prompt.rename(newName);
-                  setRenaming(false);
-                } : () => setRenaming(true)}
+                variant='outline'
+                size='sm'
+                onClick={
+                  renaming
+                    ? () => {
+                        prompt.rename(newName);
+                        setRenaming(false);
+                      }
+                    : () => setRenaming(true)
+                }
               >
-                {renaming ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-                <span className="ml-2">{renaming ? 'Save Name' : 'Rename'}</span>
+                {renaming ? <Check className='h-4 w-4' /> : <Pencil className='h-4 w-4' />}
+                <span className='ml-2'>{renaming ? 'Save Name' : 'Rename'}</span>
               </Button>
             </div>
           </div>
-          
-          <div className="flex flex-wrap gap-2">
+
+          <div className='flex flex-wrap gap-2'>
             <Button
-              variant="outline"
-              size="sm"
+              variant='outline'
+              size='sm'
               onClick={() => {
                 setImportMode(false);
                 setIsDialogOpen(true);
               }}
               disabled={renaming}
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className='h-4 w-4 mr-2' />
               Create
             </Button>
             <Button
-              variant="outline"
-              size="sm"
+              variant='outline'
+              size='sm'
               onClick={() => {
                 setImportMode(true);
                 setIsDialogOpen(true);
               }}
               disabled={renaming}
             >
-              <Upload className="h-4 w-4 mr-2" />
+              <Upload className='h-4 w-4 mr-2' />
               Import
             </Button>
-            <Button variant="outline" size="sm" onClick={() => prompt.export()} disabled={renaming}>
-              <Download className="h-4 w-4 mr-2" />
+            <Button variant='outline' size='sm' onClick={() => prompt.export()} disabled={renaming}>
+              <Download className='h-4 w-4 mr-2' />
               Export
             </Button>
-            <Button variant="outline" size="sm" onClick={() => prompt.delete()} disabled={renaming}>
-              <Trash2 className="h-4 w-4 mr-2" />
+            <Button variant='outline' size='sm' onClick={() => prompt.delete()} disabled={renaming}>
+              <Trash2 className='h-4 w-4 mr-2' />
               Delete
             </Button>
           </div>
         </div>
       </Card>
-      
+
       {promptBody ? (
         <>
-          <Card className="p-6">
+          <Card className='p-6'>
             <AutoResizeTextarea
               value={promptBody}
               onChange={(e) => {
@@ -122,17 +126,15 @@ export default function PromptPanel() {
                 setHasChanges(false);
               }}
               disabled={!hasChanges || renaming}
-              className="mt-4"
+              className='mt-4'
             />
           </Card>
-          <Card className="p-6">
+          <Card className='p-6'>
             <PromptTest promptName={prompt.data?.name} promptContent={promptBody} saved={!hasChanges} />
           </Card>
         </>
       ) : (
-        <div className="text-center py-8 text-muted-foreground">
-          Select or create a prompt to begin editing
-        </div>
+        <div className='text-center py-8 text-muted-foreground'>Select or create a prompt to begin editing</div>
       )}
       <NewPromptDialog open={isDialogOpen} setOpen={setIsDialogOpen} importMode={importMode} />
     </div>

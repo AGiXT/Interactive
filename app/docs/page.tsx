@@ -2,7 +2,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { SidebarPage } from '@/components/idiot/appwrapper/SidebarPage';
+import { SidebarPage } from '@/components/appwrapper/SidebarPage';
 import MarkdownBlock from '@/components/interactive/Chat/Message/MarkdownBlock';
 
 async function getContent(slug: string[]) {

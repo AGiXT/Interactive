@@ -7,7 +7,7 @@ import { Copy, Download } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import 'katex/dist/katex.min.css';
 import Latex from 'react-latex-next';
-import { useTheme } from '@/components/idiot/theme/useTheme';
+import { useTheme } from '@/components/theme/useTheme';
 import MarkdownBlock from '../MarkdownBlock';
 import { DataTable } from '../data-table';
 import { createColumns } from '../data-table/data-table-columns';
@@ -158,7 +158,7 @@ export default function CodeBlock({
     const languages = Object.keys(fileExtensions);
     const contentLines = children.split('\n');
     const potentialLanguage = contentLines[0].trim().toLowerCase();
-    
+
     // Handle Mermaid specific syntax
     if (contentLines[0].trim() === 'graph TD' || contentLines[0].trim() === 'graph TB') {
       language = 'mermaid';
@@ -238,7 +238,12 @@ export default function CodeBlock({
       <CollapsibleContent className='transition-all duration-300 ease-in-out'>
         {hasCustomRenderer && (
           <TabPanel value={tab} index={0}>
-            <div className='code-container'>{(languageRenders[languageKey] as (content: string, setLoading?: (loading: boolean) => void) => ReactNode)(children, setLoading)}</div>
+            <div className='code-container'>
+              {(languageRenders[languageKey] as (content: string, setLoading?: (loading: boolean) => void) => ReactNode)(
+                children,
+                setLoading,
+              )}
+            </div>
           </TabPanel>
         )}
 

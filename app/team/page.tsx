@@ -1,7 +1,7 @@
 import Team from '@/components/idiot/auth/management/Team';
 import TeamUsers from '@/components/idiot/auth/management/TeamUsers';
 import { SidebarInset } from '@/components/ui/sidebar';
-import { SidebarPage } from '@/components/idiot/appwrapper/SidebarPage';
+import { SidebarPage } from '@/components/appwrapper/SidebarPage';
 
 export default function TeamPage() {
   return (
