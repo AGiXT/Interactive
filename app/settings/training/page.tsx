@@ -1,6 +1,6 @@
 'use client';
 
-import Training from '@/components/Settings/training';
+import Training from '@/components/agent/training';
 import { SidebarPage } from '@/components/layout/SidebarPage';
 import { useUser } from '@/components/idiot/auth/hooks/useUser';
 export default function TrainingPage() {

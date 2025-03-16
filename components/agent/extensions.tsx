@@ -5,7 +5,7 @@ import { getCookie } from 'cookies-next';
 import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { useAgent } from '@/components/interactive/hooks/useAgent';
-import Extension from '@/components/Settings/extension';
+import Extension from '@/components/agent/extension';
 import { ConnectedServices } from '@/components/idiot/auth/management/ConnectedServices';
 import { useCompany } from '@/components/idiot/auth/hooks/useUser';
 

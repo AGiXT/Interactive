@@ -3,7 +3,7 @@
 import { Badge } from '@/components/ui/badge';
 import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { getTimeDifference } from '@/components/conversation/Activity';
+import { getTimeDifference } from '@/components/conversation/activity';
 import { cn } from '@/lib/utils';
 import { DotsHorizontalIcon } from '@radix-ui/react-icons';
 import dayjs from 'dayjs';

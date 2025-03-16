@@ -9,7 +9,7 @@ import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { usePrompt } from '@/components/interactive/hooks/usePrompt';
 import PromptSelector from '@/components/layout/PromptSelector';
-import { AutoResizeTextarea } from '@/components/Settings/training';
+import { AutoResizeTextarea } from '@/components/agent/training';
 import NewPromptDialog from '@/components/prompt/PromptDialog';
 import PromptTest from '@/components/prompt/PromptTest';
 

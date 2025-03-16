@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import { Activity as ChatActivity } from '@/components/conversation/Activity';
+import { Activity as ChatActivity } from '@/components/conversation/activity';
 import Message from '@/components/conversation/Message/Message';
 
 export default function ChatLog({

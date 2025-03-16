@@ -1,4 +1,4 @@
-import { Providers } from '@/components/Settings/providers';
+import { Providers } from '@/components/agent/providers';
 import { SidebarPage } from '@/components/layout/SidebarPage';
 
 export default function ProvidersPage() {
