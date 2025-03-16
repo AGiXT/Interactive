@@ -26,13 +26,7 @@ export type AuthenticationConfig = {
   close: RouterPageProps & { props?: CloseProps };
   subscribe: RouterPageProps & { props?: SubscribeProps };
   logout: RouterPageProps & { props: LogoutProps };
-  ou: RouterPageProps & { props?: OrganizationalUnitProps };
   error: RouterPageProps & { props?: ErrorPageProps };
-  authModes: {
-    basic: boolean;
-    oauth2: boolean;
-    magical: boolean;
-  };
   authServer: string;
   appName: string;
   authBaseURI: string;
@@ -86,11 +80,6 @@ const pageConfigDefaults: AuthenticationConfig = {
   appName: process.env.NEXT_PUBLIC_APP_NAME,
   authBaseURI: process.env.NEXT_PUBLIC_AUTH_WEB,
   authServer: process.env.NEXT_PUBLIC_AGIXT_SERVER,
-  authModes: {
-    basic: false,
-    oauth2: Object.values(oAuth2Providers).some((provider) => !!provider.client_id),
-    magical: process.env.NEXT_PUBLIC_ALLOW_EMAIL_SIGN_IN === 'true',
-  },
   recaptchaSiteKey: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
 };
 

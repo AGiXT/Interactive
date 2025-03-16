@@ -79,14 +79,15 @@ export default function Register({ additionalFields = [], userRegisterEndpoint =
     }
   }, []);
   useEffect(() => {
-    if (!submitted && formRef.current && authConfig.authModes.magical && additionalFields.length === 0) {
+    if (!submitted && formRef.current && additionalFields.length === 0) {
       setSubmitted(true);
       formRef.current.requestSubmit();
     }
   }, []);
   const [invite, setInvite] = useState<string | null>(null);
+  const showEmail = process.env.NEXT_PUBLIC_ALLOW_EMAIL_SIGN_IN === 'true';
   return (
-    <div className={additionalFields.length === 0 && authConfig.authModes.magical ? ' invisible' : ''}>
+    <div className={additionalFields.length === 0 && showEmail ? ' invisible' : ''}>
       <AuthCard
         title={invite !== null ? 'Accept Invitation to ' + (invite.replaceAll('+', ' ') || 'Company') : 'Sign Up'}
         description={`Welcome, please complete your registration. ${invite !== null ? 'You are ' : ''}${invite ? ' to ' + invite.replaceAll('+', ' ') + '.' : ''}${invite !== null ? '.' : ''}`}
