@@ -5,8 +5,6 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
 import PromptPanel from '@/components/interactive/Settings/prompt/PromptPanel';
 import NewPromptDialog from '@/components/interactive/Settings/prompt/PromptDialog';
-import { SidebarPage } from '@/components/idiot/appwrapper/SidebarPage';
-import { SidebarContent } from '@/components/idiot/appwrapper/SidebarContentManager';
 
 export default function PromptPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -16,7 +14,7 @@ export default function PromptPage() {
   const router = useRouter();
 
   return (
-    <SidebarPage title='Prompts'>
+    <div className="container mx-auto p-6 space-y-6">
       <PromptPanel
         showCreateDialog={showCreateDialog}
         setShowCreateDialog={setShowCreateDialog}
@@ -26,6 +24,6 @@ export default function PromptPage() {
         router={router}
       />
       <NewPromptDialog open={showCreateDialog} setOpen={setShowCreateDialog} />
-    </SidebarPage>
+    </div>
   );
 }

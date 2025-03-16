@@ -1,10 +1,10 @@
 'use client';
 
-import { SidebarContent } from '@/components/idiot/appwrapper/SidebarContentManager';
 import IconButton from '@/components/idiot/theme/IconButton';
 import { Input } from '@/components/ui/input';
-import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { ArrowBigLeft, Check, Download, Pencil, Plus, Save, Trash2, Upload } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Check, Download, Pencil, Plus, Save, Trash2, Upload } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { usePrompt } from '../../hooks/usePrompt';
@@ -33,89 +33,78 @@ export default function PromptPanel() {
     if (renaming) {
       setNewName(searchParams.get('prompt') ?? '');
     }
-  }, [renaming, searchParams.get('prompt')]);
+  }, [renaming, searchParams]);
 
   return (
-    <div className='space-y-4'>
-      <SidebarContent title='Prompt Management'>
-        <SidebarGroup>
-          <SidebarGroupLabel>Select Prompt</SidebarGroupLabel>
-          <SidebarMenuButton className='group-data-[state=expanded]:hidden'>
-            <ArrowBigLeft />
-          </SidebarMenuButton>
-          <div className='w-full group-data-[collapsible=icon]:hidden'>
-            {renaming ? (
-              <Input value={newName} onChange={(e) => setNewName(e.target.value)} className='w-full' />
-            ) : (
-              <PromptSelector />
-            )}
+    <div className="space-y-6">
+      <Card className="p-6">
+        <h2 className="text-2xl font-bold mb-6">Prompt Management</h2>
+        
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Select Prompt</label>
+            <div className="flex gap-2 items-center">
+              {renaming ? (
+                <Input value={newName} onChange={(e) => setNewName(e.target.value)} className="flex-1" />
+              ) : (
+                <div className="flex-1">
+                  <PromptSelector />
+                </div>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={renaming ? () => {
+                  prompt.rename(newName);
+                  setRenaming(false);
+                } : () => setRenaming(true)}
+              >
+                {renaming ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+                <span className="ml-2">{renaming ? 'Save Name' : 'Rename'}</span>
+              </Button>
+            </div>
           </div>
-          <SidebarGroupLabel>Prompt Functions</SidebarGroupLabel>
-          <SidebarMenu>
-            {[
-              {
-                title: 'Create Prompt',
-                icon: Plus,
-                func: () => {
-                  setImportMode(false);
-                  setIsDialogOpen(true);
-                },
-                disabled: renaming,
-              },
-              {
-                title: renaming ? 'Save Name' : 'Rename Prompt',
-                icon: renaming ? Check : Pencil,
-                func: renaming
-                  ? () => {
-                      prompt.rename(newName);
-                      setRenaming(false);
-                    }
-                  : () => setRenaming(true),
-                disabled: false,
-              },
-              {
-                title: 'Import Prompt',
-                icon: Upload,
-                func: () => {
-                  setImportMode(true);
-                  setIsDialogOpen(true);
-                },
-                disabled: renaming,
-              },
-              {
-                title: 'Export Prompt',
-                icon: Download,
-                func: () => {
-                  prompt.export();
-                },
-                disabled: renaming,
-              },
-              {
-                title: 'Delete Prompt',
-                icon: Trash2,
-                func: () => {
-                  prompt.delete();
-                },
-                disabled: renaming,
-              },
-            ].map(
-              (item) =>
-                item.visible !== false && (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton side='left' tooltip={item.title} onClick={item.func} disabled={item.disabled}>
-                      {item.icon && <item.icon />}
-                      <span>{item.title}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ),
-            )}
-          </SidebarMenu>
-        </SidebarGroup>
-      </SidebarContent>
-
-      {promptBody && (
+          
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setImportMode(false);
+                setIsDialogOpen(true);
+              }}
+              disabled={renaming}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setImportMode(true);
+                setIsDialogOpen(true);
+              }}
+              disabled={renaming}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Import
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => prompt.export()} disabled={renaming}>
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => prompt.delete()} disabled={renaming}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
+          </div>
+        </div>
+      </Card>
+      
+      {promptBody ? (
         <>
-          <div className='space-y-2'>
+          <Card className="p-6">
             <AutoResizeTextarea
               value={promptBody}
               onChange={(e) => {
@@ -124,8 +113,6 @@ export default function PromptPanel() {
               }}
               placeholder=''
             />
-          </div>
-          <div className='flex space-x-2'>
             <IconButton
               Icon={Save}
               label='Save'
@@ -135,12 +122,18 @@ export default function PromptPanel() {
                 setHasChanges(false);
               }}
               disabled={!hasChanges || renaming}
+              className="mt-4"
             />
-          </div>
-          <PromptTest promptName={prompt.data?.name} promptContent={promptBody} saved={!hasChanges} />
+          </Card>
+          <Card className="p-6">
+            <PromptTest promptName={prompt.data?.name} promptContent={promptBody} saved={!hasChanges} />
+          </Card>
         </>
+      ) : (
+        <div className="text-center py-8 text-muted-foreground">
+          Select or create a prompt to begin editing
+        </div>
       )}
-
       <NewPromptDialog open={isDialogOpen} setOpen={setIsDialogOpen} importMode={importMode} />
     </div>
   );
