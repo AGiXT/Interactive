@@ -10,7 +10,7 @@ import Logout, { LogoutProps } from '@/components/idiot/auth/Logout';
 import Subscribe, { SubscribeProps } from '@/components/idiot/auth/Subscribe';
 import ErrorPage, { ErrorPageProps } from '@/components/idiot/auth/ErrorPage';
 import oAuth2Providers from '@/components/idiot/auth/oauth2/OAuthProviders';
-import deepMerge from '@/lib/utils';
+import deepMerge from '@/lib/trash';
 import { createContext } from 'react';
 
 type RouterPageProps = {
