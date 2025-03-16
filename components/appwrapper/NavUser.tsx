@@ -19,8 +19,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/ui/sidebar';
 import { useRouter } from 'next/navigation';
-import { Skeleton } from '../ui/skeleton';
-import { useUser } from '../idiot/auth/hooks/useUser';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useUser } from '@/components/idiot/auth/hooks/useUser';
 import md5 from 'md5';
 
 const getGravatarUrl = (email?: string, size = 40): string => {

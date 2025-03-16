@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { Moon, Sun, Monitor, Eye } from 'lucide-react';
 import { CommandItemComponent, CommandMenuGroup } from '..';
-import { useCommandMenu } from '../command-menu-context';
+import { useCommandMenu } from '@/components/command/command-menu-context';
 import { CommandGroup, CommandSeparator } from '@/components/ui/command';
 import { useTheme } from '@/components/theme/themes';
 

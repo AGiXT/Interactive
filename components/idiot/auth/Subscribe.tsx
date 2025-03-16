@@ -2,8 +2,8 @@
 
 import { getCookie } from 'cookies-next';
 import React, { Suspense } from 'react';
-import { useAuthentication } from './Router';
-import PricingTable from './stripe/PricingTable';
+import { useAuthentication } from '@/components/idiot/auth/Router';
+import PricingTable from '@/components/idiot/auth/stripe/PricingTable';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
 

@@ -3,7 +3,7 @@
 import { deleteCookie } from 'cookies-next';
 import { useRouter } from 'next/navigation';
 import React, { ReactNode, useEffect } from 'react';
-import { useAuthentication } from './Router';
+import { useAuthentication } from '@/components/idiot/auth/Router';
 
 export type LogoutProps = { redirectTo?: string };
 

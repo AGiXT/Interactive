@@ -2,8 +2,8 @@
 
 import { useWallet, type Wallet } from '@solana/wallet-adapter-react';
 import { Wallet as WalletIcon, Copy, SwitchCamera, LogOut } from 'lucide-react';
-import { CommandItemComponent } from '../index';
-import { useCommandMenu } from '../command-menu-context';
+import { CommandItemComponent } from '@/components/command/index';
+import { useCommandMenu } from '@/components/command/command-menu-context';
 import { CommandGroup } from '@/components/ui/command';
 import { useToast } from '@/hooks/useToast';
 

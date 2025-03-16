@@ -1,15 +1,15 @@
 'use client';
 import React, { ReactNode, useContext } from 'react';
 import { notFound } from 'next/navigation';
-import User, { IdentifyProps } from './Identify';
-import Login, { LoginProps } from './Login';
-import Manage, { ManageProps } from './management';
-import Register, { RegisterProps } from './Register';
-import Close, { CloseProps } from './oauth2/Close';
-import Logout, { LogoutProps } from './Logout';
-import Subscribe, { SubscribeProps } from './Subscribe';
-import ErrorPage, { ErrorPageProps } from './ErrorPage';
-import oAuth2Providers from './oauth2/OAuthProviders';
+import User, { IdentifyProps } from '@/components/idiot/auth/Identify';
+import Login, { LoginProps } from '@/components/idiot/auth/Login';
+import Manage, { ManageProps } from '@/components/idiot/auth/management';
+import Register, { RegisterProps } from '@/components/idiot/auth/Register';
+import Close, { CloseProps } from '@/components/idiot/auth/oauth2/Close';
+import Logout, { LogoutProps } from '@/components/idiot/auth/Logout';
+import Subscribe, { SubscribeProps } from '@/components/idiot/auth/Subscribe';
+import ErrorPage, { ErrorPageProps } from '@/components/idiot/auth/ErrorPage';
+import oAuth2Providers from '@/components/idiot/auth/oauth2/OAuthProviders';
 import deepMerge from '@/lib/objects';
 import { createContext } from 'react';
 

@@ -4,8 +4,8 @@ import { getCookie } from 'cookies-next';
 import { ReactNode, useState } from 'react';
 import useSWR from 'swr';
 import { useRouter } from 'next/navigation';
-import { useAuthentication } from '../Router';
-import { Profile } from './Profile';
+import { useAuthentication } from '@/components/idiot/auth/Router';
+import { Profile } from '@/components/idiot/auth/management/Profile';
 import { DynamicFormFieldValueTypes } from '@/components/idiot/dynamic-form/DynamicForm';
 import { Button } from '@/components/ui/button';
 

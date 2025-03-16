@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/sidebar';
 import { ViewVerticalIcon } from '@radix-ui/react-icons';
 import { usePathname } from 'next/navigation';
-import { useSidebarContent } from './SidebarContentManager';
+import { useSidebarContent } from '@/components/appwrapper/SidebarContentManager';
 
 const visibleOnPaths = ['/chat'];
 

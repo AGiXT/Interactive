@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { useAuthentication } from '../Router';
+import { useAuthentication } from '@/components/idiot/auth/Router';
 
 export type CloseProps = {};
 
