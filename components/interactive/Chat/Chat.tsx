@@ -155,12 +155,12 @@ export default function Chat({
       state.mutate((oldState: any) => {
         return {
         ...oldState,
-        overrides: { ...oldState.overrides, conversation: state?.overrides?.conversation[0] }
+        overrides: { ...oldState.overrides, conversation: state?.overrides?.conversation?.[0] || oldState.overrides.conversation },
       }});
     }
   }, [state?.overrides?.conversation, state?.mutate]);
-  async function handleSend(messageTextBody: string, messageAttachedFiles?: Record<string, string>): Promise<string | undefined> {
-    if (!state?.agixt || !state?.overrides?.conversation) return;
+  async function handleSend(messageTextBody: string | object, messageAttachedFiles?: Record<string, string>): Promise<string> {
+    if (!state?.agixt || !state?.overrides?.conversation) return '';
 
     const messages: any[] = [];
 
@@ -186,7 +186,7 @@ export default function Chat({
     setLoading(true);
     await new Promise((resolve) => setTimeout(resolve, 100));
     if (state?.overrides?.conversation) {
-      swrMutate(conversationSWRPath + state.overrides.conversation);
+      swrMutate(conversationSWRPath + (state?.overrides?.conversation || ''));
     }
     let completionResponse: any;
     try {
@@ -245,7 +245,7 @@ export default function Chat({
         duration: 5000,
         variant: 'destructive',
       });
-      return undefined;
+      return '';
     }
   }
   // Function to handle importing a conversation
@@ -306,7 +306,7 @@ export default function Chat({
               swrMutate('/conversations');
 
               // Set the new conversation as active
-              state?.mutate((oldState: any) => ({
+              state?.mutate && state.mutate((oldState: any) => ({
                 ...oldState,
                 overrides: { ...oldState.overrides, conversation: conversationName },
               }));
@@ -360,7 +360,7 @@ export default function Chat({
       swrMutate(conversationSWRPath + state.overrides.conversation);
 
       // Update the state
-      state?.mutate((oldState: any) => ({
+      state?.mutate && state.mutate((oldState: any) => ({
         ...oldState,
         overrides: { ...oldState.overrides, conversation: '-' },
       }));
@@ -390,7 +390,7 @@ export default function Chat({
 
       // Properly invalidate both the conversation list and the specific conversation
       swrMutate('/conversations'); // Assuming this is the key used in useConversations()
-      swrMutate(conversationSWRPath + state.overrides.conversation);
+      swrMutate(conversationSWRPath + state?.overrides?.conversation);
 
       toast({
         title: 'Success',
