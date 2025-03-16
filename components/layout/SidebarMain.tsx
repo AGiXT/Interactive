@@ -9,7 +9,7 @@ import { AgentSelector } from '@/components/layout/agent-selector';
 import { ChatHistory } from '@/components/layout/chat-history';
 import { NavMain } from '@/components/layout/NavMain';
 import { NavUser } from '@/components/layout/NavUser';
-import { useUser } from '@/components/auth/useUser';
+import { useUser } from '@/components/idiot/useUser';
 import { ViewVerticalIcon } from '@radix-ui/react-icons';
 import {
   Sidebar,

@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { useAgent } from '@/components/idiot/interactive/hooks/useAgent';
 import Extension from '@/components/agent/extension';
 import { ConnectedServices } from '@/components/agent/ConnectedServices';
-import { useCompany } from '@/components/auth/useUser';
+import { useCompany } from '@/components/idiot/useUser';
 
 // Types remain the same
 type Command = {

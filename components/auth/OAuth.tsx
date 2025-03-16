@@ -81,22 +81,10 @@ export default function OAuth(): ReactNode {
   const onOAuth2 = useCallback(
     (response: any) => {
       mutate();
-      document.location.href = `${process.env.NEXT_PUBLIC_APP_URI}/chat`; // This should be fixed properly just low priority.
-
-      // const redirect = getCookie('href') ?? '/';
-      // deleteCookie('href');
-      // router.push(redirect);
+      document.location.href = `${process.env.NEXT_PUBLIC_APP_URI}/chat`;
     },
     [router],
   );
-  /*
-  // Eventually automatically launch if it's the only provider.
-  useEffect(() => {
-    if (Object.values(providers).filter((provider) => provider.client_id).length === 1) {
-      
-    }
-  }, []);
-  */
   return (
     <>
       {Object.values(providers).some((provider) => provider.client_id) &&

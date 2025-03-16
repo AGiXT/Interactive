@@ -24,7 +24,7 @@ import {
 import { DataTable } from '@/components/layout/team-table/data-table';
 import { DataTableColumnHeader } from '@/components/layout/team-table/data-table-column-header';
 import { InteractiveConfigContext } from '@/components/idiot/interactive/InteractiveConfigContext';
-import { useCompany, useCompanies } from '@/components/auth/useUser';
+import { useCompany, useCompanies } from '@/components/idiot/useUser';
 
 interface User {
   email: string;

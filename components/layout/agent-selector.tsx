@@ -1,6 +1,6 @@
 'use client';
 
-import { useCompany } from '@/components/auth/useUser';
+import { useCompany } from '@/components/idiot/useUser';
 import {
   DropdownMenu,
   DropdownMenuContent,
