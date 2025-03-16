@@ -1,6 +1,6 @@
 'use client';
 
-import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
+import { useInteractiveConfig } from '@/components/idiot/interactive/InteractiveConfigContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,7 +14,7 @@ import useSWR from 'swr';
 import { ChainSelector } from '@/components/layout/ChainSelector';
 import { CommandSelector } from '@/components/layout/CommandSelector';
 import PromptSelector from '@/components/layout/PromptSelector';
-import { type ChainStepPrompt, useChain, useChains } from '@/components/interactive/hooks/useChain';
+import { type ChainStepPrompt, useChain, useChains } from '@/components/idiot/interactive/hooks/useChain';
 
 const ignoreArgs = [
   'prompt_name',

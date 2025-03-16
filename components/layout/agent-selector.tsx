@@ -1,6 +1,6 @@
 'use client';
 
-import { useCompany } from '@/components/idiot/auth/useUser';
+import { useCompany } from '@/components/auth/useUser';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +14,7 @@ import { setCookie } from 'cookies-next';
 import { Check, ChevronsUpDown, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { FaRobot } from 'react-icons/fa';
-import { Agent, useAgent, useAgents } from '@/components/interactive/hooks/useAgent';
+import { Agent, useAgent, useAgents } from '@/components/idiot/interactive/hooks/useAgent';
 
 export function AgentSelector() {
   const { isMobile } = useSidebar('left');

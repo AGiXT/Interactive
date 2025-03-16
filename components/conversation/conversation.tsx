@@ -1,7 +1,7 @@
 'use client';
 
 import { SidebarContent } from '@/components/layout/SidebarContentManager';
-import { useCompany } from '@/components/idiot/auth/useUser';
+import { useCompany } from '@/components/auth/useUser';
 import { Input } from '@/components/ui/input';
 import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { toast } from '@/components/layout/toast';
@@ -11,9 +11,9 @@ import { Badge, Check, Download, Paperclip, Pencil, Plus, Trash2, Upload } from 
 import { useRouter } from 'next/navigation';
 import React, { useContext, useEffect, useState, useRef } from 'react';
 import useSWR, { mutate } from 'swr';
-import { UIProps } from '@/components/interactive/InteractiveAGiXT';
-import { InteractiveConfigContext, Overrides } from '@/components/interactive/InteractiveConfigContext';
-import { useConversations } from '@/components/interactive/hooks/useConversation';
+import { UIProps } from '@/components/idiot/interactive/InteractiveAGiXT';
+import { InteractiveConfigContext, Overrides } from '@/components/idiot/interactive/InteractiveConfigContext';
+import { useConversations } from '@/components/idiot/interactive/hooks/useConversation';
 import ChatBar from '@/components/conversation/chat-input';
 import { Activity as ChatActivity } from '@/components/conversation/activity';
 import Message from '@/components/conversation/Message/Message';

@@ -23,8 +23,8 @@ import {
 
 import { DataTable } from '@/components/layout/team-table/data-table';
 import { DataTableColumnHeader } from '@/components/layout/team-table/data-table-column-header';
-import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
-import { useCompany, useCompanies } from '@/components/idiot/auth/useUser';
+import { InteractiveConfigContext } from '@/components/idiot/interactive/InteractiveConfigContext';
+import { useCompany, useCompanies } from '@/components/auth/useUser';
 
 interface User {
   email: string;

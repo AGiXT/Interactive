@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRouter, useSearchParams } from 'next/navigation';
 import React, { useEffect } from 'react';
-import { usePrompts } from '@/components/interactive/hooks/usePrompt';
+import { usePrompts } from '@/components/idiot/interactive/hooks/usePrompt';
 
 export default function PromptSelector({
   category = 'Default',

@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Check, Download, Pencil, Plus, Save, Trash2, Upload } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { usePrompt } from '@/components/interactive/hooks/usePrompt';
+import { usePrompt } from '@/components/idiot/interactive/hooks/usePrompt';
 import PromptSelector from '@/components/layout/PromptSelector';
 import { AutoResizeTextarea } from '@/components/agent/training';
 import NewPromptDialog from '@/components/prompt/PromptDialog';

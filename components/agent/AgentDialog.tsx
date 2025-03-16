@@ -1,14 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { useAgent } from '@/components/interactive/hooks/useAgent';
-import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
+import { useAgent } from '@/components/idiot/interactive/hooks/useAgent';
+import { useInteractiveConfig } from '@/components/idiot/interactive/InteractiveConfigContext';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/layout/toast';
-import { useCompany } from '@/components/idiot/auth/useUser';
+import { useCompany } from '@/components/auth/useUser';
 
 export function AgentDialog({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
   const context = useInteractiveConfig();

@@ -1,13 +1,13 @@
 'use client';
 
-import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
+import { useInteractiveConfig } from '@/components/idiot/interactive/InteractiveConfigContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useEffect, useState } from 'react';
-import { useAgent } from '@/components/interactive/hooks/useAgent';
-import { useProvider } from '@/components/interactive/hooks/useProvider';
+import { useAgent } from '@/components/idiot/interactive/hooks/useAgent';
+import { useProvider } from '@/components/idiot/interactive/hooks/useProvider';
 
 export default function AgentConfigure() {
   const context = useInteractiveConfig();

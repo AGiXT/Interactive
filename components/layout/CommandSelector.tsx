@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRouter, useSearchParams } from 'next/navigation';
 import React from 'react';
-import { useAgent } from '@/components/interactive/hooks/useAgent';
+import { useAgent } from '@/components/idiot/interactive/hooks/useAgent';
 
 export function CommandSelector({
   value,

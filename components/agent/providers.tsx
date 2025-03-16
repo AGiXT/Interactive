@@ -19,8 +19,8 @@ import { getCookie } from 'cookies-next';
 import { Plus, Wrench } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { LuUnlink as Unlink } from 'react-icons/lu';
-import { useAgent } from '@/components/interactive/hooks/useAgent';
-import { useProviders } from '@/components/interactive/hooks/useProvider';
+import { useAgent } from '@/components/idiot/interactive/hooks/useAgent';
+import { useProviders } from '@/components/idiot/interactive/hooks/useProvider';
 
 type ErrorState = {
   type: 'success' | 'error';

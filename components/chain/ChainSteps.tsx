@@ -1,11 +1,11 @@
 'use client';
 
-import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
+import { useInteractiveConfig } from '@/components/idiot/interactive/InteractiveConfigContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { PlusCircle as LuPlusCircle } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
-import { useChain } from '@/components/interactive/hooks/useChain';
+import { useChain } from '@/components/idiot/interactive/hooks/useChain';
 import ChainStep from '@/components/chain/ChainStep';
 
 export default function ChainSteps() {

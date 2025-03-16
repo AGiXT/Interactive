@@ -1,11 +1,11 @@
 'use client';
 
-import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
+import { useInteractiveConfig } from '@/components/idiot/interactive/InteractiveConfigContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { mutate } from 'swr';
-import { useAgent } from '@/components/interactive/hooks/useAgent';
+import { useAgent } from '@/components/idiot/interactive/hooks/useAgent';
 
 export default function AgentMenu() {
   const context = useInteractiveConfig();

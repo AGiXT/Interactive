@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-import { useCompany } from '@/components/idiot/auth/useUser';
+import { useCompany } from '@/components/auth/useUser';
 import { getCookie } from 'cookies-next';
 
 type NestedItem = {
