@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
+import { useInteractiveConfig } from '@/components/idiot/interactive/InteractiveConfigContext';
 import PromptPanel from '@/components/prompt/PromptPanel';
 import NewPromptDialog from '@/components/prompt/PromptDialog';
 

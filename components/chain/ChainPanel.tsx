@@ -1,6 +1,6 @@
 'use client';
 
-import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
+import { useInteractiveConfig } from '@/components/idiot/interactive/InteractiveConfigContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -8,7 +8,7 @@ import { Check, Download, Pencil, Plus, Trash2 } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ChainSelector } from '@/components/layout/ChainSelector';
-import { useChain } from '@/components/interactive/hooks/useChain';
+import { useChain } from '@/components/idiot/interactive/hooks/useChain';
 import ChainSteps from '@/components/chain/ChainSteps';
 
 export default function ChainPanel({ showCreateDialog, setShowCreateDialog }) {

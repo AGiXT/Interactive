@@ -1,8 +1,8 @@
 import React from 'react';
-import CheckField from '@/components/idiot/dynamic-form/CheckField';
-import SelectField from '@/components/idiot/dynamic-form/SelectField';
-import TextField from '@/components/idiot/dynamic-form/TextField';
-import RadioField from '@/components/idiot/dynamic-form/RadioField';
+import CheckField from '@/components/layout/dynamic-form/CheckField';
+import SelectField from '@/components/layout/dynamic-form/SelectField';
+import TextField from '@/components/layout/dynamic-form/TextField';
+import RadioField from '@/components/layout/dynamic-form/RadioField';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 

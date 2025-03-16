@@ -1,4 +1,4 @@
-import AGiXTInteractive from '@/components/interactive/InteractiveAGiXT';
+import AGiXTInteractive from '@/components/idiot/interactive/InteractiveAGiXT';
 import ConvSwitch from './ConvSwitch';
 
 export default function Home({ params }: { params: { id: string } }) {

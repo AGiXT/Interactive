@@ -1,6 +1,6 @@
 'use client';
 
-import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
+import { useInteractiveConfig } from '@/components/idiot/interactive/InteractiveConfigContext';
 import { use, useEffect } from 'react';
 
 export default function ConvSwitch({ id }: { id: string }) {

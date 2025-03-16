@@ -1,6 +1,6 @@
 'use client';
 
-import { useAgent } from '@/components/interactive/hooks/useAgent';
+import { useAgent } from '@/components/idiot/interactive/hooks/useAgent';
 import { Button } from '@/components/ui/button';
 import deepMerge from '@/lib/trash';
 import { useRouter } from 'next/navigation';
@@ -15,7 +15,7 @@ import {
 } from 'react-icons/ri';
 import { GiTesla } from 'react-icons/gi';
 import React, { useEffect } from 'react';
-import { useAuthentication } from '@/components/idiot/auth/Router';
+import { useAuthentication } from '@/components/auth/Router';
 
 export type CloseProps = {};
 

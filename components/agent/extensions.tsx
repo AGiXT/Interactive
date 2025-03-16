@@ -4,10 +4,10 @@ import axios from 'axios';
 import { getCookie } from 'cookies-next';
 import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
-import { useAgent } from '@/components/interactive/hooks/useAgent';
+import { useAgent } from '@/components/idiot/interactive/hooks/useAgent';
 import Extension from '@/components/agent/extension';
 import { ConnectedServices } from '@/components/agent/ConnectedServices';
-import { useCompany } from '@/components/idiot/auth/useUser';
+import { useCompany } from '@/components/auth/useUser';
 
 // Types remain the same
 type Command = {

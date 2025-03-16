@@ -4,13 +4,13 @@ import { getCookie } from 'cookies-next';
 import { useRouter } from 'next/navigation';
 import React, { FormEvent, ReactNode, useEffect, useState, useRef } from 'react';
 import { ReCAPTCHA } from 'react-google-recaptcha';
-import { useAuthentication } from '@/components/idiot/auth/Router';
-import AuthCard from '@/components/idiot/auth/AuthCard';
-import { toTitleCase } from '@/components/idiot/dynamic-form/DynamicForm';
+import { useAuthentication } from '@/components/auth/Router';
+import AuthCard from '@/components/auth/AuthCard';
+import { toTitleCase } from '@/components/layout/dynamic-form/DynamicForm';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import OAuth from '@/components/idiot/auth/OAuth';
+import OAuth from '@/components/auth/OAuth';
 
 export type RegisterProps = {
   additionalFields?: string[];

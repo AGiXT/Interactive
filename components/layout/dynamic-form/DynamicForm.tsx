@@ -1,7 +1,7 @@
 import timezones from 'timezones-list';
 import React, { ReactNode, useCallback, useEffect, useState } from 'react';
-import Field from '@/components/idiot/dynamic-form/Field';
-import TextField from '@/components/idiot/dynamic-form/TextField';
+import Field from '@/components/layout/dynamic-form/Field';
+import TextField from '@/components/layout/dynamic-form/TextField';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 

@@ -2,7 +2,7 @@
 
 import { getCookie } from 'cookies-next';
 import React, { Suspense } from 'react';
-import { useAuthentication } from '@/components/idiot/auth/Router';
+import { useAuthentication } from '@/components/auth/Router';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
 import { LuCheck as CheckIcon, LuMinus as MinusIcon } from 'react-icons/lu';

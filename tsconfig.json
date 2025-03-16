@@ -23,8 +23,8 @@
     "paths": {
       "@/*": ["./*"],
       "@/idiot/*": ["./components/idiot/*"],
-      "@/auth/*": ["./components/idiot/auth/*"],
-      "@/interactive/*": ["./components/interactive/*"]
+      "@/auth/*": ["components/auth/*"],
+      "@/interactive/*": ["components/idiot/interactive/*"]
     }
   },
   "include": [
@@ -34,8 +34,8 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "app/theme.ts",
-    "components/idiot/auth/auth.config.js",
-    "components/interactive/interactive.config.js"
+    "components/auth/auth.config.js",
+    "components/idiot/interactive/interactive.config.js"
 , "components/conversation/Activity/Severtities.tsx"  ],
   "exclude": ["node_modules"]
 }

@@ -1,6 +1,6 @@
 import { CommandMenu } from '@/components/command';
 import { CommandMenuProvider } from '@/components/command/command-menu-context';
-import InteractiveConfigContextWrapper from '@/components/interactive/ContextWrapper';
+import InteractiveConfigContextWrapper from '@/components/idiot/interactive/ContextWrapper';
 import { SidebarContentProvider } from '@/components/layout/SidebarContentManager';
 import { SidebarContext } from '@/components/layout/SidebarContext';
 import { SidebarMain } from '@/components/layout/SidebarMain';

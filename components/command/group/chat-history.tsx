@@ -4,7 +4,7 @@ import dayjs from 'dayjs';
 import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCommandMenu } from '@/components/command/command-menu-context';
-import { useConversations } from '@/interactive/hooks/useConversation';
+import { useConversations } from '@/components/idiot/interactive/hooks/useConversation';
 import { CommandGroup, CommandItem } from '@/components/ui/command';
 
 export function ChatHistoryGroup() {

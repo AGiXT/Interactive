@@ -2,7 +2,7 @@
 
 import Training from '@/components/agent/training';
 import { SidebarPage } from '@/components/layout/SidebarPage';
-import { useUser } from '@/components/idiot/auth/useUser';
+import { useUser } from '@/components/auth/useUser';
 export default function TrainingPage() {
   const { data: user, isLoading } = useUser();
 

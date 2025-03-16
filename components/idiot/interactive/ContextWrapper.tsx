@@ -4,7 +4,7 @@ import {
   InteractiveConfigContext,
   InteractiveConfigDefault,
   InteractiveConfig,
-} from '@/components/interactive/InteractiveConfigContext';
+} from '@/components/idiot/interactive/InteractiveConfigContext';
 import AGiXTSDK from '@/lib/sdk';
 
 export default function InteractiveConfigContextWrapper({

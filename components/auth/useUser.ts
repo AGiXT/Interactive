@@ -1,4 +1,4 @@
-import { chainMutations, createGraphQLClient } from '@/components/interactive/hooks/lib';
+import { chainMutations, createGraphQLClient } from '@/components/idiot/interactive/hooks/lib';
 import '@/components/idiot/zod2gql/zod2gql';
 import axios from 'axios';
 import { getCookie } from 'cookies-next';
