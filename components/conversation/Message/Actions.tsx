@@ -14,7 +14,7 @@ import { LuCopy, LuDownload, LuPen as LuEdit, LuGitFork, LuThumbsDown, LuThumbsU
 import { mutate } from 'swr';
 import { InteractiveConfigContext } from '@/components/idiot/interactive/InteractiveConfigContext';
 import { useConversations } from '@/components/idiot/interactive/hooks/useConversation';
-import JRGDialog from '@/components/conversation/Message/Dialog';
+import MessageDialog from '@/components/conversation/Message/Dialog';
 import { ChatItem } from '@/components/conversation/Message/Message';
 
 export type MessageProps = {
@@ -205,7 +205,7 @@ export function MessageActions({
             <TooltipProvider>
               <Tooltip>
                 {/* TODO: Replace this with new dialog */}
-                <JRGDialog
+                <MessageDialog
                   ButtonComponent={Button}
                   ButtonProps={{
                     variant: 'ghost',
@@ -244,7 +244,7 @@ export function MessageActions({
               <Tooltip>
                 <TooltipTrigger asChild>
                   {/* TODO: Replace this with new dialog */}
-                  <JRGDialog
+                  <MessageDialog
                     ButtonComponent={Button}
                     ButtonProps={{ variant: 'ghost', size: 'icon', children: <LuTrash2 /> }}
                     title='Delete Message'
