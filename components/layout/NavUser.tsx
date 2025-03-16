@@ -22,6 +22,7 @@ import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUser } from '@/components/idiot/auth/hooks/useUser';
 import md5 from 'md5';
+import { cn } from '@/lib/utils';
 
 const getGravatarUrl = (email?: string, size = 40): string => {
   if (!email) return '';
