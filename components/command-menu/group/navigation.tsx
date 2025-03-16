@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { CommandItemComponent, CommandMenuGroup } from '@/components/command/index';
-import { useCommandMenu } from '@/components/command/command-menu-context';
+import { CommandItemComponent, CommandMenuGroup } from '@/components/command-menu/index';
+import { useCommandMenu } from '@/components/command-menu/command-menu-context';
 import { CommandGroup, CommandSeparator } from '@/components/ui/command';
 import { items } from '@/components/layout/NavMain';
 

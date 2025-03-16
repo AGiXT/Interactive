@@ -1,8 +1,8 @@
 import { TbMessageCirclePlus } from 'react-icons/tb';
 import { Wallet, ArrowRight, HistoryIcon, Palette } from 'lucide-react';
 import { useCallback } from 'react';
-import { CommandItemComponent } from '@/components/command/index';
-import { SubPage, useCommandMenu } from '@/components/command/command-menu-context';
+import { CommandItemComponent } from '@/components/command-menu/index';
+import { SubPage, useCommandMenu } from '@/components/command-menu/command-menu-context';
 import { CommandGroup, CommandSeparator } from '@/components/ui/command';
 import { useRouter } from 'next/navigation';
 export type QuickAction = {
