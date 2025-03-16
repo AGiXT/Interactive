@@ -10,7 +10,6 @@ import formatDate from '@/components/conversation/Message/formatDate';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
-import { LuInfo as Info, LuPencil as Pencil } from 'react-icons/lu';
 import { FaRunning } from 'react-icons/fa';
 import { Ban as Error, CircleCheck, TriangleAlert } from 'lucide-react';
 import { TfiThought } from 'react-icons/tfi';
