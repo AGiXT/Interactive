@@ -1,11 +1,10 @@
 import axios from 'axios';
 import { getCookie, setCookie } from 'cookies-next';
-import { useContext } from 'react';
 import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
 import { useCompanies } from '@/components/idiot/useUser';
-import { InteractiveConfigContext } from '@/components/idiot/interactive/InteractiveConfigContext';
 import { chainMutations, createGraphQLClient } from '@/components/idiot/interactive/hooks/lib';
+import AGiXTSDK from '@/lib/sdk';
 
 export const AgentSchema = z.object({
   companyId: z.string().uuid(),
@@ -60,7 +59,7 @@ export function useAgent(
   };
   const companiesHook = useCompanies();
   const { data: companies } = companiesHook;
-  const state = useContext(InteractiveConfigContext);
+  const agixt = new AGiXTSDK();
   let searchName = name || (getCookie('agixt-agent') as string | undefined);
   let foundEarly = null;
 
@@ -97,7 +96,7 @@ export function useAgent(
                 },
               })
             ).data.extensions;
-            toReturn.commands = await state.agixt.getCommands(toReturn.agent.name);
+            toReturn.commands = await agixt.getCommands(toReturn.agent.name);
           }
 
           return toReturn;
