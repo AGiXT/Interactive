@@ -1,4 +1,4 @@
-import IconButton from '@/components/theme/IconButton';
+import { IconButton } from '@/components/theme/themes';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import axios from 'axios';
@@ -6,7 +6,7 @@ import { getCookie } from 'cookies-next';
 import { Loader2, Repeat, Send } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import MarkdownBlock from '../../Chat/Message/MarkdownBlock';
-import { toast, useToast } from '@/hooks/useToast';
+import { toast } from '@/hooks/useToast';
 
 export default function PromptTest({
   promptName,

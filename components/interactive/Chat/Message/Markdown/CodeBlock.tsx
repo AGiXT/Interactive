@@ -7,7 +7,7 @@ import { Copy, Download } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import 'katex/dist/katex.min.css';
 import Latex from 'react-latex-next';
-import { useTheme } from '@/components/theme/useTheme';
+import { useTheme } from '@/components/theme/themes';
 import MarkdownBlock from '../MarkdownBlock';
 import { DataTable } from '../data-table';
 import { createColumns } from '../data-table/data-table-columns';

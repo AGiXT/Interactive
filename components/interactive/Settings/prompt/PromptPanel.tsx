@@ -1,6 +1,6 @@
 'use client';
 
-import IconButton from '@/components/theme/IconButton';
+import { IconButton } from '@/components/theme/themes';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';

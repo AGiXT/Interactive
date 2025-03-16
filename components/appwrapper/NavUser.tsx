@@ -2,7 +2,7 @@
 
 import { CaretRightIcon, ComponentPlaceholderIcon } from '@radix-ui/react-icons';
 import { BadgeCheck, LogOut, MoonIcon, LayoutGrid } from 'lucide-react';
-import { useTheme } from '@/components/theme/useTheme';
+import { useTheme } from '@/components/theme/themes';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
