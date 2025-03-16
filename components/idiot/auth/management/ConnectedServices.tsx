@@ -4,7 +4,7 @@ import axios from 'axios';
 import { getCookie } from 'cookies-next';
 import OAuth2Login from 'react-simple-oauth2-login';
 import { LuPlus as Plus, LuUnlink as Unlink } from 'react-icons/lu';
-import oAuth2Providers from '@/components/idiot/auth/oauth2/OAuthProviders';
+import { providers as oAuth2Providers } from '@/components/idiot/auth/OAuth';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';

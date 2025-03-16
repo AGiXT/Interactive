@@ -5,11 +5,10 @@ import User, { IdentifyProps } from '@/components/idiot/auth/Identify';
 import Login, { LoginProps } from '@/components/idiot/auth/Login';
 import Manage, { ManageProps } from '@/components/idiot/auth/management';
 import Register, { RegisterProps } from '@/components/idiot/auth/Register';
-import Close, { CloseProps } from '@/components/idiot/auth/oauth2/Close';
+import { Close, CloseProps } from '@/components/idiot/auth/OAuth';
 import Logout, { LogoutProps } from '@/components/idiot/auth/Logout';
 import Subscribe, { SubscribeProps } from '@/components/idiot/auth/Subscribe';
 import ErrorPage, { ErrorPageProps } from '@/components/idiot/auth/ErrorPage';
-import oAuth2Providers from '@/components/idiot/auth/oauth2/OAuthProviders';
 import deepMerge from '@/lib/trash';
 import { createContext } from 'react';
 

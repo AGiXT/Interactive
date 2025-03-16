@@ -10,7 +10,7 @@ import { toTitleCase } from '@/components/idiot/dynamic-form/DynamicForm';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import OAuth from '@/components/idiot/auth/oauth2/OAuth';
+import OAuth from '@/components/idiot/auth/OAuth';
 
 export type RegisterProps = {
   additionalFields?: string[];
