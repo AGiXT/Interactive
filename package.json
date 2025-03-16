@@ -1,6 +1,6 @@
 {
-  "name": "@agixt/interactive",
-  "version": "0.1.15",
+  "name": "agixt",
+  "version": "0.1.17",
   "scripts": {
     "dev": "rm -rf ./.next && next dev -p 3437",
     "basic:bitch": "rm -rf ./.next && next dev -p 3000",
@@ -17,7 +17,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AGiXT/AGiXT-Interactive.git"
+    "url": "git+https://github.com/AGiXT/Interactive.git"
   },
   "keywords": [
     "agixt",
@@ -27,7 +27,7 @@
   ],
   "author": "AGiXT",
   "bugs": {
-    "url": "https://github.com/AGiXT/AGiXT-Interactive/issues"
+    "url": "https://github.com/AGiXT/Interactive/issues"
   },
   "homepage": "https://github.com/Josh-XT/AGiXT",
   "files": [
