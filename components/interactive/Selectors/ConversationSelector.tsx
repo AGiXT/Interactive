@@ -7,80 +7,136 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { setCookie } from 'cookies-next';
 import React, { useContext, useEffect, useState } from 'react';
-import { LuChevronDown, LuChevronUp, LuDownload, LuPencil, LuPlus, LuTrash2 } from 'react-icons/lu';
-import { mutate } from 'swr';
+import { LuChevronDown, LuChevronUp, LuDownload, LuPlus, LuPencil, LuTrash2 } from 'react-icons/lu';
 import { InteractiveConfigContext } from '../InteractiveConfigContext';
-import { useConversations } from '../hooks/useConversation';
+
+interface ConversationHistory {
+  conversation_name: string;
+  messages: Array<{
+    message: string;
+  }>;
+}
+
+interface Conversation {
+  id: string;
+  conversation_name: string;
+  has_notifications?: boolean;
+}
 
 export default function ConversationSelector(): React.JSX.Element {
   const [dropDownOpen, setDropDownOpen] = useState(false);
   const state = useContext(InteractiveConfigContext);
-  const { data: conversationData } = useConversations();
-  // const { data: currentConversation } = useConversation();
+  const [conversationData, setConversationData] = useState<Conversation[]>([]);
+  const [currentAgentName, setCurrentAgentName] = useState<string>('');
+  const [currentConversation, setCurrentConversation] = useState<ConversationHistory | null>(null);
   const [openRenameConversation, setOpenRenameConversation] = useState(false);
   const [changedConversation, setChangedConversation] = useState('-');
+  const [loading, setLoading] = useState(false);
   const [openDeleteConversation, setOpenDeleteConversation] = useState(false);
 
   useEffect(() => {
-    setChangedConversation(state.overrides.conversation);
-    setCookie('agixt-conversation', state.overrides.conversation, {
-      domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
-    });
-  }, [state.overrides.conversation]);
+    if (state?.overrides?.conversation) {
+      setChangedConversation(state.overrides.conversation);
+      setCookie('agixt-conversation', state.overrides.conversation, {
+        domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
+      });
+    }
+  }, [state?.overrides?.conversation]);
+
+  useEffect(() => {
+    const fetchConversations = async () => {
+      if (!state?.agixt) return;
+      
+      try {
+        // Get current agent first
+        const agents = await state.agixt.getAgents();
+        const currentAgent = agents.find((agent: any) => agent.default) || agents[0];
+        if (currentAgent) {
+          setCurrentAgentName(currentAgent.agent_name);
+        } else {
+          console.error('No agent found');
+        }
+        setLoading(true);
+        const conversations = await state.agixt.getConversations(true);
+        setConversationData(conversations.map(conv => ({
+          id: conv.id || conv.conversation_name,
+          conversation_name: conv.conversation_name
+        })));
+
+        if (state.overrides?.conversation) {
+          const history = await state.agixt.getConversation(state.overrides.conversation);
+          setCurrentConversation(history);
+        }
+      } catch (error) {
+        console.error('Error fetching conversations:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchConversations();
+  }, [state?.agixt, state?.overrides?.conversation]);
 
   const handleAddConversation = async (): Promise<void> => {
-    state.mutate((oldState) => ({
+    if (!state?.mutate) return;
+
+    state.mutate((oldState: any) => ({
       ...oldState,
       overrides: { ...oldState.overrides, conversation: '-' },
     }));
   };
 
-  const handleRenameConversation = async (magic = true): Promise<void> => {
-    if (state.overrides.conversation) {
-      const response = await state.agixt.renameConversation(
-        state.agent,
-        state.overrides.conversation,
-        magic ? '-' : changedConversation,
-      );
-      await mutate('/conversation');
-      if (!response.startsWith('Error')) {
-        setOpenRenameConversation(false);
-      }
+  const handleRenameConversation = async (magic: boolean = true): Promise<void> => {
+    if (!state?.overrides?.conversation || !state?.agixt || !currentAgentName) return;
+
+    const response = await state.agixt.renameConversation(
+      currentAgentName,
+      state.overrides.conversation,
+      magic ? '-' : changedConversation,
+    );
+    
+    if (state.agixt) {
+      const conversations = await state.agixt.getConversations(true);
+      setConversationData(conversations.map(conv => ({
+        id: conv.id || conv.conversation_name,
+        conversation_name: conv.conversation_name
+      })));
+    }
+
+    if (!response.startsWith('Error')) {
+      setOpenRenameConversation(false);
     }
   };
 
   const handleDeleteConversation = async (): Promise<void> => {
-    if (state.overrides.conversation) {
-      await state.agixt.deleteConversation(state.overrides.conversation);
-      await mutate('/conversation');
-      state.mutate((oldState) => ({
-        ...oldState,
-        overrides: {
-          ...oldState.overrides,
-          conversation: '-',
-        },
-      }));
-      setOpenDeleteConversation(false);
-    }
+    if (!state?.overrides?.conversation || !state?.agixt || !state?.mutate) return;
+    
+    await state.agixt.deleteConversation(state.overrides.conversation);
+    const conversations = await state.agixt.getConversations(true);
+    setConversationData(conversations.map(conv => ({
+      id: conv.id || conv.conversation_name,
+      conversation_name: conv.conversation_name
+    })));
+
+    state.mutate((oldState: any) => ({
+      ...oldState,
+      overrides: {
+        ...oldState.overrides,
+        conversation: '-',
+      },
+    }));
+    setOpenDeleteConversation(false);
   };
 
   const handleExportConversation = async (): Promise<void> => {
-    if (state.overrides.conversation) {
+    if (currentConversation) {
       const element = document.createElement('a');
-      const file = new Blob([JSON.stringify(currentConversation)], {
-        type: 'application/json',
-      });
+      const file = new Blob([JSON.stringify(currentConversation)], { type: 'application/json' });
       element.href = URL.createObjectURL(file);
-      element.download = `${state.overrides.conversation}.json`;
+      element.download = `${currentConversation.conversation_name}.json`;
       document.body.appendChild(element);
       element.click();
     }
   };
-
-  const [loaded, setLoaded] = useState(false);
-  useEffect(() => {
-    setLoaded(true);
-  }, []);
 
   return (
     <div className='flex items-center flex-grow w-full'>
@@ -88,10 +144,10 @@ export default function ConversationSelector(): React.JSX.Element {
         <Select
           open={dropDownOpen}
           onOpenChange={setDropDownOpen}
-          disabled={conversationData?.length === 0}
+          disabled={loading || !conversationData || conversationData.length === 0}
           value={changedConversation}
           onValueChange={(value) =>
-            state.mutate((oldState) => ({
+            state?.mutate?.((oldState: any) => ({
               ...oldState,
               overrides: { ...oldState.overrides, conversation: value },
             }))
@@ -104,9 +160,9 @@ export default function ConversationSelector(): React.JSX.Element {
             <SelectItem value='-'>- New Conversation -</SelectItem>
             {conversationData &&
               conversationData.map((conversation) => (
-                <SelectItem key={conversation.id} value={conversation.id}>
-                  {conversation.has_notifications ? '(-) ' : ''}
-                  {conversation.name}
+                <SelectItem key={conversation.id} value={conversation.conversation_name}>
+                  {conversation.has_notifications && '(-) '}
+                  {conversation.conversation_name}
                 </SelectItem>
               ))}
           </SelectContent>

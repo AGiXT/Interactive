@@ -5,7 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRouter, useSearchParams } from 'next/navigation';
 import React from 'react';
-import { useChains } from '../hooks/useChain';
+import { useContext, useEffect, useState } from 'react';
+import { InteractiveConfigContext } from '../InteractiveConfigContext';
 
 export function ChainSelector({
   value,
@@ -15,11 +16,26 @@ export function ChainSelector({
   value?: string | null;
   onChange?: (value: string | null) => void;
 }): React.JSX.Element {
-  const { data: chainData, error } = useChains();
+  const state = useContext(InteractiveConfigContext);
+  const [chainData, setChainData] = useState<Array<{ id: string; chainName: string }>>([]);
+  const [error, setError] = useState<Error | null>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  if (error) return <div>Failed to load chains</div>;
+
+  useEffect(() => {
+    const fetchChains = async () => {
+      try {
+        const chains = await state.agixt.getChains();
+        setChainData(chains.map(chainName => ({ id: chainName, chainName })));
+      } catch (err) {
+        setError(err as Error);
+      }
+    };
+    fetchChains();
+  }, [state.agixt]);
+
+  if (error) return <div>Failed to load chains: {error.message}</div>;
 
   return (
     <TooltipProvider>

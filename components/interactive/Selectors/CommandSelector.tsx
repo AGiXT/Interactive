@@ -5,9 +5,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRouter, useSearchParams } from 'next/navigation';
 import React from 'react';
-import { useAgent } from '../hooks/useAgent';
+import { useContext, useEffect, useState } from 'react';
+import { InteractiveConfigContext } from '../InteractiveConfigContext';
 
 export function CommandSelector({
+  agentName,
   value,
   onChange,
   category = 'Default',
@@ -17,12 +19,31 @@ export function CommandSelector({
   onChange?: (value: string | null) => void;
   category?: string;
 }): React.JSX.Element {
-  const { data: agentData, error } = useAgent();
+  const state = useContext(InteractiveConfigContext);
+  const [commands, setCommands] = useState<string[]>([]);
+  const [error, setError] = useState<Error | null>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
 
-  if (error) return <div>Failed to load commands</div>;
+  useEffect(() => {
+    const fetchCommands = async () => {
+      try {
+        if (agentName) {
+          const agentCommands = await state.agixt.getCommands(agentName);
+          setCommands(typeof agentCommands === 'object' ? Object.keys(agentCommands) : []);
+        } else {
+          setCommands([]);
+        }
+
+      } catch (err) {
+        setError(err as Error);
+      }
+    };
+    fetchCommands();
+  }, [state.agixt, agentName]);
+
+  if (error) return <div>Failed to load commands: {error.message}</div>;
 
   return (
     <TooltipProvider>
@@ -30,7 +51,7 @@ export function CommandSelector({
         <TooltipTrigger asChild>
           <div className='w-full'>
             <Select
-              disabled={!agentData.commands}
+              disabled={commands.length === 0}
               value={value || searchParams.get('command') || undefined}
               onValueChange={
                 onChange
@@ -49,15 +70,13 @@ export function CommandSelector({
               </SelectTrigger>
               <SelectContent>
                 {!pathname.includes('settings/commands') && <SelectItem value='/'>- Use Agent Default -</SelectItem>}
-                {agentData.commands &&
-                  Object.keys(agentData.commands).map(
-                    (command) =>
-                      command && (
-                        <SelectItem key={command} value={command}>
-                          {command}
-                        </SelectItem>
-                      ),
-                  )}
+                {commands.map(command => (
+                  command && (
+                    <SelectItem key={command} value={command}>
+                      {command}
+                    </SelectItem>
+                  )
+                ))}
               </SelectContent>
             </Select>
           </div>

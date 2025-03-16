@@ -14,23 +14,65 @@ import { setCookie } from 'cookies-next';
 import { Check, ChevronsUpDown, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { FaRobot } from 'react-icons/fa';
-import { Agent, useAgent, useAgents } from '../hooks/useAgent';
+import { useContext, useEffect, useState } from 'react';
+import { InteractiveConfigContext } from '../InteractiveConfigContext';
+import { getCookie } from 'cookies-next';
+
+interface Agent {
+  id: string;
+  name: string;
+  companyName?: string;
+  default?: boolean;
+  status?: boolean | null;
+}
 
 export function AgentSelector() {
   const { isMobile } = useSidebar('left');
-  const { data: activeAgent, mutate: mutateActiveAgent, error: agentError } = useAgent();
-  const { data: activeCompany, mutate: mutateActiveCompany, error: companyError } = useCompany();
-  const { data: agentsData } = useAgents();
+  const { data: activeCompany, error: companyError } = useCompany();
   const router = useRouter();
-  console.error({ agentError, companyError });
+  const state = useContext(InteractiveConfigContext);
+  const [agentsData, setAgentsData] = useState<Agent[]>([]);
+  const [activeAgent, setActiveAgent] = useState<{ agent: Agent | null; commands: string[] }>({ agent: null, commands: [] });
+  console.error({ companyError });
+
+  useEffect(() => {
+    const fetchAgents = async () => {
+      try {
+        const agents = await state.agixt.getAgents();
+        setAgentsData(agents.map(agent => ({
+          id: agent.agent_name, // Using agent_name as id since SDK doesn't provide UUID
+          name: agent.agent_name,
+          companyName: activeCompany?.name
+        })));
+      } catch (error) {
+        console.error('Error fetching agents:', error);
+      }
+    };
+
+    const fetchActiveAgent = async () => {
+      const currentAgentName = getCookie('agixt-agent') as string;
+      if (currentAgentName) {
+        const config = await state.agixt.getAgentConfig(currentAgentName);
+        const commands = await state.agixt.getCommands(currentAgentName);
+        setActiveAgent({ 
+          agent: { id: currentAgentName, name: currentAgentName, companyName: activeCompany?.name },
+          commands 
+        });
+      }
+    };
+
+    fetchAgents();
+    fetchActiveAgent();
+  }, [state.agixt, activeCompany]);
 
   const switchAgents = (agent: Agent) => {
-    // setActiveAgent(agent);
     setCookie('agixt-agent', agent.name, {
       domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
     });
-    mutateActiveCompany();
-    mutateActiveAgent();
+    setActiveAgent({ 
+      agent,
+      commands: [] // Will be fetched in useEffect
+    });
   };
 
   return (
