@@ -80,22 +80,15 @@ The following environment variables can be set:
 | `COOKIE_DOMAIN` | `localhost` | Domain for cookies. |
 | `AGIXT_API_KEY` | `` | API key for AGiXT. |
 | `AGIXT_CONVERSATION` | `-` | The name of the conversation in AGiXT. |
-| `AGIXT_CONVERSATION_MODE` | `static` | The mode of conversation in AGiXT (static, select, uuid). |
 | `INTERACTIVE_UI` | `chat` | The interactive UI mode for AGiXT. |
-| `AGIXT_SHOW_APP_BAR` | `true` | Whether to show the app bar in AGiXT. |
-| `AGIXT_SHOW_SELECTION` | `` | Determines what selections are shown, comma-separated values of: 'agent', 'conversation', and/or 'prompt'. Defaults to 'conversation' if `AGIXT_CONVERSATION_MODE` is 'select'. |
 | `AGIXT_FOOTER_MESSAGE` | `Powered by AGiXT` | The footer message displayed in AGiXT. |
 | `AGIXT_RLHF` | `true` | Whether RLHF (Reinforcement Learning from Human Feedback) is enabled. |
-| `AGIXT_SHOW_CHAT_THEME_TOGGLES` | `false` | Whether to show chat theme toggles. Defaults to `true` if `AGIXT_SHOW_APP_BAR` is `false`. |
 | `AGIXT_FILE_UPLOAD_ENABLED` | `true` | Whether file upload is enabled. |
 | `AGIXT_VOICE_INPUT_ENABLED` | `true` | Whether voice input is enabled. |
 | `AGIXT_ALLOW_MESSAGE_EDITING` | `true` | Whether to allow message editing. |
 | `AGIXT_ALLOW_MESSAGE_DELETION` | `true` | Whether to allow message deletion. |
 | `AGIXT_SHOW_OVERRIDE_SWITCHES` | `tts,websearch` | Which override switches to show. |
-| `AGIXT_ENABLE_SEARCHPARAM_CONFIG` | `true` | Whether to enable configuration via search parameters. |
-| `AGIXT_MODE` | `prompt` | The mode of operation for AGiXT. |
 | `AGIXT_AGENT` | `AGiXT` | The default agent used in AGiXT. |
-| `AGIXT_INSIGHT_AGENT` | `` | The insight agent used in AGiXT. |
 | `AGIXT_PROMPT_NAME` | `Think About It` | Default prompt name. |
 | `AGIXT_PROMPT_CATEGORY` | `Default` | Default prompt category. |
 | `AGIXT_COMMAND` | `` | Default command to execute. |
@@ -122,7 +115,6 @@ APP_NAME=AGiXT
 APP_DESCRIPTION=Custom AGiXT Implementation
 AGIXT_SERVER=https://my-agixt-api.example.com
 AGIXT_AGENT=CustomAgent
-AGIXT_CONVERSATION_MODE=select
 AGIXT_SHOW_SELECTION=agent,conversation,prompt
 AGIXT_FILE_UPLOAD_ENABLED=true
 AGIXT_VOICE_INPUT_ENABLED=true
