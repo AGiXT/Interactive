@@ -62,7 +62,6 @@ export function ErrorPage({ redirectTo = '/' }: ErrorPageProps) {
 }
 
 const AuthenticationContext = createContext<AuthenticationConfig | undefined>(undefined);
-('use client');
 
 export type LogoutProps = { redirectTo?: string };
 
