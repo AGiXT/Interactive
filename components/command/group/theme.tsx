@@ -3,7 +3,7 @@ import { Moon, Sun, Monitor, Eye } from 'lucide-react';
 import { CommandItemComponent, CommandMenuGroup } from '..';
 import { useCommandMenu } from '@/components/command/command-menu-context';
 import { CommandGroup, CommandSeparator } from '@/components/ui/command';
-import { useTheme } from '@/components/theme/themes';
+import { useTheme } from '@/components/layout/themes';
 
 export function ThemeGroup() {
   const { currentSubPage, setOpen } = useCommandMenu();

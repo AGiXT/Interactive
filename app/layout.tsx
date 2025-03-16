@@ -1,9 +1,9 @@
 import { CommandMenu } from '@/components/command';
 import { CommandMenuProvider } from '@/components/command/command-menu-context';
 import InteractiveConfigContextWrapper from '@/components/interactive/ContextWrapper';
-import { SidebarContentProvider } from '@/components/appwrapper/SidebarContentManager';
-import { SidebarContext } from '@/components/appwrapper/SidebarContext';
-import { SidebarMain } from '@/components/appwrapper/SidebarMain';
+import { SidebarContentProvider } from '@/components/layout/SidebarContentManager';
+import { SidebarContext } from '@/components/layout/SidebarContext';
+import { SidebarMain } from '@/components/layout/SidebarMain';
 import '@/components/idiot/zod2gql/zod2gql';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { Toaster } from '@/components/ui/toaster';
@@ -13,7 +13,7 @@ import { cookies } from 'next/headers';
 import { ReactNode } from 'react';
 import './globals.css';
 import { metadata, viewport } from './metadata';
-import { SolanaWalletProvider } from '@/components/wais/wallet/wallet-provider';
+import { SolanaWalletProvider } from '@/components/wallet/wallet-provider';
 
 const inter = Inter({ subsets: ['latin'] });
 

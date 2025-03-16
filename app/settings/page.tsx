@@ -1,5 +1,5 @@
-import { Providers } from '@/components/interactive/Settings/providers';
-import { SidebarPage } from '@/components/appwrapper/SidebarPage';
+import { Providers } from '@/components/Settings/providers';
+import { SidebarPage } from '@/components/layout/SidebarPage';
 
 export default function ProvidersPage() {
   return (

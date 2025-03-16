@@ -1,7 +1,7 @@
 'use client';
 
-import Training from '@/components/interactive/Settings/training';
-import { SidebarPage } from '@/components/appwrapper/SidebarPage';
+import Training from '@/components/Settings/training';
+import { SidebarPage } from '@/components/layout/SidebarPage';
 import { useUser } from '@/components/idiot/auth/hooks/useUser';
 export default function TrainingPage() {
   const { data: user, isLoading } = useUser();
