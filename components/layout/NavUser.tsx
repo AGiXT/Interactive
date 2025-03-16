@@ -26,16 +26,21 @@ import { cn } from '@/lib/utils';
 import { setCookie, getCookie } from 'cookies-next';
 import { useEffect, useState } from 'react';
 
-const defaultThemes = ['icons', 'labels'];
+export function NavUser() {
+  const { isMobile } = useSidebar('left');
+  const router = useRouter();
+  const { data: user } = useUser();
+  const { themes, currentTheme, setTheme } = useTheme();
 
-export const useAppearance = (customAppearances?: string[], initialAppearance?: string) => {
+  // Appearance functionality
+  const defaultThemes = ['icons', 'labels'];
   const [appearances] = useState(() => {
-    return Array.from(new Set([...defaultThemes, ...(customAppearances ?? [])]));
+    return Array.from(new Set([...defaultThemes]));
   });
 
   const [appearance, setAppearance] = useState(() => {
     const cookieValue = getCookie('appearance');
-    return cookieValue?.toString() ?? initialAppearance ?? 'labels';
+    return cookieValue?.toString() ?? 'labels';
   });
 
   useEffect(() => {
@@ -47,77 +52,20 @@ export const useAppearance = (customAppearances?: string[], initialAppearance?: 
     document.body.classList.add(appearance);
   }, [appearance, appearances]);
 
-  return {
-    appearances,
-    appearance,
-    setAppearance,
+  const getGravatarUrl = (email?: string, size = 40): string => {
+    if (!email) return '';
+    const hash = md5(email.trim().toLowerCase());
+    return `https://www.gravatar.com/avatar/${hash}?s=${size}&d=404`;
   };
-};
-
-const getGravatarUrl = (email?: string, size = 40): string => {
-  if (!email) return '';
-  const hash = md5(email.trim().toLowerCase());
-  return `https://www.gravatar.com/avatar/${hash}?s=${size}&d=404`;
-};
-
-export const Themes = () => {
-  const { themes, currentTheme, setTheme } = useTheme();
-  return (
-    <DropdownMenuSub>
-      <DropdownMenuSubTrigger>
-        <MoonIcon className='w-4 h-4 mr-2' />
-        Themes
-      </DropdownMenuSubTrigger>
-      <DropdownMenuPortal>
-        <DropdownMenuSubContent>
-          <DropdownMenuLabel>Themes</DropdownMenuLabel>
-          {themes.map((theme) => (
-            <DropdownMenuItem
-              key={theme}
-              className={cn('capitalize', theme === currentTheme && 'bg-muted')}
-              onClick={() => setTheme(theme)}
-            >
-              {theme}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuSubContent>
-      </DropdownMenuPortal>
-    </DropdownMenuSub>
-  );
-};
-export const Appearances = () => {
-  const { appearances, appearance, setAppearance } = useAppearance();
-  return (
-    <DropdownMenuSub>
-      <DropdownMenuSubTrigger>
-        <LayoutGrid className='w-4 h-4 mr-2' />
-        Appearances
-      </DropdownMenuSubTrigger>
-      <DropdownMenuPortal>
-        <DropdownMenuSubContent>
-          <DropdownMenuLabel>Appearances</DropdownMenuLabel>
-          {appearances.map((thisAppearance) => (
-            <DropdownMenuItem
-              key={thisAppearance}
-              className={cn('capitalize', thisAppearance === appearance && 'bg-muted')}
-              onClick={() => setAppearance(thisAppearance)}
-            >
-              {thisAppearance}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuSubContent>
-      </DropdownMenuPortal>
-    </DropdownMenuSub>
-  );
-};
-export function NavUser() {
-  const { isMobile } = useSidebar('left');
-  const router = useRouter();
-  const { data: user } = useUser();
 
   const handleLogout = () => {
     router.push('/user/logout');
   };
+
+  function userInitials(user: { firstName?: string; lastName?: string } | null | undefined): string | null {
+    if (!user?.firstName || !user?.lastName) return null;
+    return `${user.firstName[0].toUpperCase()}${user.lastName[0].toUpperCase()}`;
+  }
 
   return (
     <SidebarMenu>
@@ -185,8 +133,49 @@ export function NavUser() {
             </DropdownMenuGroup>
 
             <DropdownMenuSeparator />
-            <Themes />
-            <Appearances />
+            {/* Themes sub-menu */}
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <MoonIcon className='w-4 h-4 mr-2' />
+                Themes
+              </DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent>
+                  <DropdownMenuLabel>Themes</DropdownMenuLabel>
+                  {themes.map((theme) => (
+                    <DropdownMenuItem
+                      key={theme}
+                      className={cn('capitalize', theme === currentTheme && 'bg-muted')}
+                      onClick={() => setTheme(theme)}
+                    >
+                      {theme}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
+
+            {/* Appearances sub-menu */}
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <LayoutGrid className='w-4 h-4 mr-2' />
+                Appearances
+              </DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent>
+                  <DropdownMenuLabel>Appearances</DropdownMenuLabel>
+                  {appearances.map((thisAppearance) => (
+                    <DropdownMenuItem
+                      key={thisAppearance}
+                      className={cn('capitalize', thisAppearance === appearance && 'bg-muted')}
+                      onClick={() => setAppearance(thisAppearance)}
+                    >
+                      {thisAppearance}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout}>
               <LogOut className='mr-2 size-4' />
@@ -197,9 +186,4 @@ export function NavUser() {
       </SidebarMenuItem>
     </SidebarMenu>
   );
-}
-
-function userInitials(user: { firstName?: string; lastName?: string } | null | undefined): string | null {
-  if (!user?.firstName || !user?.lastName) return null;
-  return `${user.firstName[0].toUpperCase()}${user.lastName[0].toUpperCase()}`;
 }
