@@ -1,8 +1,8 @@
 /** @type {import('next').NextConfig} */
 
-let APP_URI, AUTH_WEB, AGIXT_SERVER;
+let APP_URI, AGIXT_SERVER;
 
-module.exports = {
+let nextConfig = {
   eslint: {
     // Warning: This allows production builds to successfully complete even if
     // your project has ESLint errors.
@@ -19,8 +19,6 @@ module.exports = {
       return ipPattern.test(domain) ? domain : domain.split('.').reverse().slice(0, 2).reverse().join('.');
     })(),
     PRIVATE_ROUTES: process.env.PRIVATE_ROUTES || '/chat,/team,/settings/',
-    AUTH_WEB: (AUTH_WEB = process.env.AUTH_WEB || `${APP_URI}/user`),
-    NEXT_PUBLIC_AUTH_WEB: AUTH_WEB,
     AGIXT_SERVER: (AGIXT_SERVER = process.env.AGIXT_SERVER || 'https://api.agixt.dev'),
     NEXT_PUBLIC_AGIXT_SERVER: AGIXT_SERVER,
     NEXT_PUBLIC_ALLOW_EMAIL_SIGN_IN: process.env.ALLOW_EMAIL_SIGN_IN || 'true',
@@ -62,16 +60,16 @@ module.exports = {
     NEXT_PUBLIC_AGIXT_SHOW_OVERRIDE_SWITCHES: process.env.AGIXT_SHOW_OVERRIDE_SWITCHES || 'tts,websearch',
     // State Options
     NEXT_PUBLIC_AGIXT_AGENT: process.env.AGIXT_AGENT || 'AGiXT',
-    images: AGIXT_SERVER && {
-      remotePatterns: [
-        {
-          protocol: 'https',
-          hostname: AGIXT_SERVER.split('://')[1].split(':')[0].split('/')[0],
-          port: '',
-          pathname: '/outputs/**',
-        },
-      ],
-    },
+  },
+  images: AGIXT_SERVER && {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: AGIXT_SERVER.split('://')[1].split(':')[0].split('/')[0],
+        port: '',
+        pathname: '/outputs/**',
+      },
+    ],
   },
   experimental: {
     serverActions: {
@@ -96,3 +94,5 @@ module.exports = {
     ];
   },
 };
+
+module.exports = nextConfig;

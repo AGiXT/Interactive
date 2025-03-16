@@ -1,5 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 
+const authWeb = `${process.env.NEXT_PUBLIC_APP_URI}/user`;
+
 export type MiddlewareHook = (req: NextRequest) => Promise<{
   activated: boolean;
   response: NextResponse;
@@ -82,7 +84,7 @@ export const verifyJWT = async (jwt: string): Promise<Response> => {
 export const useAuth: MiddlewareHook = async (req) => {
   const toReturn = {
     activated: false,
-    response: NextResponse.redirect(new URL(process.env.AUTH_WEB as string), { headers: {} }),
+    response: NextResponse.redirect(new URL(authWeb as string), { headers: {} }),
   };
   const requestedURI = getRequestedURI(req);
 
@@ -111,7 +113,7 @@ export const useAuth: MiddlewareHook = async (req) => {
         cookieArray.push(generateCookieString('company', queryParams.company, (86400).toString()));
       }
       toReturn.activated = true;
-      toReturn.response = NextResponse.redirect(`${process.env.AUTH_WEB}/register`, {
+      toReturn.response = NextResponse.redirect(`${authWeb}/register`, {
         // @ts-expect-error NextJS' types are wrong.
         headers: {
           'Set-Cookie': cookieArray,
@@ -138,10 +140,10 @@ export const useAuth: MiddlewareHook = async (req) => {
           // Payment Required
           // No body = no stripe ID present for user.
           // Body = that is the session ID for the user to get a new subscription.
-          if (!requestedURI.startsWith(`${process.env.AUTH_WEB}/subscribe`)) {
+          if (!requestedURI.startsWith(`${authWeb}/subscribe`)) {
             toReturn.response = NextResponse.redirect(
               new URL(
-                `${process.env.AUTH_WEB}/subscribe${
+                `${authWeb}/subscribe${
                   responseJSON.detail.customer_session.client_secret
                     ? '?customer_session=' + responseJSON.detail.customer_session.client_secret
                     : ''
@@ -152,14 +154,14 @@ export const useAuth: MiddlewareHook = async (req) => {
           }
         } else if (responseJSON?.missing_requirements || response.status === 403) {
           // Forbidden (Missing Values for User)
-          if (!requestedURI.startsWith(`${process.env.AUTH_WEB}/manage`)) {
-            toReturn.response = NextResponse.redirect(new URL(`${process.env.AUTH_WEB}/manage`));
+          if (!requestedURI.startsWith(`${authWeb}/manage`)) {
+            toReturn.response = NextResponse.redirect(new URL(`${authWeb}/manage`));
             toReturn.activated = true;
           }
         } else if (response.status === 502) {
           const cookieArray = [generateCookieString('href', requestedURI, (86400).toString())];
           toReturn.activated = true;
-          toReturn.response = NextResponse.redirect(new URL(`${process.env.AUTH_WEB}/down`, req.url), {
+          toReturn.response = NextResponse.redirect(new URL(`${authWeb}/down`, req.url), {
             // @ts-expect-error NextJS' types are wrong.
             headers: {
               'Set-Cookie': cookieArray,
@@ -172,7 +174,7 @@ export const useAuth: MiddlewareHook = async (req) => {
             `Invalid token response, status ${response.status}, detail ${responseJSON.detail}. Server error, please try again later.`,
           );
 
-          toReturn.response = NextResponse.redirect(new URL(`${process.env.AUTH_WEB}/error`, req.url));
+          toReturn.response = NextResponse.redirect(new URL(`${authWeb}/error`, req.url));
           toReturn.activated = true;
         } else if (response.status !== 200) {
           // @ts-expect-error NextJS' types are wrong.
@@ -182,37 +184,34 @@ export const useAuth: MiddlewareHook = async (req) => {
           ]);
           throw new Error(`Invalid token response, status ${response.status}, detail ${responseJSON.detail}.`);
         } else if (
-          requestedURI.startsWith(process.env.AUTH_WEB || '') &&
+          requestedURI.startsWith(authWeb || '') &&
           jwt.length > 0 &&
           !['/user/manage'].includes(req.nextUrl.pathname)
         ) {
-          toReturn.response = NextResponse.redirect(new URL(`${process.env.AUTH_WEB}/manage`));
+          toReturn.response = NextResponse.redirect(new URL(`${authWeb}/manage`));
           toReturn.activated = true;
         }
       } catch (exception) {
         if (exception instanceof TypeError && exception.cause instanceof AggregateError) {
           console.error(
-            `Invalid token. Failed with TypeError>AggregateError. Logging out and redirecting to authentication at ${process.env.AUTH_WEB}. ${exception.message} Exceptions to follow.`,
+            `Invalid token. Failed with TypeError>AggregateError. Logging out and redirecting to authentication at ${authWeb}. ${exception.message} Exceptions to follow.`,
           );
           for (const anError of exception.cause.errors) {
             console.error(anError.message);
           }
         } else if (exception instanceof AggregateError) {
           console.error(
-            `Invalid token. Failed with AggregateError. Logging out and redirecting to authentication at ${process.env.AUTH_WEB}. ${exception.message} Exceptions to follow.`,
+            `Invalid token. Failed with AggregateError. Logging out and redirecting to authentication at ${authWeb}. ${exception.message} Exceptions to follow.`,
           );
           for (const anError of exception.errors) {
             console.error(anError.message);
           }
         } else if (exception instanceof TypeError) {
           console.error(
-            `Invalid token. Failed with TypeError. Logging out and redirecting to authentication at ${process.env.AUTH_WEB}. ${exception.message} Cause: ${exception.cause}.`,
+            `Invalid token. Failed with TypeError. Logging out and redirecting to authentication at ${authWeb}. ${exception.message} Cause: ${exception.cause}.`,
           );
         } else {
-          console.error(
-            `Invalid token. Logging out and redirecting to authentication at ${process.env.AUTH_WEB}.`,
-            exception,
-          );
+          console.error(`Invalid token. Logging out and redirecting to authentication at ${authWeb}.`, exception);
         }
         toReturn.activated = true;
       }
@@ -223,7 +222,7 @@ export const useAuth: MiddlewareHook = async (req) => {
 
 export const useOAuth2: MiddlewareHook = async (req) => {
   const provider = req.nextUrl.pathname.split('?')[0].split('/').pop();
-  const redirect = new URL(`${process.env.AUTH_WEB}/close/${provider}`);
+  const redirect = new URL(`${authWeb}/close/${provider}`);
   let toReturn = {
     activated: false,
     response: NextResponse.redirect(redirect),

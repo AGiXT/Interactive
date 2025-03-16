@@ -117,7 +117,7 @@ export default function OAuth({ overrides }: OAuthProps): ReactNode {
               responseType='code'
               clientId={provider.client_id}
               scope={provider.scope}
-              redirectUri={`${process.env.NEXT_PUBLIC_AUTH_WEB}/close/${key.replaceAll('.', '-').replaceAll(' ', '-').replaceAll('_', '-').toLowerCase()}`}
+              redirectUri={`${process.env.NEXT_PUBLIC_APP_URI}/user/close/${key.replaceAll('.', '-').replaceAll(' ', '-').replaceAll('_', '-').toLowerCase()}`}
               onSuccess={onOAuth2}
               onFailure={onOAuth2}
               extraParams={provider.params}

@@ -127,7 +127,7 @@ const pageConfigDefaults: AuthenticationConfig = {
     heading: 'Error',
   },
   appName: process.env.NEXT_PUBLIC_APP_NAME,
-  authBaseURI: process.env.NEXT_PUBLIC_AUTH_WEB,
+  authBaseURI: `${process.env.NEXT_PUBLIC_APP_URI}/user`;
   authServer: process.env.NEXT_PUBLIC_AGIXT_SERVER,
   recaptchaSiteKey: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
 };

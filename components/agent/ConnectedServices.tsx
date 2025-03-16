@@ -8,7 +8,7 @@ import { providers as oAuth2Providers } from '@/components/auth/OAuth';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-
+const authWeb = `${process.env.NEXT_PUBLIC_APP_URI}/user`;
 interface ConnectedService {
   provider: string;
   connected: boolean;
@@ -97,7 +97,7 @@ export const ConnectedServices = () => {
         `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/oauth2/${provider}`,
         {
           code: response.code,
-          referrer: `${process.env.NEXT_PUBLIC_AUTH_WEB}/close/${provider}`,
+          referrer: `${authWeb}/close/${provider}`,
         },
         {
           headers: {
@@ -163,7 +163,7 @@ export const ConnectedServices = () => {
                     responseType='code'
                     clientId={provider.client_id}
                     state={getCookie('jwt')}
-                    redirectUri={`${process.env.NEXT_PUBLIC_AUTH_WEB}/close/${service.provider.toLowerCase()}`}
+                    redirectUri={`${authWeb}/close/${service.provider.toLowerCase()}`}
                     scope={provider.scope}
                     onSuccess={onSuccess}
                     onFailure={onSuccess}

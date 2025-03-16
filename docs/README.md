@@ -66,8 +66,7 @@ The following environment variables can be set:
 | `ENV` | `development` | Environment mode (development/production). |
 | `LOG_VERBOSITY_CLIENT` | `3` | Client-side logging verbosity level. |
 | `PRIVATE_ROUTES` | `/chat,/team,/settings/` | Routes that require authentication. |
-| `AUTH_WEB` | `http://localhost:3437/user` | Authentication web endpoint. |
-| `AGIXT_SERVER` | `https://api.app.agixt.chat` | The server address for AGiXT. |
+| `AGIXT_SERVER` | `http://agixt:7437` | The server address for AGiXT. |
 | `ALLOW_EMAIL_SIGN_IN` | `true` | Whether to allow email sign-in. |
 | `GITHUB_CLIENT_ID` | `` | GitHub OAuth client ID. |
 | `GITHUB_SCOPES` | `repo user:email read:user workflow` | GitHub OAuth scopes. |
