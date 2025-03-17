@@ -23,6 +23,10 @@ const providerDescriptions = {
     'Connect to GitHub to enable AI assistance with repository management. Agents can help analyze codebases, create pull requests, review code changes, and manage issues.',
   Tesla:
     'Link your Tesla account to enable AI control of your vehicle. Agents can help manage charging, climate control, and other vehicle settings.',
+  Amazon:
+    'Connect your Amazon account to enable AI interactions with your shopping experience. Agents can help manage your orders, track deliveries, and assist with product recommendations.',
+  X: 'Connect your X (Twitter) account to enable AI interactions with your social media. Agents can help manage your posts, analyze engagement, and assist with content creation.',
+  Walmart: 'Connect your Walmart account to enable AI interactions with your shopping experience.',
 };
 
 export const ConnectedServices = () => {

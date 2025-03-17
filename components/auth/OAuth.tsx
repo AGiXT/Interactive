@@ -13,6 +13,8 @@ import {
 } from 'react-icons/ri';
 import { BsTwitterX } from 'react-icons/bs';
 import { SiTesla } from 'react-icons/si';
+import { FaAws } from 'react-icons/fa';
+import { TbBrandWalmart } from 'react-icons/tb';
 
 export const providers = {
   Amazon: {
@@ -20,7 +22,7 @@ export const providers = {
     scope: 'profile',
     uri: 'https://www.amazon.com/ap/oa',
     params: {},
-    icon: <ShoppingCartOutlined />,
+    icon: <FaAws />,
   },
   Tesla: {
     client_id: process.env.NEXT_PUBLIC_TESLA_CLIENT_ID,
@@ -61,6 +63,13 @@ export const providers = {
     uri: 'https://x.com/i/oauth2/authorize',
     params: {},
     icon: <BsTwitterX />,
+  },
+  Walmart: {
+    client_id: process.env.NEXT_PUBLIC_WALMART_CLIENT_ID,
+    scope: 'orders items inventory pricing reports returns',
+    uri: 'https://walmart.com/oauth2/authorize',
+    params: {},
+    icon: <TbBrandWalmart />,
   },
 };
 
