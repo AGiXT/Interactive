@@ -12,7 +12,7 @@ import {
   RiShoppingCartLine as ShoppingCartOutlined,
   RiTwitterFill as Twitter,
 } from 'react-icons/ri';
-import { GiTesla } from 'react-icons/gi';
+import { SiTesla } from 'react-icons/si';
 
 export const providers = {
   Amazon: {
@@ -27,7 +27,7 @@ export const providers = {
     scope: 'openid offline_access user_data vehicle_device_data vehicle_cmds vehicle_charging_cmds vehicle_location',
     uri: 'https://auth.tesla.com/oauth2/v3/authorize',
     params: {},
-    icon: <GiTesla />,
+    icon: <SiTesla />,
   },
   GitHub: {
     client_id: process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID,
