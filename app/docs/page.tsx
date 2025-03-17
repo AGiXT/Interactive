@@ -2,6 +2,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { SidebarInset } from '@/components/ui/sidebar';
 import { SidebarPage } from '@/components/layout/SidebarPage';
 import MarkdownBlock from '@/components/conversation/Message/MarkdownBlock';
 
@@ -26,12 +27,14 @@ export default async function DocPage({ params }: { params: { slug: string[] } }
   const content = await getContent(params.slug || []);
 
   return (
-    <SidebarPage title='Documentation'>
-      <div className='mx-auto px-4'>
-        <article className='prose dark:prose-invert prose-sm sm:prose-base lg:prose-lg overflow-x-hidden'>
-          <MarkdownBlock content={content} />
-        </article>
-      </div>
-    </SidebarPage>
+    <SidebarInset>
+      <SidebarPage title='Documentation'>
+        <div className='mx-auto px-4'>
+          <article className='prose dark:prose-invert prose-sm sm:prose-base lg:prose-lg overflow-x-hidden'>
+            <MarkdownBlock content={content} />
+          </article>
+        </div>
+      </SidebarPage>
+    </SidebarInset>
   );
 }
