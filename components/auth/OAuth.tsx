@@ -60,14 +60,14 @@ export const providers = {
     client_id: process.env.NEXT_PUBLIC_X_CLIENT_ID,
     scope:
       'tweet.read tweet.write users.read offline.access like.read like.write follows.read follows.write dm.read dm.write',
-    uri: 'https://x.com/i/oauth2/authorize',
+    uri: 'https://twitter.com/i/oauth2/authorize',
     params: {},
     icon: <BsTwitterX />,
   },
   Walmart: {
     client_id: process.env.NEXT_PUBLIC_WALMART_CLIENT_ID,
     scope: 'orders items inventory pricing reports returns',
-    uri: 'https://walmart.com/oauth2/authorize',
+    uri: 'https://developer.walmart.com/api/oauth/authorize',
     params: {},
     icon: <TbBrandWalmart />,
   },
