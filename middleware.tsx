@@ -80,18 +80,26 @@ export const verifyJWT = async (jwt: string): Promise<Response> => {
   }
   return new Response();
 };
-
 export const useAuth: MiddlewareHook = async (req) => {
+  // Initialize response object to redirect to auth page
   const toReturn = {
     activated: false,
-    response: NextResponse.redirect(new URL(authWeb as string), { headers: {} }),
+    response: NextResponse.redirect(new URL(authWeb as string), {
+      headers: {
+        'Set-Cookie': [generateCookieString('jwt', '', '0')], // Always clear JWT on redirect to auth
+      },
+    }),
   };
-  const requestedURI = getRequestedURI(req);
 
+  const requestedURI = getRequestedURI(req);
   const queryParams = getQueryParams(req);
+
+  // Skip auth check for logout path
   if (requestedURI.endsWith('/user/logout')) {
     return toReturn;
   }
+
+  // Handle email verification
   if (queryParams['verify_email'] && queryParams['email']) {
     await fetch(`${process.env.AGIXT_SERVER}/v1/user/verify/email`, {
       method: 'POST',
@@ -119,107 +127,154 @@ export const useAuth: MiddlewareHook = async (req) => {
           'Set-Cookie': cookieArray,
         },
       });
+      return toReturn;
     }
+  }
 
-    if (
-      !process.env.PRIVATE_ROUTES?.split(',').some((path) => req.nextUrl.pathname.startsWith(path)) &&
-      !req.nextUrl.pathname.startsWith('/user')
-    ) {
-      return toReturn;
-    }
-    if (req.nextUrl.pathname.startsWith('/user/close')) {
-      // Let oauth close happen on subsequent links.
-      return toReturn;
-    }
-    const jwt = getJWT(req);
-    if (jwt) {
-      try {
-        const response = await verifyJWT(jwt);
-        const responseJSON = await response.json();
-        if (response.status === 402) {
-          // Payment Required
-          // No body = no stripe ID present for user.
-          // Body = that is the session ID for the user to get a new subscription.
-          if (!requestedURI.startsWith(`${authWeb}/subscribe`)) {
-            toReturn.response = NextResponse.redirect(
-              new URL(
-                `${authWeb}/subscribe${
-                  responseJSON.detail.customer_session.client_secret
-                    ? '?customer_session=' + responseJSON.detail.customer_session.client_secret
-                    : ''
-                }`,
-              ),
-            );
-            toReturn.activated = true;
-          }
-        } else if (responseJSON?.missing_requirements || response.status === 403) {
-          // Forbidden (Missing Values for User)
-          if (!requestedURI.startsWith(`${authWeb}/manage`)) {
-            toReturn.response = NextResponse.redirect(new URL(`${authWeb}/manage`));
-            toReturn.activated = true;
-          }
-        } else if (response.status === 502) {
-          const cookieArray = [generateCookieString('href', requestedURI, (86400).toString())];
-          toReturn.activated = true;
-          toReturn.response = NextResponse.redirect(new URL(`${authWeb}/down`, req.url), {
-            // @ts-expect-error NextJS' types are wrong.
-            headers: {
-              'Set-Cookie': cookieArray,
-            },
-          });
-        } else if (response.status >= 500 && response.status < 600) {
-          // Internal Server Error
-          // This should not delete the JWT.
-          console.error(
-            `Invalid token response, status ${response.status}, detail ${responseJSON.detail}. Server error, please try again later.`,
+  // Check if the route requires authentication
+  const isPrivateRoute = process.env.PRIVATE_ROUTES?.split(',').some((path) => req.nextUrl.pathname.startsWith(path));
+
+  // Skip auth for public user routes (login, register) and OAuth close page
+  if (
+    req.nextUrl.pathname.startsWith('/user/close') ||
+    req.nextUrl.pathname === '/user' ||
+    req.nextUrl.pathname === '/user/login' ||
+    req.nextUrl.pathname === '/user/register'
+  ) {
+    toReturn.activated = false;
+    return toReturn;
+  }
+
+  // Skip auth check for non-private routes that aren't in /user path
+  if (!isPrivateRoute && !req.nextUrl.pathname.startsWith('/user')) {
+    toReturn.activated = false;
+    return toReturn;
+  }
+
+  // Get JWT from cookies
+  const jwt = getJWT(req);
+
+  // If no JWT and we're on a private route or protected user route, redirect to auth and activate
+  if (
+    !jwt &&
+    (isPrivateRoute ||
+      (req.nextUrl.pathname.startsWith('/user') &&
+        !req.nextUrl.pathname.startsWith('/user/register') &&
+        !req.nextUrl.pathname.startsWith('/user/login') &&
+        req.nextUrl.pathname !== '/user'))
+  ) {
+    toReturn.activated = true;
+    toReturn.response.headers.set('Set-Cookie', [
+      generateCookieString('jwt', '', '0'),
+      generateCookieString('href', requestedURI, (86400).toString()),
+    ]);
+    return toReturn;
+  }
+
+  // If JWT exists, verify it
+  if (jwt) {
+    try {
+      const response = await verifyJWT(jwt);
+      const responseJSON = await response.json();
+
+      if (response.status === 402) {
+        // Payment Required
+        if (!requestedURI.startsWith(`${authWeb}/subscribe`)) {
+          toReturn.response = NextResponse.redirect(
+            new URL(
+              `${authWeb}/subscribe${
+                responseJSON.detail.customer_session.client_secret
+                  ? '?customer_session=' + responseJSON.detail.customer_session.client_secret
+                  : ''
+              }`,
+            ),
           );
-
-          toReturn.response = NextResponse.redirect(new URL(`${authWeb}/error`, req.url));
           toReturn.activated = true;
-        } else if (response.status !== 200) {
-          // @ts-expect-error NextJS' types are wrong.
-          toReturn.response.headers.set('Set-Cookie', [
-            generateCookieString('jwt', '', (0).toString()),
-            generateCookieString('href', requestedURI, (86400).toString()),
-          ]);
-          throw new Error(`Invalid token response, status ${response.status}, detail ${responseJSON.detail}.`);
-        } else if (
-          requestedURI.startsWith(authWeb || '') &&
-          jwt.length > 0 &&
-          !['/user/manage'].includes(req.nextUrl.pathname)
-        ) {
+        }
+      } else if (responseJSON?.missing_requirements || response.status === 403) {
+        // Forbidden (Missing Values for User)
+        if (!requestedURI.startsWith(`${authWeb}/manage`)) {
           toReturn.response = NextResponse.redirect(new URL(`${authWeb}/manage`));
           toReturn.activated = true;
         }
-      } catch (exception) {
-        if (exception instanceof TypeError && exception.cause instanceof AggregateError) {
-          console.error(
-            `Invalid token. Failed with TypeError>AggregateError. Logging out and redirecting to authentication at ${authWeb}. ${exception.message} Exceptions to follow.`,
-          );
-          for (const anError of exception.cause.errors) {
-            console.error(anError.message);
-          }
-        } else if (exception instanceof AggregateError) {
-          console.error(
-            `Invalid token. Failed with AggregateError. Logging out and redirecting to authentication at ${authWeb}. ${exception.message} Exceptions to follow.`,
-          );
-          for (const anError of exception.errors) {
-            console.error(anError.message);
-          }
-        } else if (exception instanceof TypeError) {
-          console.error(
-            `Invalid token. Failed with TypeError. Logging out and redirecting to authentication at ${authWeb}. ${exception.message} Cause: ${exception.cause}.`,
-          );
-        } else {
-          console.error(`Invalid token. Logging out and redirecting to authentication at ${authWeb}.`, exception);
-        }
+      } else if (response.status === 502) {
+        const cookieArray = [generateCookieString('href', requestedURI, (86400).toString())];
+        toReturn.activated = true;
+        toReturn.response = NextResponse.redirect(new URL(`${authWeb}/down`, req.url), {
+          // @ts-expect-error NextJS' types are wrong.
+          headers: {
+            'Set-Cookie': cookieArray,
+          },
+        });
+      } else if (response.status >= 500 && response.status < 600) {
+        // Internal Server Error - Don't delete JWT for server errors
+        console.error(
+          `Invalid token response, status ${response.status}, detail ${responseJSON.detail}. Server error, please try again later.`,
+        );
+
+        toReturn.response = NextResponse.redirect(new URL(`${authWeb}/error`, req.url));
+        toReturn.activated = true;
+      } else if (response.status !== 200) {
+        // Invalid JWT - clear JWT and redirect to auth page
+        toReturn.response = NextResponse.redirect(new URL(authWeb, req.url), {
+          headers: {
+            'Set-Cookie': [
+              generateCookieString('jwt', '', '0'),
+              generateCookieString('href', requestedURI, (86400).toString()),
+            ],
+          },
+        });
+        toReturn.activated = true;
+        console.error(`Invalid token response, status ${response.status}, detail ${responseJSON.detail}.`);
+      } else if (requestedURI.startsWith(authWeb) && jwt.length > 0 && !['/user/manage'].includes(req.nextUrl.pathname)) {
+        // Valid JWT but on auth page - redirect to manage
+        toReturn.response = NextResponse.redirect(new URL(`${authWeb}/manage`));
         toReturn.activated = true;
       }
+    } catch (exception) {
+      // Handle JWT verification errors
+      logJwtError(exception, authWeb);
+
+      // Clear JWT and redirect to auth
+      toReturn.response = NextResponse.redirect(new URL(authWeb, req.url), {
+        headers: {
+          'Set-Cookie': [
+            generateCookieString('jwt', '', '0'),
+            generateCookieString('href', requestedURI, (86400).toString()),
+          ],
+        },
+      });
+      toReturn.activated = true;
     }
   }
+
   return toReturn;
 };
 
+// Helper function to log JWT errors
+function logJwtError(exception: any, authWeb: string) {
+  if (exception instanceof TypeError && exception.cause instanceof AggregateError) {
+    console.error(
+      `Invalid token. Failed with TypeError>AggregateError. Logging out and redirecting to authentication at ${authWeb}. ${exception.message} Exceptions to follow.`,
+    );
+    for (const anError of exception.cause.errors) {
+      console.error(anError.message);
+    }
+  } else if (exception instanceof AggregateError) {
+    console.error(
+      `Invalid token. Failed with AggregateError. Logging out and redirecting to authentication at ${authWeb}. ${exception.message} Exceptions to follow.`,
+    );
+    for (const anError of exception.errors) {
+      console.error(anError.message);
+    }
+  } else if (exception instanceof TypeError) {
+    console.error(
+      `Invalid token. Failed with TypeError. Logging out and redirecting to authentication at ${authWeb}. ${exception.message} Cause: ${exception.cause}.`,
+    );
+  } else {
+    console.error(`Invalid token. Logging out and redirecting to authentication at ${authWeb}.`, exception);
+  }
+}
 export const useOAuth2: MiddlewareHook = async (req) => {
   const provider = req.nextUrl.pathname.split('?')[0].split('/').pop();
   const redirect = new URL(`${authWeb}/close/${provider}`);
