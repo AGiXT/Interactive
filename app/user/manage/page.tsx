@@ -37,7 +37,7 @@ export const Profile = ({
             you do, please make note of your most recent actions and{' '}
             <Link
               className='text-info hover:underline'
-              href='https://github.com/AGiXT/AGiXT-Interactive/issues/new?template=bug_report_prod.yml'
+              href='https://github.com/AGiXT/Interactive/issues/new?template=bug_report_prod.yml'
             >
               let us know by making a report here
             </Link>
