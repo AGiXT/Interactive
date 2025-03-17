@@ -203,3 +203,17 @@
     @apply opacity-50 pointer-events-none;
   }
 }
+
+/* LaTeX styling */
+.katex-display {
+  @apply my-4 overflow-x-auto;
+  max-width: 100%;
+}
+
+.dark .katex {
+  color: var(--foreground);
+}
+
+.dark .katex-html {
+  color: var(--foreground);
+}
