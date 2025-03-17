@@ -10,8 +10,8 @@ import {
   RiGoogleFill as Google,
   RiMicrosoftFill as Microsoft,
   RiShoppingCartLine as ShoppingCartOutlined,
-  RiTwitterFill as Twitter,
 } from 'react-icons/ri';
+import { BsTwitterX } from 'react-icons/bs';
 import { SiTesla } from 'react-icons/si';
 
 export const providers = {
@@ -56,10 +56,11 @@ export const providers = {
   },
   X: {
     client_id: process.env.NEXT_PUBLIC_X_CLIENT_ID,
-    scope: 'users.read tweet.read tweet.write offline.access',
-    uri: 'https://twitter.com/i/oauth2/authorize',
+    scope:
+      'tweet.read tweet.write users.read offline.access like.read like.write follows.read follows.write dm.read dm.write',
+    uri: 'https://x.com/i/oauth2/authorize',
     params: {},
-    icon: <Twitter />,
+    icon: <BsTwitterX />,
   },
 };
 
