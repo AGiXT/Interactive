@@ -21,7 +21,7 @@ export default function PromptTest({
   const [loading, setLoading] = useState(false);
   const [responses, setResponses] = useState<string[]>([]);
   const [responseIndex, setResponseIndex] = useState(0);
-
+  
   const preview = useMemo(() => {
     let result = promptContent;
     Object.entries(variables).forEach(([key, value]) => {
@@ -43,24 +43,14 @@ export default function PromptTest({
           headers: {
             Authorization: getCookie('jwt'),
           },
-        },
-      );
-
-      if (response.status === 200) {
-        // Check if the expected data structure exists
-        if (response.data?.choices?.[0]?.message?.content) {
-          setResponses((prevResponses) => [
-            ...prevResponses,
-            response.data.choices[0].message.content,
-          ]);
-        } else if (response.data?.message) {
-          // Fallback to a simpler response structure
-          setResponses((prevResponses) => [...prevResponses, response.data.message]);
-        } else {
-          throw new Error('Unexpected response format');
         }
+      );
+      
+      if (response.status === 200) {
+        // Changed to match your specified response format
+        setResponses((responses) => [...responses, response.data.response]);
       } else {
-        throw new Error('Request failed with status: ' + response.status);
+        throw new Error(response.data.error?.message || 'Unknown error');
       }
     } catch (error) {
       toast({
@@ -68,9 +58,8 @@ export default function PromptTest({
         description: error.message || 'Failed to process prompt',
         variant: 'destructive',
       });
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   }, [promptName, variables]);
 
   const vars = useMemo(() => {
@@ -82,10 +71,10 @@ export default function PromptTest({
 
   useEffect(() => {
     setVariables((currentVars) =>
-      vars.reduce((acc, v) => ({
-        ...acc,
-        [v]: Object.keys(currentVars).includes(v) ? currentVars[v] : '',
-      }), {}),
+      vars.reduce((acc, v) => ({ 
+        ...acc, 
+        [v]: Object.keys(currentVars).includes(v) ? currentVars[v] : '' 
+      }), {})
     );
   }, [vars]);
 
@@ -96,10 +85,10 @@ export default function PromptTest({
         {vars.map((v) => (
           <fieldset key={v}>
             <Label htmlFor={v}>{v}</Label>
-            <Input
-              id={v}
-              value={variables[v] || ''} // Ensure value is always defined
-              onChange={(e) => setVariables({ ...variables, [v]: e.target.value })}
+            <Input 
+              id={v} 
+              value={variables[v]} 
+              onChange={(e) => setVariables({ ...variables, [v]: e.target.value })} 
             />
           </fieldset>
         ))}
@@ -114,11 +103,7 @@ export default function PromptTest({
           label='Run'
           disabled={!saved}
           onClick={sendPrompt}
-          description={
-            Object.keys(variables).length > 0
-              ? 'Run the prompt with the provided variables.'
-              : 'Run the prompt.'
-          }
+          description={Object.keys(variables).length > 0 ? 'Run the prompt with the provided variables.' : 'Run the prompt.'}
         />
       )}
 
