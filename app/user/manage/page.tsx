@@ -10,8 +10,6 @@ import { mutate } from 'swr';
 import DynamicForm from '@/components/layout/dynamic-form/DynamicForm';
 import { Separator } from '@/components/ui/separator';
 import { SidebarPage } from '@/components/layout/SidebarPage';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import Link from 'next/link';
 
 export const Profile = ({
   isLoading,
@@ -31,22 +29,6 @@ export const Profile = ({
   return (
     <SidebarPage title='Account Management'>
       <div>
-        <div className='mb-4'>
-          <Alert>
-            <AlertTitle>Early Access Software</AlertTitle>
-            <AlertDescription>
-              This is an early-access deployment of open-source software. You may encounter problems or &quot;bugs&quot;. If
-              you do, please make note of your most recent actions and{' '}
-              <Link
-                className='text-info hover:underline'
-                href='https://github.com/AGiXT/Interactive/issues/new?template=bug_report_prod.yml'
-              >
-                let us know by making a report here
-              </Link>
-              . Your understanding as we build towards the future is much appreciated.
-            </AlertDescription>
-          </Alert>
-        </div>
         <div>
           <h3 className='text-lg font-medium'>Profile</h3>
           <p className='text-sm text-muted-foreground'>Apply basic changes to your profile</p>
@@ -178,30 +160,15 @@ export default function Manage(): ReactNode {
   });
 
   return (
-    <div className='w-full'>
-      <main className='flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 bg-transparent p-4 md:gap-8 md:p-10'>
-        <div className='flex justify-between w-full max-w-6xl gap-2 mx-auto'>
-          <h2 className='text-3xl font-semibold'>Account Management</h2>
-          <Button
-            key='done'
-            onClick={() => {
-              router.push('/chat');
-            }}
-          >
-            Go to {process.env.NEXT_PUBLIC_APP_NAME}
-          </Button>
-        </div>
-        <Profile
-          {...{
-            isLoading,
-            error,
-            data,
-            router,
-            responseMessage,
-            setResponseMessage,
-          }}
-        />
-      </main>
-    </div>
+    <Profile
+      {...{
+        isLoading,
+        error,
+        data,
+        router,
+        responseMessage,
+        setResponseMessage,
+      }}
+    />
   );
 }

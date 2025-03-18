@@ -88,8 +88,6 @@ export default function OAuth(): ReactNode {
   );
   return (
     <>
-      {Object.values(providers).some((provider) => provider.client_id) &&
-        process.env.NEXT_PUBLIC_ALLOW_EMAIL_SIGN_IN === 'true' && <hr />}
       {Object.entries(providers).map(([key, provider]) => {
         return (
           provider.client_id && (
@@ -107,7 +105,11 @@ export default function OAuth(): ReactNode {
               render={(renderProps) => (
                 <Button variant='outline' type='button' className='space-x-1 bg-transparent' onClick={renderProps.onClick}>
                   <span className='text-lg'>{provider.icon}</span>
-                  <span>Login with {key}</span>
+                  {key === 'X' ? (
+                    <span>Continue with &#120143; (Twitter) account</span>
+                  ) : (
+                    <span>Continue with {key} account</span>
+                  )}
                 </Button>
               )}
             />
