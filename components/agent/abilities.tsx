@@ -39,6 +39,15 @@ export function Abilities() {
   // Filter extensions for the enabled commands view
   const extensions = searchParams.get('mode') === 'company' ? activeCompany?.extensions || [] : agentData?.extensions || [];
   const extensionsWithCommands = extensions.filter((ext) => ext.commands?.length > 0);
+  
+  const agentAbilities = [
+    { name: 'Text to Speech', key: 'tts', description: 'Enable text-to-speech capabilities' },
+    { name: 'Image Generation', key: 'create_image', description: 'Enable AI image generation' },
+    { name: 'Web Search', key: 'websearch', description: 'Enable web search functionality', 
+      extraParams: { websearch_depth: 2 } },
+    { name: 'File Analysis', key: 'analyze_user_input', description: 'Enable file content analysis' }
+  ];
+
 
   const handleToggleCommand = async (commandName: string, enabled: boolean) => {
     try {
@@ -59,6 +68,24 @@ export function Abilities() {
       );
 
       if (result.status === 200) {
+        // Update local state immediately for better UX
+        if (searchParams.get('mode') === 'company') {
+          mutateCompany((prev) => ({
+            ...prev,
+            extensions: prev?.extensions.map((ext) => ({
+              ...ext,
+              commands: ext.commands.map((cmd) => 
+                cmd.friendly_name === commandName ? { ...cmd, enabled } : cmd
+              )
+            }))
+          }));
+        } else {
+          mutateAgent((prev) => ({
+            ...prev,
+            extensions: prev?.extensions.map((ext) => ({ ...ext, enabled }))
+          }));
+        }
+
         if (searchParams.get('mode') === 'company') {
           mutateCompany();
         } else {
@@ -83,6 +110,32 @@ export function Abilities() {
           <Switch id='show-enabled-only' checked={showEnabledOnly} onCheckedChange={setShowEnabledOnly} />
         </div>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>AGiXT Agent Abilities</CardTitle>
+          <CardDescription>Core capabilities for your AI agent</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {agentAbilities.map((ability) => (
+            <div key={ability.key} className="flex items-center justify-between p-4 border rounded-lg">
+              <div>
+                <Label htmlFor={ability.key} className="text-sm font-medium">
+                  {ability.name}
+                </Label>
+                <p className="text-sm text-muted-foreground">{ability.description}</p>
+              </div>
+              <Switch
+                id={ability.key}
+                checked={agentData?.settings?.[ability.key] || false}
+                onCheckedChange={(checked) => 
+                  handleToggleCommand(ability.key, checked)
+                }
+              />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
 
       {extensionsWithCommands.length === 0 ? (
         <Alert>
