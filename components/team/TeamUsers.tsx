@@ -70,12 +70,12 @@ function useActiveCompany() {
       const companies = await state.agixt.getCompanies();
       const user = await axios.get(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user`, {
         headers: {
-          Authorization: getCookie('jwt'),
+          Authorization: getCookie('jwt')?.toString() || '',
         },
       });
-      const target = companies.filter((company) => company.id === companyData.id)[0];
-      target.my_role = user.data.companies.filter((company) => company.id === companyData.id)[0].role_id;
-      return target;
+      const target = companies.filter((company) => company.id === companyData?.id)[0];
+      target.my_role = user.data.companies.filter((company: any) => company.id === companyData?.id)[0]?.role_id;
+      return target || {};
     },
     {
       fallbackData: [],
@@ -164,7 +164,7 @@ export const Team = () => {
       accessorKey: 'role',
       header: ({ column }) => <DataTableColumnHeader column={column} title='Role' />,
       cell: ({ row }) => {
-        const role = row.getValue('role');
+        const role = row.getValue('role') as string;
         return (
           <div className='flex items-center'>
             <Badge variant='outline' className='capitalize'>
@@ -198,7 +198,49 @@ export const Team = () => {
                   Edit User
                 </Button>
               </DropdownMenuItem> */}
+              <DropdownMenuSeparator />
+{[
+        { id: 1, name: 'Tenant Admin' },
+        { id: 2, name: 'Company Admin' },
+        { id: 3, name: 'User' }
+      ]
+        .filter(role => role.id > (activeCompany?.my_role || 3))
+        .map(role => (
+          <DropdownMenuItem
+            key={role.id}
+            onSelect={() => 
+              axios.put(
+                `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user/role`,
+                { user_id: row.original.id, role_id: role.id },
+                { headers: { 'Content-Type': 'application/json', Authorization: getCookie('jwt') } }
+              ).then(() => mutate())
+            }
+          >
+            Change Role to {role.name}
+          </DropdownMenuItem>
+        ))}
               <DropdownMenuItem onSelect={() => router.push(`/users/${row.original.id}`)}>View Details</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {[
+                { id: 1, name: 'Tenant Admin' },
+                { id: 2, name: 'Company Admin' },
+                { id: 3, name: 'User' },
+              ]
+                .filter((role) => role.id > (activeCompany?.my_role || 3))
+                .map((role) => (
+                  <DropdownMenuItem
+                    key={role.id}
+                    onSelect={() =>
+                      axios.put(
+                        `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user/role`,
+                        { user_id: row.original.id, role_id: role.id },
+                        { headers: { 'Content-Type': 'application/json', Authorization: getCookie('jwt') } }
+                      ).then(() => mutate())
+                    }
+                  >
+                    Change Role to {role.name}
+                  </DropdownMenuItem>
+                ))}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={(e) => {
@@ -396,7 +438,7 @@ export const Team = () => {
         mutate();
         setResponseMessage('Company name updated successfully!');
       } catch (error) {
-        setResponseMessage(error.response?.data?.detail || 'Failed to update company name');
+        setResponseMessage((error as any)?.response?.data?.detail || 'Failed to update company name');
       }
     } else {
       try {
@@ -413,13 +455,13 @@ export const Team = () => {
         mutate();
         setResponseMessage('Company created successfully!');
       } catch (error) {
-        setResponseMessage(error.response?.data?.detail || 'Failed to create company');
+        setResponseMessage((error as any)?.response?.data?.detail || 'Failed to create company');
       }
       setCreating(false);
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
       setResponseMessage('Please enter an email to invite.');
@@ -452,7 +494,7 @@ export const Team = () => {
         setEmail('');
       }
     } catch (error) {
-      setResponseMessage(error.response?.data?.detail || 'Failed to send invitation');
+      setResponseMessage((error as any)?.response?.data?.detail || 'Failed to send invitation');
     }
   };
   return (
