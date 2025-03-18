@@ -21,6 +21,7 @@ export default function PromptTest({
   const [loading, setLoading] = useState(false);
   const [responses, setResponses] = useState<string[]>([]);
   const [responseIndex, setResponseIndex] = useState(0);
+
   const preview = useMemo(() => {
     let result = promptContent;
     Object.entries(variables).forEach(([key, value]) => {
@@ -28,42 +29,66 @@ export default function PromptTest({
     });
     return result;
   }, [promptContent, variables]);
+
   const sendPrompt = useCallback(async () => {
     setLoading(true);
-    const response = await axios.post(
-      `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/agent/${getCookie('agixt-agent')}/prompt`,
-      {
-        prompt_name: promptName,
-        prompt_args: variables,
-      },
-      {
-        headers: {
-          Authorization: getCookie('jwt'),
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/agent/${getCookie('agixt-agent')}/prompt`,
+        {
+          prompt_name: promptName,
+          prompt_args: variables,
         },
-      },
-    );
-    if (response.status === 200) {
-      setResponses((responses) => [...responses, response.data.choices[0].message.content]);
-    } else {
+        {
+          headers: {
+            Authorization: getCookie('jwt'),
+          },
+        },
+      );
+
+      if (response.status === 200) {
+        // Check if the expected data structure exists
+        if (response.data?.choices?.[0]?.message?.content) {
+          setResponses((prevResponses) => [
+            ...prevResponses,
+            response.data.choices[0].message.content,
+          ]);
+        } else if (response.data?.message) {
+          // Fallback to a simpler response structure
+          setResponses((prevResponses) => [...prevResponses, response.data.message]);
+        } else {
+          throw new Error('Unexpected response format');
+        }
+      } else {
+        throw new Error('Request failed with status: ' + response.status);
+      }
+    } catch (error) {
       toast({
         title: 'Error',
-        description: response.data.error.message,
+        description: error.message || 'Failed to process prompt',
         variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  }, [promptContent, variables]);
+  }, [promptName, variables]);
+
   const vars = useMemo(() => {
     return promptContent
       .split('{')
       .map((v) => v.split('}')[0])
       .slice(1);
   }, [promptContent]);
+
   useEffect(() => {
     setVariables((currentVars) =>
-      vars.reduce((acc, v) => ({ ...acc, [v]: Object.keys(currentVars).includes(v) ? currentVars[v] : '' }), {}),
+      vars.reduce((acc, v) => ({
+        ...acc,
+        [v]: Object.keys(currentVars).includes(v) ? currentVars[v] : '',
+      }), {}),
     );
   }, [vars]);
+
   return (
     <div>
       <h3>Test Prompt</h3>
@@ -71,7 +96,11 @@ export default function PromptTest({
         {vars.map((v) => (
           <fieldset key={v}>
             <Label htmlFor={v}>{v}</Label>
-            <Input id={v} value={variables[v]} onChange={(e) => setVariables({ ...variables, [v]: e.target.value })} />
+            <Input
+              id={v}
+              value={variables[v] || ''} // Ensure value is always defined
+              onChange={(e) => setVariables({ ...variables, [v]: e.target.value })}
+            />
           </fieldset>
         ))}
       </div>
@@ -85,14 +114,18 @@ export default function PromptTest({
           label='Run'
           disabled={!saved}
           onClick={sendPrompt}
-          description={Object.keys(variables).length > 0 ? 'Run the prompt with the provided variables.' : 'Run the prompt.'}
+          description={
+            Object.keys(variables).length > 0
+              ? 'Run the prompt with the provided variables.'
+              : 'Run the prompt.'
+          }
         />
       )}
 
       {responses.length > 0 && (
         <>
           <h4>
-            Response {responseIndex}/{responses.length}
+            Response {responseIndex + 1}/{responses.length}
           </h4>
           <MarkdownBlock content={responses[responseIndex]} />
         </>
