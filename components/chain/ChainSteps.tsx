@@ -6,20 +6,22 @@ import { Card, CardContent } from '@/components/ui/card';
 import { PlusCircle as LuPlusCircle } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useChain } from '@/components/idiot/interactive/hooks/useChain';
+import { useAgent } from '@/components/idiot/interactive/hooks/useAgent';
 import ChainStep from '@/components/chain/ChainStep';
 
 export default function ChainSteps() {
   const searchParams = useSearchParams();
   const context = useInteractiveConfig();
-  const { data: chainData, mutate, error } = useChain(searchParams.get('chain') ?? undefined);
+  const { data: chainData, mutate: mutateChain, error } = useChain(searchParams.get('chain') ?? undefined);
+  const { data: agentData } = useAgent();
 
   const handleAdd = async () => {
     if (!chainData) return;
     const lastStep = chainData.steps.length === 0 ? undefined : chainData.steps[chainData.steps.length - 1];
-    await context.agixt.addStep(
+    const result = await context.agixt.addStep(
       chainData.chainName,
       chainData.steps.length + 1,
-      lastStep ? lastStep.agentName : context.agent,
+      lastStep ? lastStep.agentName : agentData?.agent?.name ?? '',
       lastStep ? lastStep.promptType : 'Prompt',
       lastStep
         ? lastStep.prompt
@@ -28,7 +30,8 @@ export default function ChainSteps() {
             prompt_category: 'Default',
           },
     );
-    mutate();
+    // Revalidate both chain and step data
+    await Promise.all([mutateChain(), context.agixt.getChain(chainData.chainName)]);
   };
 
   return (
