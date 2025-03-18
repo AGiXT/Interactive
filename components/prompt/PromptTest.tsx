@@ -21,6 +21,7 @@ export default function PromptTest({
   const [loading, setLoading] = useState(false);
   const [responses, setResponses] = useState<string[]>([]);
   const [responseIndex, setResponseIndex] = useState(0);
+  
   const preview = useMemo(() => {
     let result = promptContent;
     Object.entries(variables).forEach(([key, value]) => {
@@ -28,42 +29,55 @@ export default function PromptTest({
     });
     return result;
   }, [promptContent, variables]);
+
   const sendPrompt = useCallback(async () => {
     setLoading(true);
-    const response = await axios.post(
-      `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/agent/${getCookie('agixt-agent')}/prompt`,
-      {
-        prompt_name: promptName,
-        prompt_args: variables,
-      },
-      {
-        headers: {
-          Authorization: getCookie('jwt'),
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/agent/${getCookie('agixt-agent')}/prompt`,
+        {
+          prompt_name: promptName,
+          prompt_args: variables,
         },
-      },
-    );
-    if (response.status === 200) {
-      setResponses((responses) => [...responses, response.data.choices[0].message.content]);
-    } else {
+        {
+          headers: {
+            Authorization: getCookie('jwt'),
+          },
+        }
+      );
+      
+      if (response.status === 200) {
+        // Changed to match your specified response format
+        setResponses((responses) => [...responses, response.data.response]);
+      } else {
+        throw new Error(response.data.error?.message || 'Unknown error');
+      }
+    } catch (error) {
       toast({
         title: 'Error',
-        description: response.data.error.message,
+        description: error.message || 'Failed to process prompt',
         variant: 'destructive',
       });
     }
     setLoading(false);
-  }, [promptContent, variables]);
+  }, [promptName, variables]);
+
   const vars = useMemo(() => {
     return promptContent
       .split('{')
       .map((v) => v.split('}')[0])
       .slice(1);
   }, [promptContent]);
+
   useEffect(() => {
     setVariables((currentVars) =>
-      vars.reduce((acc, v) => ({ ...acc, [v]: Object.keys(currentVars).includes(v) ? currentVars[v] : '' }), {}),
+      vars.reduce((acc, v) => ({ 
+        ...acc, 
+        [v]: Object.keys(currentVars).includes(v) ? currentVars[v] : '' 
+      }), {})
     );
   }, [vars]);
+
   return (
     <div>
       <h3>Test Prompt</h3>
@@ -71,7 +85,11 @@ export default function PromptTest({
         {vars.map((v) => (
           <fieldset key={v}>
             <Label htmlFor={v}>{v}</Label>
-            <Input id={v} value={variables[v]} onChange={(e) => setVariables({ ...variables, [v]: e.target.value })} />
+            <Input 
+              id={v} 
+              value={variables[v]} 
+              onChange={(e) => setVariables({ ...variables, [v]: e.target.value })} 
+            />
           </fieldset>
         ))}
       </div>
@@ -92,7 +110,7 @@ export default function PromptTest({
       {responses.length > 0 && (
         <>
           <h4>
-            Response {responseIndex}/{responses.length}
+            Response {responseIndex + 1}/{responses.length}
           </h4>
           <MarkdownBlock content={responses[responseIndex]} />
         </>

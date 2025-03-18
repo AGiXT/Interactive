@@ -3,6 +3,7 @@
 import { SidebarContent } from '@/components/layout/SidebarContentManager';
 import { useCompany } from '@/components/idiot/useUser';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { toast } from '@/components/layout/toast';
 import axios from 'axios';
@@ -482,6 +483,7 @@ export default function Chat({
     }
   }, [loading, state.overrides.conversation]);
   const [renaming, setRenaming] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   useEffect(() => {
     if (renaming) {
       setNewName(currentConversation?.name || '');
@@ -550,9 +552,7 @@ export default function Chat({
               {
                 title: 'Delete Conversation',
                 icon: Trash2,
-                func: () => {
-                  handleDeleteConversation();
-                },
+                func: () => setDeleteDialogOpen(true),
                 disabled: renaming,
               },
             ].map(
@@ -568,6 +568,25 @@ export default function Chat({
             )}
           </SidebarMenu>
         </SidebarGroup>
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Conversation</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this conversation? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <button className="px-4 py-2 text-sm rounded hover:bg-gray-100" onClick={() => setDeleteDialogOpen(false)}>
+                Cancel
+              </button>
+              <button className="px-4 py-2 text-sm font-semibold text-white bg-red-500 rounded hover:bg-red-600" onClick={() => {
+                handleDeleteConversation();
+                setDeleteDialogOpen(false);
+              }}>Delete</button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </SidebarContent>
       <ChatLog
         conversation={conversation.data}
