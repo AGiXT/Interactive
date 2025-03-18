@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useInteractiveConfig } from '@/components/idiot/interactive/InteractiveConfigContext';
+import { mutate as globalMutate } from 'swr';
 
 export function ChainDialog({ open, setOpen }) {
   const router = useRouter();
@@ -15,7 +16,8 @@ export function ChainDialog({ open, setOpen }) {
 
   const handleNewChain = async () => {
     await context.agixt.addChain(newChainName);
-    router.push(`/settings/chains?chain=${newChainName}`);
+    await globalMutate('/chains');
+    await router.push(`/settings/chains?chain=${newChainName}`);
     setOpen(false);
   };
 
@@ -30,7 +32,8 @@ export function ChainDialog({ open, setOpen }) {
       const steps = JSON.parse(fileContent);
       await context.agixt.addChain(newChainName);
       await context.agixt.importChain(newChainName, steps);
-      router.push(`/chains?chain=${newChainName}`);
+      await globalMutate('/chains');
+      await router.push(`/chains?chain=${newChainName}`);
     }
     setOpen(false);
   };

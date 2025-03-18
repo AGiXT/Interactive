@@ -11,7 +11,12 @@ import { ChainSelector } from '@/components/layout/ChainSelector';
 import { useChain } from '@/components/idiot/interactive/hooks/useChain';
 import ChainSteps from '@/components/chain/ChainSteps';
 
-export default function ChainPanel({ showCreateDialog, setShowCreateDialog }) {
+interface ChainPanelProps {
+  showCreateDialog: boolean;
+  setShowCreateDialog: (show: boolean) => void;
+}
+
+export default function ChainPanel({ showCreateDialog, setShowCreateDialog }: ChainPanelProps) {
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState('');
   const context = useInteractiveConfig();
@@ -19,7 +24,7 @@ export default function ChainPanel({ showCreateDialog, setShowCreateDialog }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const { data: chainData, error } = useChain(searchParams.get('chain') ?? undefined);
+  const { data: chainData, mutate: mutateChain, error } = useChain(searchParams.get('chain') ?? undefined);
 
   useEffect(() => {
     if (renaming) {
@@ -29,16 +34,22 @@ export default function ChainPanel({ showCreateDialog, setShowCreateDialog }) {
 
   const handleDelete = async () => {
     await context.agixt.deleteChain(searchParams.get('chain') ?? '');
+    await mutateChain();
     router.push(pathname);
   };
 
   const handleRename = async () => {
-    if ((newName && newName !== searchParams.get('chain')) ?? '') {
-      (await context.agixt.searchParams.get('chain')) ?? ''(searchParams.get('chain') ?? '', newName);
+    const currentChain = searchParams.get('chain') ?? '';
+    if (newName && newName !== currentChain) {
+      const oldName = searchParams.get('chain') ?? '';
+      await context.agixt.renameChain(oldName, newName);
       setRenaming(false);
       const current = new URLSearchParams(Array.from(searchParams.entries()));
       current.set('chain', newName);
-      router.push(`${pathname}?${current.toString()}`);
+      // Update the data before navigation
+      await Promise.all([
+        mutateChain(),
+        router.push(`${pathname}?${current.toString()}`)]);
     }
   };
 
@@ -95,7 +106,7 @@ export default function ChainPanel({ showCreateDialog, setShowCreateDialog }) {
                         variant='ghost'
                         size='icon'
                         onClick={handleRename}
-                        disabled={(!newName || newName === searchParams.get('chain')) ?? ''}
+                        disabled={!newName || newName === searchParams.get('chain')}
                       >
                         <Check className='h-4 w-4' />
                       </Button>
