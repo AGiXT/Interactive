@@ -16,5 +16,5 @@ export default function Logout({ redirectTo = '/' }: LogoutProps): ReactNode {
   }, [router, redirectTo]);
 
   // Moved the conditional rendering here, after all hooks are called
-  return null;
+  return <center>Please wait while you are redirected...</center>;
 }
