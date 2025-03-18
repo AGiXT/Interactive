@@ -39,15 +39,6 @@ export function Abilities() {
   // Filter extensions for the enabled commands view
   const extensions = searchParams.get('mode') === 'company' ? activeCompany?.extensions || [] : agentData?.extensions || [];
   const extensionsWithCommands = extensions.filter((ext) => ext.commands?.length > 0);
-  
-  const agentAbilities = [
-    { name: 'Text to Speech', key: 'tts', description: 'Enable text-to-speech capabilities' },
-    { name: 'Image Generation', key: 'create_image', description: 'Enable AI image generation' },
-    { name: 'Web Search', key: 'websearch', description: 'Enable web search functionality', 
-      extraParams: { websearch_depth: 2 } },
-    { name: 'File Analysis', key: 'analyze_user_input', description: 'Enable file content analysis' }
-  ];
-
 
   const handleToggleCommand = async (commandName: string, enabled: boolean) => {
     try {
@@ -68,24 +59,6 @@ export function Abilities() {
       );
 
       if (result.status === 200) {
-        // Update local state immediately for better UX
-        if (searchParams.get('mode') === 'company') {
-          mutateCompany((prev) => ({
-            ...prev,
-            extensions: prev?.extensions.map((ext) => ({
-              ...ext,
-              commands: ext.commands.map((cmd) => 
-                cmd.friendly_name === commandName ? { ...cmd, enabled } : cmd
-              )
-            }))
-          }));
-        } else {
-          mutateAgent((prev) => ({
-            ...prev,
-            extensions: prev?.extensions.map((ext) => ({ ...ext, enabled }))
-          }));
-        }
-
         if (searchParams.get('mode') === 'company') {
           mutateCompany();
         } else {
@@ -104,38 +77,125 @@ export function Abilities() {
   return (
     <div className='space-y-6'>
       <div className='flex items-center justify-between mb-4'>
+        <h3 className='text-lg font-medium'>AGiXT Agent</h3>
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Core Agent Extensions</CardTitle>
+          <CardDescription>Enable or disable core AGiXT agent capabilities</CardDescription>
+        </CardHeader>
+        <CardContent className='space-y-4'>
+          <Card className='p-4 border border-border/50'>
+            <div className='flex items-center mb-2'>
+              <Switch
+                checked={agentData?.settings?.tts === true}
+                onCheckedChange={async (checked) => {
+                  try {
+                    await axios.put(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/agent/${agent_name}`,
+                      { agent_name, settings: { ...agentData?.settings, tts: checked } },
+                      { headers: { Authorization: getCookie('jwt') } }
+                    );
+                    mutateAgent();
+                  } catch (error) {
+                    console.error('Failed to update TTS setting:', error);
+                  }
+                }}
+              />
+              <h4 className='text-lg font-medium'>&nbsp;&nbsp;Text to Speech</h4>
+            </div>
+            <p className='text-sm text-muted-foreground'>Convert text responses to spoken audio output.</p>
+          </Card>
+
+          <Card className='p-4 border border-border/50'>
+            <div className='flex items-center mb-2'>
+              <Switch
+                checked={agentData?.settings?.create_image === true}
+                onCheckedChange={async (checked) => {
+                  try {
+                    await axios.put(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/agent/${agent_name}`,
+                      { agent_name, settings: { ...agentData?.settings, create_image: checked } },
+                      { headers: { Authorization: getCookie('jwt') } }
+                    );
+                    mutateAgent();
+                  } catch (error) {
+                    console.error('Failed to update image generation setting:', error);
+                  }
+                }}
+              />
+              <h4 className='text-lg font-medium'>&nbsp;&nbsp;Image Generation</h4>
+            </div>
+            <p className='text-sm text-muted-foreground'>Create AI-generated images from text descriptions.</p>
+          </Card>
+
+          <Card className='p-4 border border-border/50'>
+            <div className='flex items-center mb-2'>
+              <Switch
+                checked={agentData?.settings?.websearch === true}
+                onCheckedChange={async (checked) => {
+                  try {
+                    await axios.put(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/agent/${agent_name}`,
+                      { 
+                        agent_name, 
+                        settings: { 
+                          ...agentData?.settings, 
+                          websearch: checked,
+                          websearch_depth: checked ? (agentData?.settings?.websearch_depth || 2) : undefined
+                        } 
+                      },
+                      { headers: { Authorization: getCookie('jwt') } }
+                    );
+                    mutateAgent();
+                  } catch (error) {
+                    console.error('Failed to update web search setting:', error);
+                  }
+                }}
+              />
+              <h4 className='text-lg font-medium'>&nbsp;&nbsp;Web Search</h4>
+            </div>
+            <p className='text-sm text-muted-foreground'>Search and reference current web content.</p>
+          </Card>
+
+          <Card className='p-4 border border-border/50'>
+            <div className='flex items-center mb-2'>
+              <Switch
+                checked={agentData?.settings?.analyze_user_input === true}
+                onCheckedChange={async (checked) => {
+                  try {
+                    await axios.put(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/agent/${agent_name}`,
+                      { 
+                        agent_name, 
+                        settings: { ...agentData?.settings, analyze_user_input: checked } 
+                      },
+                      { headers: { Authorization: getCookie('jwt') } }
+                    );
+                    mutateAgent();
+                  } catch (error) {
+                    console.error('Failed to update file analysis setting:', error);
+                  }
+                }}
+              />
+              <h4 className='text-lg font-medium'>&nbsp;&nbsp;File Analysis</h4>
+            </div>
+            <p className='text-sm text-muted-foreground'>Analyze uploaded files and documents for insights.</p>
+          </Card>
+        </CardContent>
+      </Card>
+
+      <div className='border-t border-border/50 my-6'></div>
+
+      {error && (
+        <Alert variant={error.type === 'error' ? 'destructive' : 'default'}>
+          <AlertDescription>{error.message}</AlertDescription>
+        </Alert>
+      )}
+
+      <div className='flex items-center justify-between mb-4'>
         <h3 className='text-lg font-medium'>Enabled Abilities</h3>
         <div className='flex items-center gap-2'>
           <Label htmlFor='show-enabled-only'>Show Enabled Only</Label>
           <Switch id='show-enabled-only' checked={showEnabledOnly} onCheckedChange={setShowEnabledOnly} />
         </div>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>AGiXT Agent Abilities</CardTitle>
-          <CardDescription>Core capabilities for your AI agent</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {agentAbilities.map((ability) => (
-            <div key={ability.key} className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <Label htmlFor={ability.key} className="text-sm font-medium">
-                  {ability.name}
-                </Label>
-                <p className="text-sm text-muted-foreground">{ability.description}</p>
-              </div>
-              <Switch
-                id={ability.key}
-                checked={agentData?.settings?.[ability.key] || false}
-                onCheckedChange={(checked) => 
-                  handleToggleCommand(ability.key, checked)
-                }
-              />
-            </div>
-          ))}
-        </CardContent>
-      </Card>
 
       {extensionsWithCommands.length === 0 ? (
         <Alert>

@@ -37,7 +37,21 @@ interface ExtensionSettings {
 }
 
 export function Extensions() {
-  const { data: agentData, mutate: mutateAgent } = useAgent();
+  // Add type for agent data
+  interface AgentData {
+    agent: {
+      settings: { value: string; name: string; }[];
+      status: boolean | null;
+      companyId: string;
+      default: boolean;
+      id: string;
+      name: string;
+    } | null;
+    commands: string[];
+    extensions?: Extension[];
+  }
+  
+  const { data: agentData, mutate: mutateAgent } = useAgent<AgentData>();
   const [searchText, setSearchText] = useState('');
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [error, setError] = useState<ErrorState>(null);
@@ -45,8 +59,8 @@ export function Extensions() {
   const { data: activeCompany, mutate: mutateCompany } = useCompany();
 
   const searchParams = useSearchParams();
-  // Filter extensions for the enabled commands view
-  const extensions = searchParams.get('mode') === 'company' ? activeCompany?.extensions || [] : agentData?.extensions || [];
+  // Get connected third-party extensions
+  const extensions: Extension[] = searchParams.get('mode') === 'company' ? [] : (agentData?.extensions || []);
 
   // Categorize extensions for the available tab
   const categorizeExtensions = (exts: Extension[]) => {
@@ -101,12 +115,12 @@ export function Extensions() {
     await handleSaveSettings(extension.extension_name, emptySettings);
   };
 
-  function filterExtensions(extensions, text) {
-    return text
+  function filterExtensions(extensions: Extension[], text: string): Extension[] {
+    return !text
       ? extensions
       : extensions.filter(
-          (ext) =>
-            ext.extension_name.toLowerCase().includes(text.toLowerCase()) ||
+          (ext: Extension) =>
+            ext.extension_name.toLowerCase().includes(text?.toLowerCase()) ||
             ext.description.toLowerCase().includes(text.toLowerCase()),
         );
   }
@@ -118,45 +132,6 @@ export function Extensions() {
         <p className='text-sm text-muted-foreground'>
           Manage your connected third-party extensions that grant your agent additional capabilities through abilities.
         </p>
-        {searchParams.get('mode') !== 'company' &&
-          [
-            {
-              extension_name: 'text-to-speech',
-              friendly_name: 'Text to Speech',
-              description: 'Convert text responses to spoken audio output.',
-              settings: [],
-            },
-            {
-              extension_name: 'web-search',
-              friendly_name: 'Web Search',
-              description: 'Search and reference current web content.',
-              settings: [],
-            },
-            {
-              extension_name: 'image-generation',
-              friendly_name: 'Image Generation',
-              description: 'Create AI-generated images from text descriptions.',
-              settings: [],
-            },
-            {
-              extension_name: 'analysis',
-              friendly_name: 'File Analysis',
-              description: 'Analyze uploaded files and documents for insights.',
-              settings: [],
-            },
-          ].map((ext) => (
-            <Extension
-              key={ext.extension_name}
-              extension={ext}
-              connected={false}
-              onConnect={() => {}}
-              onDisconnect={() => {}}
-              settings={{}}
-              setSettings={() => {}}
-              error={null}
-              setSelectedExtension={() => {}}
-            />
-          ))}
         {searchParams.get('mode') !== 'company' && <ConnectedServices />}
         {connectedExtensions.map((extension) => (
           <Extension
