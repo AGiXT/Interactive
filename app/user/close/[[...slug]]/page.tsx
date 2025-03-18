@@ -6,5 +6,5 @@ export default function ClosePage(props: any) {
     window.close();
   }, []);
 
-  return null;
+  return <center>Please wait while you are redirected...</center>;
 }
