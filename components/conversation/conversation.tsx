@@ -1,6 +1,8 @@
 'use client';
 
 import { SidebarContent } from '@/components/layout/SidebarContentManager';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useCompany } from '@/components/idiot/useUser';
 import { Input } from '@/components/ui/input';
 import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
@@ -183,6 +185,7 @@ export default function Chat({
   showOverrideSwitchesCSV,
 }: Overrides & UIProps): React.JSX.Element {
   const [loading, setLoading] = useState(false);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const state = useContext(InteractiveConfigContext);
   const { data: conversations, isLoading: isLoadingConversations } = useConversations();
 
@@ -550,9 +553,7 @@ export default function Chat({
               {
                 title: 'Delete Conversation',
                 icon: Trash2,
-                func: () => {
-                  handleDeleteConversation();
-                },
+                func: () => setOpenDeleteDialog(true),
                 disabled: renaming,
               },
             ].map(
@@ -586,6 +587,25 @@ export default function Chat({
         showOverrideSwitchesCSV={showOverrideSwitchesCSV}
         showResetConversation={false}
       />
+      <Dialog open={openDeleteDialog} onOpenChange={setOpenDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+          </DialogHeader>
+          <DialogDescription>
+            Are you sure you want to delete the conversation? This action cannot be undone.
+          </DialogDescription>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenDeleteDialog(false)}>Cancel</Button>
+            <Button variant='destructive' onClick={() => {
+              handleDeleteConversation();
+              setOpenDeleteDialog(false);
+            }}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
