@@ -8,31 +8,72 @@ import { Label } from '@/components/ui/label';
 import { useEffect, useState } from 'react';
 import { useAgent } from '@/components/idiot/interactive/hooks/useAgent';
 import { useProvider } from '@/components/idiot/interactive/hooks/useProvider';
+import { Switch } from '@/components/ui/switch';
+
+interface ExtendedSettings {
+  tts?: boolean;
+  create_image?: boolean;
+  websearch?: boolean;
+  websearch_depth?: number;
+  analyze_user_input?: boolean;
+  provider?: string;
+}
+
+type AgentSettings = ExtendedSettings & Record<string, any>;
 
 export default function AgentConfigure() {
   const context = useInteractiveConfig();
-  const { data: agentData, mutate } = useAgent();
+  const { data: agentData, mutate } = useAgent(false);
   const { data: providerData } = useProvider(agentData?.settings?.provider || 'default');
 
-  const [provider, setProvider] = useState(agentData?.settings?.provider || '');
-  const [agentState, setAgentState] = useState<any>(agentData);
+  const [provider, setProvider] = useState(agentData?.agent?.settings?.find(s => s.name === 'provider')?.value || '');
+  const [agentState, setAgentState] = useState<AgentSettings>(
+    (agentData?.agent?.settings || []).reduce((acc, setting) => ({
+      ...acc,
+      [setting.name]: setting.value
+    }), {
+      provider: '',
+    })
+  );
 
   useEffect(() => {
     if (agentData) {
-      setProvider(agentData.settings.provider);
-      setAgentState(agentData);
+      const settings = agentData.agent?.settings || [];
+      setProvider(settings.find(s => s.name === 'provider')?.value || '');
+      setAgentState(settings.reduce((acc, setting) => ({
+        ...acc,
+        [setting.name]: setting.value
+      }), {}));
     }
   }, [agentData]);
 
   const handleConfigure = async () => {
-    await context.agixt.updateAgentSettings(context.agent, {
+    const agentName = agentData?.agent?.name;
+    if (!agentName) return;
+    
+    await context.agixt.updateAgentSettings(agentName, {
       provider: provider,
       ...agentState,
     });
     mutate();
   };
 
-  const renderFields = (dictionary) => {
+  const handleToggleExtension = async (key: string, value: boolean, additionalSettings = {}) => {
+    const newSettings = {
+      ...agentState,
+      [key]: value,
+      ...additionalSettings,
+    };
+    const agentName = agentData?.agent?.name;
+    if (!agentName) return;
+    await context.agixt.updateAgentSettings(agentName, {
+      provider: provider,
+      ...newSettings,
+    });
+    mutate();
+  };
+
+  const renderFields = (dictionary: Record<string, any>) => {
     return (
       dictionary &&
       Object.entries(dictionary).map(([key, value]) => (
@@ -48,7 +89,7 @@ export default function AgentConfigure() {
     );
   };
 
-  const renderFieldsNested = (dictionary) => {
+  const renderFieldsNested = (dictionary: Record<string, Record<string, any>>) => {
     return (
       dictionary &&
       Object.entries(dictionary).map(([key, value]) => (
@@ -66,37 +107,80 @@ export default function AgentConfigure() {
 
   return (
     <div className='space-y-6'>
-      <div className='grid grid-cols-2 gap-4'>
-        {renderFields({
-          ...agentData.agentSettings,
-          ...Object.keys(agentData.agentSettings || {}).reduce((acc, key) => {
-            if (key in (agentData.settings || {})) acc[key] = agentData.settings[key];
-            return acc;
-          }, {}),
-        })}
+      <div>
+        <h2 className='text-xl font-semibold mb-4'>Quick Settings</h2>
+        <Card className='mb-4'>
+          <CardContent className='space-y-4 pt-4'>
+            <div className='flex items-center justify-between'>
+              <div>
+                <Label className='text-base'>Text to Speech</Label>
+                <p className='text-sm text-muted-foreground'>Convert text responses to spoken audio output</p>
+              </div>
+              <Switch
+                checked={agentState.tts === true}
+                onCheckedChange={(checked) => handleToggleExtension('tts', checked)}
+              />
+            </div>
+
+            <div className='flex items-center justify-between'>
+              <div>
+                <Label className='text-base'>Image Generation</Label>
+                <p className='text-sm text-muted-foreground'>Create AI-generated images from text descriptions</p>
+              </div>
+              <Switch
+                checked={agentState.create_image === true}
+                onCheckedChange={(checked) => handleToggleExtension('create_image', checked)}
+              />
+            </div>
+
+            <div className='flex items-center justify-between'>
+              <div>
+                <Label className='text-base'>Web Search</Label>
+                <p className='text-sm text-muted-foreground'>Search and reference current web content</p>
+              </div>
+              <Switch
+                checked={agentState.websearch === true}
+                onCheckedChange={(checked) => 
+                  handleToggleExtension('websearch', checked, {
+                    websearch_depth: checked ? (agentState.websearch_depth || 2) : undefined
+                  })
+                }
+              />
+            </div>
+
+            <div className='flex items-center justify-between'>
+              <div>
+                <Label className='text-base'>File Analysis</Label>
+                <p className='text-sm text-muted-foreground'>Analyze uploaded files and documents for insights</p>
+              </div>
+              <Switch
+                checked={agentState.analyze_user_input === true}
+                onCheckedChange={(checked) => handleToggleExtension('analyze_user_input', checked)}
+              />
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      <div className='grid grid-cols-2 gap-4'>
+        {renderFields(agentState)}
+      </div>
+
       <div>
         <h2 className='text-xl font-semibold mb-2'>Provider Settings</h2>
         <div className='grid grid-cols-2 gap-4'>
           {renderFields({
-            ...providerData,
-            ...Object.keys(agentData.providerSettings || {}).reduce((acc, key) => {
-              if (key in (agentData.settings || {})) acc[key] = agentData.settings[key];
-              return acc;
-            }, {}),
+            provider,
+            ...(providerData || {})
           })}
         </div>
       </div>
+
       <div>
         <h2 className='text-xl font-semibold mb-2'>Extension Settings</h2>
-        {renderFieldsNested({
-          ...agentData.extensionSettings,
-          ...Object.keys(agentData.extensionSettings || {}).reduce((acc, key) => {
-            if (key in (agentData.settings || {})) acc[key] = agentData.settings[key];
-            return acc;
-          }, {}),
-        })}
+        {renderFieldsNested({})}
       </div>
+
       <Button onClick={handleConfigure}>Save Agent Configuration</Button>
     </div>
   );
