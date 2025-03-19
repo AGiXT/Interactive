@@ -227,8 +227,12 @@ export const Team = () => {
                         onSelect={async () => {
                           try {
                             await axios.put(
-                              `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user/role`,
-                              { id: row.original.id, new_role_id: role.id },
+                             `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user/role`,
+                              {
+                                company_id: activeCompany?.id,
+                                user_id: row.original.id,
+                                role_id: role.id
+                              },
                               { headers: { Authorization: getCookie('jwt')?.toString() } }
                             );
                             mutate();
