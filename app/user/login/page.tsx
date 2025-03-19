@@ -13,76 +13,18 @@ import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from '@/comp
 import { LuMail as Mail, LuLoader as Loader2 } from 'react-icons/lu';
 import { Disclosure, DisclosureContent, DisclosureTrigger } from '@/components/ui/disclosure';
 
-export const MissingAuthenticator = () => {
-  const [loading, setLoading] = useState({
-    email: false,
-    sms: false,
-  });
-
-  const handleEmailSend = async () => {
-    setLoading((prev) => ({ ...prev, email: true }));
-    axios.post(
-      `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user/mfa/email`,
-      {
-        email: getCookie('email'),
-      },
-      {
-        headers: {
-          Authorization: getCookie('jwt'),
-        },
-      },
-    );
-    setLoading((prev) => ({ ...prev, email: false }));
-  };
-
-  const handleSMSSend = async () => {
-    setLoading((prev) => ({ ...prev, sms: true }));
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setLoading((prev) => ({ ...prev, sms: false }));
-  };
-
-  return (
-    <Disclosure>
-      <DisclosureTrigger>
-        <Button className='w-full bg-transparent' type='button' variant='outline'>
-          I don&apos;t have my authenticator
-        </Button>
-      </DisclosureTrigger>
-      <DisclosureContent>
-        <div className='p-2 space-y-2'>
-          <Button
-            onClick={handleEmailSend}
-            disabled={loading.email}
-            variant='outline'
-            type='button'
-            size='sm'
-            className='flex w-full gap-2 bg-transparent'
-          >
-            {loading.email ? <Loader2 className='w-4 h-4 animate-spin' /> : <Mail className='w-4 h-4' />}
-            Send Email Code
-          </Button>
-
-          {/* <Button
-            onClick={handleSMSSend}
-            disabled={loading.sms}
-            variant='outline'
-            type='button'
-            size='sm'
-            className='flex w-full gap-2 bg-transparent'
-          >
-            {loading.sms ? <Loader2 className='w-4 h-4 animate-spin' /> : <MessageSquare className='w-4 h-4' />}
-            Send SMS Code
-          </Button> */}
-        </div>
-      </DisclosureContent>
-    </Disclosure>
-  );
-};
-
 export default function Login({ searchParams }: { searchParams: { otp_uri?: string } }): ReactNode {
   const [responseMessage, setResponseMessage] = useState('');
   const [captcha, setCaptcha] = useState<string | null>(null);
+  const [copyButtonState, setCopyButtonState] = useState({
+    isCopied: false,
+  });
+  const [missingAuthState, setMissingAuthState] = useState({
+    loading: {
+      email: false,
+      sms: false,
+    },
+  });
 
   const submitForm = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
@@ -123,6 +65,51 @@ export default function Login({ searchParams }: { searchParams: { otp_uri?: stri
     }
   };
 
+  const handleEmailSend = async () => {
+    setMissingAuthState((prev) => ({
+      ...prev,
+      loading: { ...prev.loading, email: true },
+    }));
+
+    axios.post(
+      `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user/mfa/email`,
+      {
+        email: getCookie('email'),
+      },
+      {
+        headers: {
+          Authorization: getCookie('jwt'),
+        },
+      },
+    );
+
+    setMissingAuthState((prev) => ({
+      ...prev,
+      loading: { ...prev.loading, email: false },
+    }));
+  };
+
+  const handleSMSSend = async () => {
+    setMissingAuthState((prev) => ({
+      ...prev,
+      loading: { ...prev.loading, sms: true },
+    }));
+
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    setMissingAuthState((prev) => ({
+      ...prev,
+      loading: { ...prev.loading, sms: false },
+    }));
+  };
+
+  const handleCopyLink = (uri: string) => {
+    setCopyButtonState({ isCopied: true });
+    navigator.clipboard.writeText(uri);
+    setTimeout(() => setCopyButtonState({ isCopied: false }), 2000);
+  };
+
   const otp_uri = searchParams?.otp_uri || '';
 
   return (
@@ -147,13 +134,78 @@ export default function Login({ searchParams }: { searchParams: { otp_uri?: stri
               Scan the above QR code with Microsoft Authenticator, Google Authenticator or equivalent (or click the copy
               button if you are using your Authenticator device).
             </p>
-            <CopyButton otp_uri={otp_uri} />
+
+            {/* Copy button inline */}
+            <Button
+              variant='outline'
+              size='sm'
+              type='button'
+              className='flex items-center gap-2 mx-auto'
+              onClick={() => handleCopyLink(otp_uri)}
+            >
+              {copyButtonState.isCopied ? <Check className='w-4 h-4' /> : <Copy className='w-4 h-4' />}
+              {copyButtonState.isCopied ? 'Copied!' : 'Copy Link'}
+            </Button>
           </div>
         )}
         <input type='hidden' id='email' name='email' value={getCookie('email')} />
         <Label htmlFor='token'>Multi-Factor Code</Label>
-        <OTPInput name='token' id='token' />
-        <MissingAuthenticator />
+        <div className='flex justify-center'>
+          <InputOTP maxLength={6} name='token' id='token' autoFocus>
+            <InputOTPGroup>
+              <InputOTPSlot className='w-[50px] h-12 text-lg' index={0} />
+              <InputOTPSlot className='w-[50px] h-12 text-lg' index={1} />
+              <InputOTPSlot className='w-[50px] h-12 text-lg' index={2} />
+            </InputOTPGroup>
+            <InputOTPSeparator />
+            <InputOTPGroup>
+              <InputOTPSlot className='w-[50px] h-12 text-lg' index={3} />
+              <InputOTPSlot className='w-[50px] h-12 text-lg' index={4} />
+              <InputOTPSlot className='w-[50px] h-12 text-lg' index={5} />
+            </InputOTPGroup>
+          </InputOTP>
+        </div>
+
+        {/* Missing Authenticator inline */}
+        <Disclosure>
+          <DisclosureTrigger>
+            <Button className='w-full bg-transparent' type='button' variant='outline'>
+              I don&apos;t have my authenticator
+            </Button>
+          </DisclosureTrigger>
+          <DisclosureContent>
+            <div className='p-2 space-y-2'>
+              <Button
+                onClick={handleEmailSend}
+                disabled={missingAuthState.loading.email}
+                variant='outline'
+                type='button'
+                size='sm'
+                className='flex w-full gap-2 bg-transparent'
+              >
+                {missingAuthState.loading.email ? (
+                  <Loader2 className='w-4 h-4 animate-spin' />
+                ) : (
+                  <Mail className='w-4 h-4' />
+                )}
+                Send Email Code
+              </Button>
+
+              {/* <Button
+                onClick={handleSMSSend}
+                disabled={missingAuthState.loading.sms}
+                variant='outline'
+                type='button'
+                size='sm'
+                className='flex w-full gap-2 bg-transparent'
+              >
+                {missingAuthState.loading.sms ? <Loader2 className='w-4 h-4 animate-spin' /> : <MessageSquare className='w-4 h-4' />}
+                Send SMS Code
+              </Button> */}
+            </div>
+          </DisclosureContent>
+        </Disclosure>
+
         {process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && (
           <div className='my-3'>
             <ReCAPTCHA
@@ -169,46 +221,5 @@ export default function Login({ searchParams }: { searchParams: { otp_uri?: stri
         {responseMessage && <AuthCard.ResponseMessage>{responseMessage}</AuthCard.ResponseMessage>}
       </form>
     </AuthCard>
-  );
-}
-
-const CopyButton = ({ otp_uri }: { otp_uri: string }) => {
-  const [isCopied, setIsCopied] = useState(false);
-
-  return (
-    <Button
-      variant='outline'
-      size='sm'
-      type='button'
-      className='flex items-center gap-2 mx-auto'
-      onClick={() => {
-        setIsCopied(true);
-        navigator.clipboard.writeText(otp_uri);
-        setTimeout(() => setIsCopied(false), 2000);
-      }}
-    >
-      {isCopied ? <Check className='w-4 h-4' /> : <Copy className='w-4 h-4' />}
-      {isCopied ? 'Copied!' : 'Copy Link'}
-    </Button>
-  );
-};
-
-export function OTPInput({ name, id }: { name?: string; id?: string }) {
-  return (
-    <div className='flex justify-center'>
-      <InputOTP maxLength={6} name={name} id={id} autoFocus>
-        <InputOTPGroup>
-          <InputOTPSlot className='w-[50px] h-12 text-lg' index={0} />
-          <InputOTPSlot className='w-[50px] h-12 text-lg' index={1} />
-          <InputOTPSlot className='w-[50px] h-12 text-lg' index={2} />
-        </InputOTPGroup>
-        <InputOTPSeparator />
-        <InputOTPGroup>
-          <InputOTPSlot className='w-[50px] h-12 text-lg' index={3} />
-          <InputOTPSlot className='w-[50px] h-12 text-lg' index={4} />
-          <InputOTPSlot className='w-[50px] h-12 text-lg' index={5} />
-        </InputOTPGroup>
-      </InputOTP>
-    </div>
   );
 }
