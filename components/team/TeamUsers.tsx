@@ -15,12 +15,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
 import { DataTable } from '@/components/layout/team-table/data-table';
 import { DataTableColumnHeader } from '@/components/layout/team-table/data-table-column-header';
 import { InteractiveConfigContext } from '@/components/idiot/interactive/InteractiveConfigContext';
@@ -53,13 +54,14 @@ interface Invitation {
 
 function useInvitations(company_id?: string) {
   const state = useContext(InteractiveConfigContext);
-  return useSWR<string[]>(
+  const { data = [], ...rest } = useSWR<Invitation[]>(
     company_id ? `/invitations/${company_id}` : '/invitations',
     async () => await state.agixt.getInvitations(company_id),
     {
-      fallbackData: [],
+      fallbackData: [] as Invitation[],
     },
   );
+  return { data, ...rest };
 }
 function useActiveCompany() {
   const state = useContext(InteractiveConfigContext);
@@ -192,55 +194,55 @@ export const Team = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align='end' className='w-[160px]'>
               <DropdownMenuLabel>User Actions</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {/* <DropdownMenuItem onClick={(e) => e.preventDefault()} className='p-0'>
-                <Button variant='ghost' className='justify-start w-full'>
-                  Edit User
-                </Button>
-              </DropdownMenuItem> */}
-              <DropdownMenuSeparator />
-{[
-        { id: 1, name: 'Tenant Admin' },
-        { id: 2, name: 'Company Admin' },
-        { id: 3, name: 'User' }
-      ]
-        .filter(role => role.id > (activeCompany?.my_role || 3))
-        .map(role => (
-          <DropdownMenuItem
-            key={role.id}
-            onSelect={() => 
-              axios.put(
-                `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user/role`,
-                { user_id: row.original.id, role_id: role.id },
-                { headers: { 'Content-Type': 'application/json', Authorization: getCookie('jwt') } }
-              ).then(() => mutate())
-            }
-          >
-            Change Role to {role.name}
-          </DropdownMenuItem>
-        ))}
               <DropdownMenuItem onSelect={() => router.push(`/users/${row.original.id}`)}>View Details</DropdownMenuItem>
               <DropdownMenuSeparator />
-              {[
-                { id: 1, name: 'Tenant Admin' },
-                { id: 2, name: 'Company Admin' },
-                { id: 3, name: 'User' },
-              ]
-                .filter((role) => role.id > (activeCompany?.my_role || 3))
-                .map((role) => (
-                  <DropdownMenuItem
-                    key={role.id}
-                    onSelect={() =>
-                      axios.put(
-                        `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user/role`,
-                        { user_id: row.original.id, role_id: role.id },
-                        { headers: { 'Content-Type': 'application/json', Authorization: getCookie('jwt') } }
-                      ).then(() => mutate())
-                    }
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="flex items-center justify-between w-full">
+                  Change Role
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="ml-2"
                   >
-                    Change Role to {role.name}
-                  </DropdownMenuItem>
-                ))}
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuContent>
+                  {[
+                    { id: 1, name: 'Tenant Admin' },
+                    { id: 2, name: 'Company Admin' },
+                    { id: 3, name: 'User' }
+                  ]
+                    .filter(role => role.id > (activeCompany?.my_role || 3))
+                    .map(role => (
+                      <DropdownMenuItem
+                        key={role.id}
+                        onSelect={async () => {
+                          try {
+                            await axios.put(
+                              `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user/role`,
+                              { id: row.original.id, new_role_id: role.id },
+                              { headers: { Authorization: getCookie('jwt')?.toString() } }
+                            );
+                            mutate();
+                          } catch (error) {
+                            console.error('Role change failed:', error);
+                            alert(`Failed to update role: ${(error as any)?.response?.data?.detail || 'Unknown error'}`);
+                          }
+                        }}
+                      >
+                        {role.name}
+                      </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+              </DropdownMenuSub>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={(e) => {
@@ -535,7 +537,7 @@ export const Team = () => {
           Send Invitation
         </Button>
       </form>
-      {invitationsData.length > 0 && (
+      {invitationsData && invitationsData.length > 0 && (
         <>
           <h4 className='text-md font-medium'>Pending Invitations</h4>
           <DataTable data={invitationsData || []} columns={invitations_columns} />
