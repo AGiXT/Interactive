@@ -251,11 +251,17 @@ export function NavMain() {
   const { toggleSidebar, open } = useSidebar('left');
 
   const itemsWithActiveState = useMemo(() => {
+    const isAuthLoading = !company && !companyError;
+
+    if (isAuthLoading) {
+      return [];
+    }
     return items
       .filter((item) => {
         const hasJwt = !!getCookie('jwt');
         const hasCompany = !!company && !companyError;
         const meetsRoleThreshold = !item.roleThreshold || (hasCompany && company.roleId <= item.roleThreshold);
+
         if (!hasJwt || !hasCompany) {
           return item.title === 'Documentation';
         }
