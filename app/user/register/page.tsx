@@ -18,20 +18,32 @@ export default function Register(): ReactNode {
   const [captcha, setCaptcha] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [responseMessage, setResponseMessage] = useState('');
+  const [invite, setInvite] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const showEmail = process.env.NEXT_PUBLIC_ALLOW_EMAIL_SIGN_IN === 'true';
+
   const submitForm = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
+
+    // Prevent double submission
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     if (process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && !captcha) {
       setResponseMessage('Please complete the reCAPTCHA.');
+      setIsSubmitting(false);
       return;
     }
+
     const formData = Object.fromEntries(new FormData((event.currentTarget as HTMLFormElement) ?? undefined));
     if (getCookie('invitation')) {
       formData['invitation_id'] = getCookie('invitation') ?? ''.toString();
     }
+
     let registerResponse;
     let registerResponseData;
+
     try {
-      // TODO fix the stupid double submission.
       registerResponse = await axios
         .post(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user`, {
           ...formData,
@@ -41,13 +53,15 @@ export default function Register(): ReactNode {
           console.error(exception);
           return exception.response;
         });
+
       registerResponseData = registerResponse?.data;
     } catch (exception) {
-      console.error('ERROR OCCURRED DURING AUTH PROCESS');
-      console.error(exception);
+      console.error('Error during registration:', exception);
       registerResponse = null;
     }
+
     setResponseMessage(registerResponseData?.detail);
+
     const loginParams = [];
     if (registerResponseData?.otp_uri) {
       loginParams.push(`otp_uri=${registerResponseData?.otp_uri}`);
@@ -58,63 +72,78 @@ export default function Register(): ReactNode {
     if (registerResponseData?.verify_sms) {
       loginParams.push(`verify_sms=true`);
     }
+
     if ([200, 201].includes(registerResponse?.status || 500)) {
       router.push(loginParams.length > 0 ? `/user/login?${loginParams.join('&')}` : '/user/login');
     } else {
-      console.error('AUTH NO WORK HELP');
+      console.error('Error during registration:', registerResponseData);
+      setIsSubmitting(false); // Reset submitting state on error
     }
   };
-  useEffect(() => {
-    // To-Do Assert that there are no dupes or empty strings in additionalFields (after trimming and lowercasing)
-  }, [additionalFields]);
+
+  // Check for invitation cookie
   useEffect(() => {
     if (getCookie('invitation')) {
       setInvite(getCookie('company') || '');
     }
   }, []);
+
+  // Auto-submit if no additional fields are needed
   useEffect(() => {
-    if (!submitted && formRef.current && additionalFields.length === 0) {
+    // Only auto-submit once and only if there are no fields to fill out
+    if (!submitted && formRef.current && additionalFields.length === 0 && !isSubmitting) {
       setSubmitted(true);
-      formRef.current.requestSubmit();
+      // Use a small delay to prevent potential race conditions with other effects
+      const timer = setTimeout(() => {
+        if (formRef.current) {
+          formRef.current.requestSubmit();
+        }
+      }, 100);
+
+      return () => clearTimeout(timer);
     }
-  }, []);
-  const [invite, setInvite] = useState<string | null>(null);
-  const showEmail = process.env.NEXT_PUBLIC_ALLOW_EMAIL_SIGN_IN === 'true';
+  }, [submitted, additionalFields.length, isSubmitting]);
+
+  // Only render the component if additionalFields has elements or showEmail is false
+  if (additionalFields.length === 0 && showEmail) {
+    return null;
+  }
+
   return (
-    <div className={additionalFields.length === 0 && showEmail ? ' invisible' : ''}>
-      <AuthCard
-        title={invite !== null ? 'Accept Invitation to ' + (invite.replaceAll('+', ' ') || 'Company') : 'Sign Up'}
-        description={`Welcome, please complete your registration. ${invite !== null ? 'You are ' : ''}${invite ? ' to ' + invite.replaceAll('+', ' ') + '.' : ''}${invite !== null ? '.' : ''}`}
-        showBackButton
-      >
-        <form onSubmit={submitForm} className='flex flex-col gap-4' ref={formRef}>
-          <input type='hidden' id='email' name='email' value={getCookie('email')} />
-          {additionalFields.length > 0 &&
-            additionalFields.map((field) => (
-              <div key={field} className='space-y-1'>
-                <Label htmlFor={field}>{toTitleCase(field)}</Label>
-                <Input key={field} id={field} name={field} type='text' required placeholder={toTitleCase(field)} />
-              </div>
-            ))}
-          {process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && (
-            <div
-              style={{
-                margin: '0.8rem 0',
-              }}
-            >
-              <ReCAPTCHA
-                sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
-                onChange={(token: string | null) => {
-                  setCaptcha(token);
-                }}
-              />
+    <AuthCard
+      title={invite !== null ? 'Accept Invitation to ' + (invite.replaceAll('+', ' ') || 'Company') : 'Sign Up'}
+      description={`Welcome, please complete your registration. ${invite !== null ? 'You are ' : ''}${invite ? ' to ' + invite.replaceAll('+', ' ') + '.' : ''}${invite !== null ? '.' : ''}`}
+      showBackButton
+    >
+      <form onSubmit={submitForm} className='flex flex-col gap-4' ref={formRef}>
+        <input type='hidden' id='email' name='email' value={getCookie('email')} />
+        {additionalFields.length > 0 &&
+          additionalFields.map((field) => (
+            <div key={field} className='space-y-1'>
+              <Label htmlFor={field}>{toTitleCase(field)}</Label>
+              <Input key={field} id={field} name={field} type='text' required placeholder={toTitleCase(field)} />
             </div>
-          )}
-          <Button type='submit'>Register</Button>
-          {responseMessage && <AuthCard.ResponseMessage>{responseMessage}</AuthCard.ResponseMessage>}
-        </form>
-        {invite && <OAuth />}
-      </AuthCard>
-    </div>
+          ))}
+        {process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && (
+          <div
+            style={{
+              margin: '0.8rem 0',
+            }}
+          >
+            <ReCAPTCHA
+              sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+              onChange={(token: string | null) => {
+                setCaptcha(token);
+              }}
+            />
+          </div>
+        )}
+        <Button type='submit' disabled={isSubmitting}>
+          {isSubmitting ? 'Registering...' : 'Register'}
+        </Button>
+        {responseMessage && <AuthCard.ResponseMessage>{responseMessage}</AuthCard.ResponseMessage>}
+      </form>
+      {invite && <OAuth />}
+    </AuthCard>
   );
 }
