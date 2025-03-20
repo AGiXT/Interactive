@@ -11,7 +11,7 @@ import { toast } from '@/components/layout/toast';
 import { UIProps } from '@/components/idiot/interactive/InteractiveAGiXT';
 import { InteractiveConfigContext, Overrides } from '@/components/idiot/interactive/InteractiveConfigContext';
 import { useConversations } from '@/components/idiot/interactive/hooks/useConversation';
-import ChatBar from '@/components/conversation/chat-input';
+import ChatBar from '@/components/conversation/input/chat-input';
 import { ChatLog } from '@/components/conversation/chat-log';
 
 const conversationSWRPath = '/conversation/';

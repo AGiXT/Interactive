@@ -4,14 +4,14 @@ import React, { ReactNode, useContext, useEffect, useRef, useState } from 'react
 import { setCookie } from 'cookies-next';
 import { BiCollapseVertical } from 'react-icons/bi';
 import { InteractiveConfigContext } from '@/components/idiot/interactive/InteractiveConfigContext';
-import { VoiceRecorder } from '@/components/conversation/VoiceRecorder';
+import { VoiceRecorder } from '@/components/conversation/input/VoiceRecorder';
 import {
   ListUploadedFiles,
   OverrideSwitches,
   ResetConversation,
   SendMessage,
   UploadFiles,
-} from '@/components/layout/Adornments';
+} from '@/components/conversation/input/Adornments';
 import { Textarea } from '@/components/ui/textarea';
 import { DropZone } from '@/components/layout/DropZone';
 import { Button } from '@/components/ui/button';
