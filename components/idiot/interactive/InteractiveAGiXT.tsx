@@ -1,6 +1,7 @@
 'use client';
+
 import React, { ReactNode, useMemo } from 'react';
-import Chat from '@/components/conversation/conversation';
+import { Chat } from '@/components/conversation/conversation';
 import { Overrides } from '@/components/idiot/interactive/InteractiveConfigContext';
 
 export type FormProps = {

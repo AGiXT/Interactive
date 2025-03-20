@@ -15,7 +15,7 @@ import ChatBar from '@/components/conversation/chat-input';
 import { ChatLog } from '@/components/conversation/chat-log';
 
 const conversationSWRPath = '/conversation/';
-export default function Chat({
+export function Chat({
   showChatThemeToggles,
   alternateBackground,
   enableFileUpload,
@@ -134,6 +134,7 @@ export default function Chat({
   useEffect(() => {
     mutate(conversationSWRPath + state.overrides.conversation);
   }, [state.overrides.conversation]);
+
   useEffect(() => {
     if (!loading) {
       setTimeout(() => {
