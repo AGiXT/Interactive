@@ -15,6 +15,7 @@ import {
   Users,
   VenetianMask,
   Workflow,
+  CircleDollarSign,
 } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { TbMessageCirclePlus } from 'react-icons/tb';
@@ -62,16 +63,12 @@ type Item = {
 // Base documentation items without URL modification
 const docItems = [
   {
-    title: 'Introduction',
-    icon: BookOpen,
-    items: [{ title: 'Introduction', slug: '0-Introduction' }],
-  },
-  {
     title: 'Getting Started',
     icon: Rocket,
     items: [
+      { title: 'Introduction', slug: '0-Introduction' },
       { title: 'Quick Start', slug: '1-Getting started/0-Quick Start' },
-      { title: 'Environment Variables', slug: '1-Getting started/1-Environment Variables' },
+      { title: 'Environment', slug: '1-Getting started/1-Environment Variables' },
       { title: 'Examples', slug: '1-Getting started/3-Examples' },
       { title: 'Things to Consider', slug: '1-Getting started/4-Things to Consider' },
       { title: 'Preinstalled ISOs', slug: '1-Getting started/5-Preinstalled ISOs' },
@@ -124,8 +121,10 @@ const docItems = [
     title: 'Reference',
     icon: BookOpen,
     items: [
+      { title: 'Cryptocurrency', slug: '5-Reference/2-Cryptocurrency' },
       { title: 'API Reference', slug: '5-Reference/0-API Reference' },
       { title: 'Privacy Policy', slug: '5-Reference/1-Privacy Policy' },
+      { title: 'Social Media', slug: '5-Reference/3-Social Media' },
     ],
   },
 ];
