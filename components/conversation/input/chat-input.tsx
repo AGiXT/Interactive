@@ -4,29 +4,27 @@ import React, { ReactNode, useContext, useEffect, useRef, useState } from 'react
 import { setCookie } from 'cookies-next';
 import { BiCollapseVertical } from 'react-icons/bi';
 import { InteractiveConfigContext } from '@/components/idiot/interactive/InteractiveConfigContext';
-import { VoiceRecorder } from '@/components/conversation/VoiceRecorder';
+import { VoiceRecorder } from '@/components/conversation/input/VoiceRecorder';
 import {
   ListUploadedFiles,
   OverrideSwitches,
   ResetConversation,
   SendMessage,
-  Timer,
   UploadFiles,
-} from '@/components/layout/Adornments';
+} from '@/components/conversation/input/Adornments';
 import { Textarea } from '@/components/ui/textarea';
 import { DropZone } from '@/components/layout/DropZone';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { TooltipBasic } from '@/components/ui/tooltip';
 
-export default function ChatBar({
+export function ChatBar({
   onSend,
   disabled,
   loading,
   setLoading,
   clearOnSend = true,
   blurOnSend = true,
-  showChatThemeToggles = false,
   enableFileUpload = false,
   enableVoiceInput = false,
   showResetConversation = false,
@@ -38,7 +36,6 @@ export default function ChatBar({
   setLoading: (loading: boolean) => void;
   clearOnSend?: boolean;
   blurOnSend?: boolean;
-  showChatThemeToggles: boolean;
   enableFileUpload?: boolean;
   enableVoiceInput?: boolean;
   showResetConversation?: boolean;

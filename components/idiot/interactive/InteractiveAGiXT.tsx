@@ -1,6 +1,7 @@
 'use client';
+
 import React, { ReactNode, useMemo } from 'react';
-import Chat from '@/components/conversation/conversation';
+import { Chat } from '@/components/conversation/conversation';
 import { Overrides } from '@/components/idiot/interactive/InteractiveConfigContext';
 
 export type FormProps = {
@@ -12,7 +13,6 @@ export type FormProps = {
 };
 export type UIProps = {
   showSelectorsCSV?: string;
-  showChatThemeToggles?: boolean;
   enableFileUpload?: boolean;
   enableVoiceInput?: boolean;
   alternateBackground?: 'primary' | 'secondary';
@@ -34,7 +34,6 @@ const InteractiveAGiXT = ({
   const uiConfigWithEnv = useMemo(
     () => ({
       showRLHF: process.env.NEXT_PUBLIC_AGIXT_RLHF === 'true',
-      showChatThemeToggles: false,
       footerMessage: process.env.NEXT_PUBLIC_AGIXT_FOOTER_MESSAGE || '',
       showOverrideSwitchesCSV: process.env.NEXT_PUBLIC_AGIXT_SHOW_OVERRIDE_SWITCHES || '',
       alternateBackground: 'primary' as 'primary' | 'secondary',
