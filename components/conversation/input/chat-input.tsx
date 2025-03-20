@@ -18,14 +18,13 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { TooltipBasic } from '@/components/ui/tooltip';
 
-export default function ChatBar({
+export function ChatBar({
   onSend,
   disabled,
   loading,
   setLoading,
   clearOnSend = true,
   blurOnSend = true,
-  showChatThemeToggles = false,
   enableFileUpload = false,
   enableVoiceInput = false,
   showResetConversation = false,
@@ -37,7 +36,6 @@ export default function ChatBar({
   setLoading: (loading: boolean) => void;
   clearOnSend?: boolean;
   blurOnSend?: boolean;
-  showChatThemeToggles: boolean;
   enableFileUpload?: boolean;
   enableVoiceInput?: boolean;
   showResetConversation?: boolean;

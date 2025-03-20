@@ -13,7 +13,6 @@ export type FormProps = {
 };
 export type UIProps = {
   showSelectorsCSV?: string;
-  showChatThemeToggles?: boolean;
   enableFileUpload?: boolean;
   enableVoiceInput?: boolean;
   alternateBackground?: 'primary' | 'secondary';
@@ -35,7 +34,6 @@ const InteractiveAGiXT = ({
   const uiConfigWithEnv = useMemo(
     () => ({
       showRLHF: process.env.NEXT_PUBLIC_AGIXT_RLHF === 'true',
-      showChatThemeToggles: false,
       footerMessage: process.env.NEXT_PUBLIC_AGIXT_FOOTER_MESSAGE || '',
       showOverrideSwitchesCSV: process.env.NEXT_PUBLIC_AGIXT_SHOW_OVERRIDE_SWITCHES || '',
       alternateBackground: 'primary' as 'primary' | 'secondary',
