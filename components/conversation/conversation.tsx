@@ -18,68 +18,6 @@ import { useConversations } from '@/components/idiot/interactive/hooks/useConver
 import ChatBar from '@/components/conversation/chat-input';
 import { ChatLog } from '@/components/conversation/chat-log';
 
-export async function getAndFormatConversastion(state): Promise<any[]> {
-  const rawConversation = await state.agixt.getConversation('', state.overrides.conversation, 100, 1);
-
-  // Create a map of activity messages for faster lookups
-  const activityMessages = {};
-  const formattedConversation = [];
-
-  // First pass: identify and store all activities
-  rawConversation.forEach((message) => {
-    const messageType = message.message.split(' ')[0];
-    if (!messageType.startsWith('[SUBACTIVITY]')) {
-      formattedConversation.push({ ...message, children: [] });
-      activityMessages[message.id] = formattedConversation[formattedConversation.length - 1];
-    }
-  });
-
-  // Second pass: handle subactivities
-  rawConversation.forEach((currentMessage) => {
-    const messageType = currentMessage.message.split(' ')[0];
-    if (messageType.startsWith('[SUBACTIVITY]')) {
-      try {
-        // Try to extract parent ID
-        const parent = messageType.split('[')[2].split(']')[0];
-        let foundParent = false;
-
-        // Look for the parent in our activity map
-        if (activityMessages[parent]) {
-          activityMessages[parent].children.push({ ...currentMessage, children: [] });
-          foundParent = true;
-        } else {
-          // If no exact match, try to find it in children
-          for (const activity of formattedConversation) {
-            const targetInChildren = activity.children.find((child) => child.id === parent);
-            if (targetInChildren) {
-              targetInChildren.children.push({ ...currentMessage, children: [] });
-              foundParent = true;
-              break;
-            }
-          }
-        }
-
-        // If still not found, add to the last activity as a fallback
-        if (!foundParent && formattedConversation.length > 0) {
-          const lastActivity = formattedConversation[formattedConversation.length - 1];
-          lastActivity.children.push({ ...currentMessage, children: [] });
-        }
-      } catch (error) {
-        // If parsing fails, add to the last activity as a fallback
-        if (formattedConversation.length > 0) {
-          const lastActivity = formattedConversation[formattedConversation.length - 1];
-          lastActivity.children.push({ ...currentMessage, children: [] });
-        } else {
-          // If no activities exist yet, convert this subactivity to an activity
-          formattedConversation.push({ ...currentMessage, children: [] });
-        }
-      }
-    }
-  });
-
-  return formattedConversation;
-}
-
 const conversationSWRPath = '/conversation/';
 export default function Chat({
   showChatThemeToggles,
@@ -517,4 +455,66 @@ export default function Chat({
       />
     </>
   );
+}
+
+export async function getAndFormatConversastion(state): Promise<any[]> {
+  const rawConversation = await state.agixt.getConversation('', state.overrides.conversation, 100, 1);
+
+  // Create a map of activity messages for faster lookups
+  const activityMessages = {};
+  const formattedConversation = [];
+
+  // First pass: identify and store all activities
+  rawConversation.forEach((message) => {
+    const messageType = message.message.split(' ')[0];
+    if (!messageType.startsWith('[SUBACTIVITY]')) {
+      formattedConversation.push({ ...message, children: [] });
+      activityMessages[message.id] = formattedConversation[formattedConversation.length - 1];
+    }
+  });
+
+  // Second pass: handle subactivities
+  rawConversation.forEach((currentMessage) => {
+    const messageType = currentMessage.message.split(' ')[0];
+    if (messageType.startsWith('[SUBACTIVITY]')) {
+      try {
+        // Try to extract parent ID
+        const parent = messageType.split('[')[2].split(']')[0];
+        let foundParent = false;
+
+        // Look for the parent in our activity map
+        if (activityMessages[parent]) {
+          activityMessages[parent].children.push({ ...currentMessage, children: [] });
+          foundParent = true;
+        } else {
+          // If no exact match, try to find it in children
+          for (const activity of formattedConversation) {
+            const targetInChildren = activity.children.find((child) => child.id === parent);
+            if (targetInChildren) {
+              targetInChildren.children.push({ ...currentMessage, children: [] });
+              foundParent = true;
+              break;
+            }
+          }
+        }
+
+        // If still not found, add to the last activity as a fallback
+        if (!foundParent && formattedConversation.length > 0) {
+          const lastActivity = formattedConversation[formattedConversation.length - 1];
+          lastActivity.children.push({ ...currentMessage, children: [] });
+        }
+      } catch (error) {
+        // If parsing fails, add to the last activity as a fallback
+        if (formattedConversation.length > 0) {
+          const lastActivity = formattedConversation[formattedConversation.length - 1];
+          lastActivity.children.push({ ...currentMessage, children: [] });
+        } else {
+          // If no activities exist yet, convert this subactivity to an activity
+          formattedConversation.push({ ...currentMessage, children: [] });
+        }
+      }
+    }
+  });
+
+  return formattedConversation;
 }
