@@ -22,9 +22,6 @@
     ],
     "paths": {
       "@/*": ["./*"],
-      "@/idiot/*": ["./components/idiot/*"],
-      "@/auth/*": ["./components/auth/*"],
-      "@/interactive/*": ["./components/idiot/interactive/*"]
     }
   },
   "include": [
