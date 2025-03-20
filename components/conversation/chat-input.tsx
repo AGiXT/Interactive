@@ -10,7 +10,6 @@ import {
   OverrideSwitches,
   ResetConversation,
   SendMessage,
-  Timer,
   UploadFiles,
 } from '@/components/layout/Adornments';
 import { Textarea } from '@/components/ui/textarea';
