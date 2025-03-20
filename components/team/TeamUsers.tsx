@@ -15,12 +15,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
 import { DataTable } from '@/components/layout/team-table/data-table';
 import { DataTableColumnHeader } from '@/components/layout/team-table/data-table-column-header';
 import { InteractiveConfigContext } from '@/components/idiot/interactive/InteractiveConfigContext';
@@ -53,13 +54,14 @@ interface Invitation {
 
 function useInvitations(company_id?: string) {
   const state = useContext(InteractiveConfigContext);
-  return useSWR<string[]>(
+  const { data = [], ...rest } = useSWR<Invitation[]>(
     company_id ? `/invitations/${company_id}` : '/invitations',
     async () => await state.agixt.getInvitations(company_id),
     {
-      fallbackData: [],
+      fallbackData: [] as Invitation[],
     },
   );
+  return { data, ...rest };
 }
 function useActiveCompany() {
   const state = useContext(InteractiveConfigContext);
@@ -70,12 +72,12 @@ function useActiveCompany() {
       const companies = await state.agixt.getCompanies();
       const user = await axios.get(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user`, {
         headers: {
-          Authorization: getCookie('jwt'),
+          Authorization: getCookie('jwt')?.toString() || '',
         },
       });
-      const target = companies.filter((company) => company.id === companyData.id)[0];
-      target.my_role = user.data.companies.filter((company) => company.id === companyData.id)[0].role_id;
-      return target;
+      const target = companies.filter((company) => company.id === companyData?.id)[0];
+      target.my_role = user.data.companies.filter((company: any) => company.id === companyData?.id)[0]?.role_id;
+      return target || {};
     },
     {
       fallbackData: [],
@@ -164,7 +166,7 @@ export const Team = () => {
       accessorKey: 'role',
       header: ({ column }) => <DataTableColumnHeader column={column} title='Role' />,
       cell: ({ row }) => {
-        const role = row.getValue('role');
+        const role = row.getValue('role') as string;
         return (
           <div className='flex items-center'>
             <Badge variant='outline' className='capitalize'>
@@ -192,13 +194,59 @@ export const Team = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align='end' className='w-[160px]'>
               <DropdownMenuLabel>User Actions</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {/* <DropdownMenuItem onClick={(e) => e.preventDefault()} className='p-0'>
-                <Button variant='ghost' className='justify-start w-full'>
-                  Edit User
-                </Button>
-              </DropdownMenuItem> */}
               <DropdownMenuItem onSelect={() => router.push(`/users/${row.original.id}`)}>View Details</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="flex items-center justify-between w-full">
+                  Change Role
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="ml-2"
+                  >
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuContent>
+                  {[
+                    { id: 1, name: 'Tenant Admin' },
+                    { id: 2, name: 'Company Admin' },
+                    { id: 3, name: 'User' }
+                  ]
+                    .filter(role => role.id > (activeCompany?.my_role || 3))
+                    .map(role => (
+                      <DropdownMenuItem
+                        key={role.id}
+                        onSelect={async () => {
+                          try {
+                            await axios.put(
+                             `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user/role`,
+                              {
+                                company_id: activeCompany?.id,
+                                user_id: row.original.id,
+                                role_id: role.id
+                              },
+                              { headers: { Authorization: getCookie('jwt')?.toString() } }
+                            );
+                            mutate();
+                          } catch (error) {
+                            console.error('Role change failed:', error);
+                            alert(`Failed to update role: ${(error as any)?.response?.data?.detail || 'Unknown error'}`);
+                          }
+                        }}
+                      >
+                        {role.name}
+                      </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+              </DropdownMenuSub>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={(e) => {
@@ -396,7 +444,7 @@ export const Team = () => {
         mutate();
         setResponseMessage('Company name updated successfully!');
       } catch (error) {
-        setResponseMessage(error.response?.data?.detail || 'Failed to update company name');
+        setResponseMessage((error as any)?.response?.data?.detail || 'Failed to update company name');
       }
     } else {
       try {
@@ -413,13 +461,13 @@ export const Team = () => {
         mutate();
         setResponseMessage('Company created successfully!');
       } catch (error) {
-        setResponseMessage(error.response?.data?.detail || 'Failed to create company');
+        setResponseMessage((error as any)?.response?.data?.detail || 'Failed to create company');
       }
       setCreating(false);
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
       setResponseMessage('Please enter an email to invite.');
@@ -452,7 +500,7 @@ export const Team = () => {
         setEmail('');
       }
     } catch (error) {
-      setResponseMessage(error.response?.data?.detail || 'Failed to send invitation');
+      setResponseMessage((error as any)?.response?.data?.detail || 'Failed to send invitation');
     }
   };
   return (
@@ -493,7 +541,7 @@ export const Team = () => {
           Send Invitation
         </Button>
       </form>
-      {invitationsData.length > 0 && (
+      {invitationsData && invitationsData.length > 0 && (
         <>
           <h4 className='text-md font-medium'>Pending Invitations</h4>
           <DataTable data={invitationsData || []} columns={invitations_columns} />
