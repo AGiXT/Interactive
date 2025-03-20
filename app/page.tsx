@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { Hero } from '@/components/home/hero';
 import { Features } from '@/components/home/features';
 import { HowItWorks } from '@/components/home/how-it-works';
-import Subscribe from '@/components/auth/Subscribe';
+import { PricingTable } from '@/components/auth/Subscribe';
 import { Contact } from '@/components/home/contact';
 import { CallToAction } from '@/components/home/call-to-action';
 import { ThemeToggle } from '@/components/layout/themes';
@@ -48,7 +48,7 @@ export default function Home(searchParams: { searchParams: { [key: string]: stri
 
         <CallToAction />
         <div className='flex flex-col items-center justify-center'>
-          <Subscribe searchParams={searchParams} />
+          <PricingTable />
         </div>
         <Contact />
         <div className='flex flex-col items-center justify-center'>
