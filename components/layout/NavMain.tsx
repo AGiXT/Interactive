@@ -34,6 +34,7 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { useCompany } from '@/components/idiot/useUser';
 import { getCookie } from 'cookies-next';
+import { useEffect, useState } from 'react';
 
 type NestedItem = {
   title: string;
@@ -237,32 +238,67 @@ export function NavMain() {
   const router = useRouter();
   const pathname = usePathname();
   const queryParams = useSearchParams();
-  const { data: company, error: companyError } = useCompany();
+  const { data: company, error: companyError, isLoading: isCompanyLoading } = useCompany();
   const { toggleSidebar, open } = useSidebar('left');
+  const [isJwtLoaded, setIsJwtLoaded] = useState(false);
+
+  // Check JWT existence once component mounts
+  useEffect(() => {
+    setIsJwtLoaded(true);
+  }, []);
 
   const itemsWithActiveState = useMemo(() => {
-    return items
-      .filter((item) => {
-        const hasJwt = !!getCookie('jwt');
-        const hasCompany = !!company && !companyError;
-        const meetsRoleThreshold = !item.roleThreshold || (hasCompany && company.roleId <= item.roleThreshold);
-        if (!hasJwt || !hasCompany) {
-          return item.title === 'Documentation';
-        }
-        return meetsRoleThreshold;
-      })
-      .map((item) => ({
+    const filteredItems = items.filter((item) => {
+      const hasJwt = !!getCookie('jwt');
+      const hasCompany = !!company && !companyError;
+      const meetsRoleThreshold = !item.roleThreshold || (hasCompany && company.roleId <= item.roleThreshold);
+      if (!hasJwt || !hasCompany) {
+        return item.title === 'Documentation';
+      }
+      return meetsRoleThreshold;
+    });
+
+    // Auto-expand Documentation if it's the only item
+    if (filteredItems.length === 1 && filteredItems[0].title === 'Documentation') {
+      return filteredItems.map((item) => ({
         ...item,
-        isActive: isActive(item, pathname, queryParams),
+        isActive: true, // Force Documentation to be active/expanded when it's alone
       }));
+    }
+
+    return filteredItems.map((item) => ({
+      ...item,
+      isActive: isActive(item, pathname, queryParams),
+    }));
   }, [company, companyError, pathname, queryParams]);
+
+  // Show loading state until all data is ready
+  const isLoading = !isJwtLoaded || isCompanyLoading;
+
+  if (isLoading) {
+    return (
+      <SidebarGroup>
+        <SidebarGroupLabel>Pages</SidebarGroupLabel>
+        <SidebarMenu>
+          <div className='flex items-center justify-center p-4'>
+            <div className='h-5 w-5 animate-spin rounded-full border-b-2 border-t-2 border-primary'></div>
+          </div>
+        </SidebarMenu>
+      </SidebarGroup>
+    );
+  }
 
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Pages</SidebarGroupLabel>
       <SidebarMenu>
         {itemsWithActiveState.map((item) => (
-          <Collapsible key={item.title} asChild defaultOpen={item.isActive} className='group/collapsible'>
+          <Collapsible
+            key={item.title}
+            asChild
+            defaultOpen={item.isActive || (itemsWithActiveState.length === 1 && item.title === 'Documentation')}
+            className='group/collapsible'
+          >
             <SidebarMenuItem>
               <CollapsibleTrigger asChild>
                 <SidebarMenuButton
