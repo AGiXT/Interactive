@@ -73,9 +73,6 @@ export const providers = {
   },
 };
 
-export type OAuthProps = {
-  overrides?: any;
-};
 export default function OAuth(): ReactNode {
   const router = useRouter();
   const { mutate } = useAgent();
