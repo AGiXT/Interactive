@@ -369,18 +369,25 @@ const Training = (): React.ReactElement => {
           <div className='space-y-4'>
             <h3 className='text-lg font-medium'>Mandatory Context</h3>
             <p className='mt-2 text-sm text-muted-foreground'>
-              This is like setting personality traits or preferences that the AI should always remember. It's automatically
-              included in every conversation, helping the AI maintain consistency. For example, you might want to specify
-              language preferences, areas of expertise, or communication style.
+              Think of mandatory context as your agent's permanent memory and personal instruction manual. Information added
+              here is included in
+              <strong> every conversation</strong>, allowing you to:
+              <ul className='mt-2 ml-6 list-disc space-y-1'>
+                <li>Store information that you want the agent to remember about you or anything else</li>
+                <li>Store team contact details (emails, GitHub usernames, nicknames, etc)</li>
+                <li>Define your communication preferences</li>
+                <li>Create shortcuts for repetitive workflows</li>
+                <li>Add domain-specific knowledge unique to your needs</li>
+                <li>Customize response formats or special features (like language lessons)</li>
+              </ul>
+              The more specific details you provide, the more personalized and efficient your agent becomes.
             </p>
             <AutoResizeTextarea
               value={searchParams.get('mode') === 'company' ? companyPersona : userPersona}
               onChange={(e) =>
                 searchParams.get('mode') === 'company' ? setCompanyPersona(e.target.value) : setUserPersona(e.target.value)
               }
-              placeholder={`Enter mandatory context for the AI to always have during all interactions for this ${
-                searchParams.get('mode') === 'company' ? 'company' : 'user'
-              }...`}
+              placeholder={`Enter details your agent should always remember (team contacts, preferences, workflows, etc.)...`}
             />
             <Button
               type='button'
