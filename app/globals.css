@@ -204,6 +204,9 @@
   }
 }
 
+img[src=""],img[src="#"] {
+  display: none;
+}
 /* LaTeX styling */
 .katex-display {
   @apply my-4 overflow-x-auto;
