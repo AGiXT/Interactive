@@ -1,5 +1,4 @@
 import { Plus, Unlink, Wrench, Power, PowerOff } from 'lucide-react';
-import { useState, useEffect } from 'react';
 import MarkdownBlock from '@/components/conversation/Message/MarkdownBlock';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -14,14 +13,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { getCookie, setCookie } from 'cookies-next';
-
-const OVERRIDE_EXTENSIONS = {
-  'text-to-speech': { name: 'tts', label: 'Text to Speech' },
-  'web-search': { name: 'websearch', label: 'Web Search' },
-  'image-generation': { name: 'create-image', label: 'Image Generation' },
-  analysis: { name: 'analyze-user-input', label: 'File Analysis' },
-};
 
 export default function Extension({
   extension,
@@ -33,15 +24,6 @@ export default function Extension({
   error,
   setSelectedExtension = () => {},
 }) {
-  const [state, setState] = useState(false);
-
-  useEffect(() => {
-    setState(
-      Object.keys(OVERRIDE_EXTENSIONS).includes(extension.extension_name)
-        ? getCookie(`agixt-${OVERRIDE_EXTENSIONS[extension.extension_name].name}`) === 'true'
-        : false,
-    );
-  }, [extension.extension_name]);
   return (
     <div className='flex flex-col gap-2 p-3 transition-colors border rounded-lg bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'>
       <div className='flex items-center gap-2'>
@@ -49,36 +31,11 @@ export default function Extension({
           <Wrench className='flex-shrink-0 w-5 h-5 text-muted-foreground' />
           <div>
             <h4 className='font-medium truncate'>{extension.friendly_name || extension.extension_name}</h4>
-            <p className='text-sm text-muted-foreground'>
-              {Object.keys(OVERRIDE_EXTENSIONS).includes(extension.extension_name)
-                ? state
-                  ? 'Enabled'
-                  : 'Disabled'
-                : connected
-                  ? 'Connected'
-                  : 'Not Connected'}
-            </p>
+            <p className='text-sm text-muted-foreground'>{connected ? 'Connected' : 'Not Connected'}</p>
           </div>
         </div>
 
-        {Object.keys(OVERRIDE_EXTENSIONS).includes(extension.extension_name) ? (
-          <Button
-            variant='outline'
-            size='sm'
-            className='gap-2'
-            onClick={() => {
-              setCookie(`agixt-${OVERRIDE_EXTENSIONS[extension.extension_name].name}`, (!state).toString(), {
-                domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
-                maxAge: 2147483647,
-                path: '/',
-              });
-              setState(!state);
-            }}
-          >
-            {state ? <PowerOff className='w-4 h-4' /> : <Power className='w-4 h-4' />}
-            {state ? 'Disable' : 'Enable'}
-          </Button>
-        ) : connected ? (
+        {connected ? (
           <Button variant='outline' size='sm' className='gap-2' onClick={() => onDisconnect(extension)}>
             <Unlink className='w-4 h-4' />
             Disconnect
