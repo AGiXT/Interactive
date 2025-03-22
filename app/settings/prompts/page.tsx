@@ -9,7 +9,6 @@ import { useSearchParams } from 'next/navigation';
 import { usePrompt } from '@/components/idiot/interactive/hooks/usePrompt';
 import PromptSelector from '@/components/layout/PromptSelector';
 import { AutoResizeTextarea } from '@/components/agent/training';
-import NewPromptDialog from '@/components/prompt/PromptDialog';
 import { Label } from '@/components/ui/label';
 import axios from 'axios';
 import { getCookie } from 'cookies-next';
@@ -342,7 +341,7 @@ export default function PromptPanel() {
           ) : (
             <div className='text-center py-8 text-muted-foreground'>Select or create a prompt to begin editing</div>
           )}
-          <NewPromptDialog open={isDialogOpen} setOpen={setIsDialogOpen} importMode={importMode} />
+          <PromptDialog open={isDialogOpen} setOpen={setIsDialogOpen} importMode={importMode} />
         </div>
         <PromptDialog open={showCreateDialog} setOpen={setShowCreateDialog} />
       </div>
