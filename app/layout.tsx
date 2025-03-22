@@ -13,7 +13,6 @@ import { cookies } from 'next/headers';
 import { ReactNode } from 'react';
 import './globals.css';
 import { metadata, viewport } from './metadata';
-import { SolanaWalletProvider } from '@/components/command-menu/wallet-provider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -48,20 +47,18 @@ export default function RootLayout({ children }: { children: ReactNode }): React
       <Head />
       <body className={cn(inter.className, theme, appearance)}>
         <InteractiveConfigContextWrapper>
-          <SolanaWalletProvider>
-            <CommandMenuProvider>
-              <SidebarContentProvider>
-                <SidebarProvider className='flex-1' defaultRightOpen={false}>
-                  <SidebarMain side='left' />
-                  {children}
-                  <Toaster />
-                  {/* <ThemeSetter /> */}
-                  <CommandMenu />
-                  <SidebarContext side='right' />
-                </SidebarProvider>
-              </SidebarContentProvider>
-            </CommandMenuProvider>
-          </SolanaWalletProvider>
+          <CommandMenuProvider>
+            <SidebarContentProvider>
+              <SidebarProvider className='flex-1' defaultRightOpen={false}>
+                <SidebarMain side='left' />
+                {children}
+                <Toaster />
+                {/* <ThemeSetter /> */}
+                <CommandMenu />
+                <SidebarContext side='right' />
+              </SidebarProvider>
+            </SidebarContentProvider>
+          </CommandMenuProvider>
         </InteractiveConfigContextWrapper>
       </body>
     </html>
