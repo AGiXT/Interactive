@@ -1,5 +1,5 @@
 import { TbMessageCirclePlus } from 'react-icons/tb';
-import { Wallet, ArrowRight, HistoryIcon, Palette } from 'lucide-react';
+import { ArrowRight, HistoryIcon, Palette } from 'lucide-react';
 import { useCallback } from 'react';
 import { CommandItemComponent } from '@/components/command-menu/index';
 import { SubPage, useCommandMenu } from '@/components/command-menu/command-menu-context';
@@ -55,13 +55,6 @@ export const quickActions = [
     description: 'View your chat history',
     keywords: ['chat', 'history', 'conversation', 'messages'],
     subPage: 'chat-history',
-  },
-  {
-    label: 'Wallet',
-    icon: Wallet,
-    description: 'View your wallet',
-    keywords: ['wallet', 'balance', 'transactions', 'payments', 'crypto', 'solana', 'sol', 'connect wallet'],
-    subPage: 'wallet-list',
   },
   {
     label: 'Go to Page',
