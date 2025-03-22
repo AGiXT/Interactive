@@ -5,11 +5,10 @@ import { PricingTable } from '@/components/auth/Subscribe';
 import { ThemeToggle } from '@/components/layout/themes';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
   LuDatabase as Database,
   LuMessageSquare as MessageSquare,

@@ -158,7 +158,7 @@ const ignoreArgs = [
   'output_url',
 ];
 
-export default function ChainStep({
+export function ChainStep({
   step,
   last_step,
   agent_name,
