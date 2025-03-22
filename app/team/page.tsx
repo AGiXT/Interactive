@@ -31,8 +31,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { DataTable } from '@/components/layout/team-table/data-table';
-import { DataTableColumnHeader } from '@/components/layout/team-table/data-table-column-header';
+import { DataTable } from '@/components/conversation/Message/data-table';
+import { DataTableColumnHeader } from '@/components/conversation/Message/data-table/data-table-column-header';
 import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
 import { SidebarPage } from '@/components/layout/SidebarPage';
 
