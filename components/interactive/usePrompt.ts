@@ -2,8 +2,8 @@ import { useToast } from '@/components/layout/toast';
 import { useRouter } from 'next/navigation';
 import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
-import { useInteractiveConfig } from '@/components/idiot/interactive/InteractiveConfigContext';
-import { createGraphQLClient } from '@/components/idiot/interactive/hooks/lib';
+import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
+import { createGraphQLClient } from '@/components/interactive/lib';
 
 export const PromptArgumentSchema = z.object({
   name: z.string(),

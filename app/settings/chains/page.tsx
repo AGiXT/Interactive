@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useInteractiveConfig } from '@/components/idiot/interactive/InteractiveConfigContext';
+import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
 import { mutate as globalMutate } from 'swr';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Check, Download, Pencil, Plus, Trash2 } from 'lucide-react';
@@ -12,13 +12,13 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import React, { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { PlusCircle as LuPlusCircle } from 'lucide-react';
-import { useAgent } from '@/components/idiot/interactive/hooks/useAgent';
+import { useAgent } from '@/components/interactive/useAgent';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { ArrowDown, ArrowUp, Save, X } from 'lucide-react';
 import useSWR from 'swr';
 import PromptSelector from '@/components/layout/PromptSelector';
-import { type ChainStepPrompt, useChain, useChains } from '@/components/idiot/interactive/hooks/useChain';
+import { type ChainStepPrompt, useChain, useChains } from '@/components/interactive/useChain';
 
 export function CommandSelector({
   value,

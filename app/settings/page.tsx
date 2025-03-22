@@ -3,11 +3,11 @@ import { SidebarPage } from '@/components/layout/SidebarPage';
 import { setCookie } from 'cookies-next';
 import { usePathname, useRouter } from 'next/navigation';
 import { LuDownload, LuPencil, LuTrash2, LuPlus } from 'react-icons/lu';
-import { useAgent } from '@/components/idiot/interactive/hooks/useAgent';
+import { useAgent } from '@/components/interactive/useAgent';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useCompany } from '@/components/idiot/useUser';
-import { useInteractiveConfig } from '@/components/idiot/interactive/InteractiveConfigContext';
+import { useCompany } from '@/components/interactive/useUser';
+import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
@@ -29,7 +29,7 @@ import { getCookie } from 'cookies-next';
 import { Plus, Wrench } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { LuUnlink as Unlink } from 'react-icons/lu';
-import { useProviders } from '@/components/idiot/interactive/hooks/useProvider';
+import { useProviders } from '@/components/interactive/useProvider';
 
 type ErrorState = {
   type: 'success' | 'error';

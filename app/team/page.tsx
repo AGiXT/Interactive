@@ -14,7 +14,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import axios from 'axios';
 import { getCookie } from 'cookies-next';
 import { LuCheck, LuPencil, LuPlus } from 'react-icons/lu';
-import { useCompanies, useCompany } from '@/components/idiot/useUser';
+import { useCompanies, useCompany } from '@/components/interactive/useUser';
 import { Label } from '@/components/ui/label';
 import { ColumnDef } from '@tanstack/react-table';
 import { Check, Mail, MoreHorizontal, X } from 'lucide-react';
@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { DataTable } from '@/components/layout/team-table/data-table';
 import { DataTableColumnHeader } from '@/components/layout/team-table/data-table-column-header';
-import { InteractiveConfigContext } from '@/components/idiot/interactive/InteractiveConfigContext';
+import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
 import { SidebarPage } from '@/components/layout/SidebarPage';
 
 interface User {

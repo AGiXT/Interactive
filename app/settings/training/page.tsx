@@ -1,5 +1,5 @@
 'use client';
-import { useCompany } from '@/components/idiot/useUser';
+import { useCompany } from '@/components/interactive/useUser';
 import { SidebarPage } from '@/components/layout/SidebarPage';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';

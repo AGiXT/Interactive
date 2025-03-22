@@ -1,10 +1,10 @@
 import { CommandMenu } from '@/components/command-menu';
 import { CommandMenuProvider } from '@/components/command-menu/command-menu-context';
-import InteractiveConfigContextWrapper from '@/components/idiot/interactive/ContextWrapper';
+import InteractiveConfigContextWrapper from '@/components/interactive/ContextWrapper';
 import { SidebarContentProvider } from '@/components/layout/SidebarContentManager';
 import { SidebarContext } from '@/components/layout/SidebarContext';
 import { SidebarMain } from '@/components/layout/SidebarMain';
-import '@/components/idiot/zod2gql/zod2gql';
+import '@/components/interactive/zod2gql';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Check, Download, Pencil, Plus, Save, Trash2, Upload } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
-import { usePrompt } from '@/components/idiot/interactive/hooks/usePrompt';
+import { usePrompt } from '@/components/interactive/usePrompt';
 import PromptSelector from '@/components/layout/PromptSelector';
 import { Label } from '@/components/ui/label';
 import axios from 'axios';
@@ -17,7 +17,7 @@ import MarkdownBlock from '@/components/conversation/Message/MarkdownBlock';
 import { toast } from '@/components/layout/toast';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { usePrompts } from '@/components/idiot/interactive/hooks/usePrompt';
+import { usePrompts } from '@/components/interactive/usePrompt';
 import { SidebarPage } from '@/components/layout/SidebarPage';
 import { useRef } from 'react';
 

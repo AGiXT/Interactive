@@ -1,6 +1,6 @@
 'use client';
 
-import { useAgent } from '@/components/idiot/interactive/hooks/useAgent';
+import { useAgent } from '@/components/interactive/useAgent';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { ReactNode, useCallback } from 'react';

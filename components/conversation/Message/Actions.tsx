@@ -12,8 +12,8 @@ import { Loader2, Volume2 } from 'lucide-react';
 import { useContext, useRef, useState } from 'react';
 import { LuCopy, LuDownload, LuPen as LuEdit, LuGitFork, LuThumbsDown, LuThumbsUp, LuTrash2 } from 'react-icons/lu';
 import { mutate } from 'swr';
-import { InteractiveConfigContext } from '@/components/idiot/interactive/InteractiveConfigContext';
-import { useConversations } from '@/components/idiot/interactive/hooks/useConversation';
+import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
+import { useConversations } from '@/components/interactive/useConversation';
 import MessageDialog from '@/components/conversation/Message/Dialog';
 import { ChatItem } from '@/components/conversation/Message/Message';
 

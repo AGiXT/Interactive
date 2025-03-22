@@ -1,5 +1,5 @@
 'use client';
-import { cookies } from 'next/headers';
+import { getCookie } from 'cookies-next';
 import { redirect } from 'next/navigation';
 import { PricingTable } from '@/components/auth/Subscribe';
 import { ThemeToggle } from '@/components/layout/themes';
@@ -142,7 +142,7 @@ function ExampleChat() {
   );
 }
 export default function Home(searchParams: { searchParams: { [key: string]: string | string[] | undefined } }) {
-  if (cookies().has('jwt')) {
+  if (getCookie('jwt')) {
     redirect('/chat');
   }
 
@@ -163,7 +163,7 @@ export default function Home(searchParams: { searchParams: { [key: string]: stri
               Documentation
             </Button>
           </Link>
-          <ThemeToggle initialTheme={cookies().get('theme')?.value} />
+          <ThemeToggle initialTheme={getCookie('theme')?.value} />
           <Link href='/user'>
             <Button size='lg' className='px-4 rounded-full'>
               Login or Register

@@ -5,11 +5,10 @@ import { getCookie } from 'cookies-next';
 import { useRouter } from 'next/navigation';
 import React, { useContext, useEffect, useState, useRef } from 'react';
 import useSWR, { mutate } from 'swr';
-import { useCompany } from '@/components/idiot/useUser';
+import { useCompany } from '@/components/interactive/useUser';
 import { toast } from '@/components/layout/toast';
-import { UIProps } from '@/components/idiot/interactive/InteractiveAGiXT';
-import { InteractiveConfigContext, Overrides } from '@/components/idiot/interactive/InteractiveConfigContext';
-import { useConversations } from '@/components/idiot/interactive/hooks/useConversation';
+import { InteractiveConfigContext, Overrides } from '@/components/interactive/InteractiveConfigContext';
+import { useConversations } from '@/components/interactive/useConversation';
 import { Activity as ChatActivity } from '@/components/conversation/activity';
 import Message from '@/components/conversation/Message/Message';
 import { Badge, Check, Download, Paperclip, Pencil, Plus, Trash2, Upload } from 'lucide-react';
@@ -17,6 +16,15 @@ import { SidebarContent } from '@/components/layout/SidebarContentManager';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
+
+export type UIProps = {
+  showSelectorsCSV?: string;
+  enableFileUpload?: boolean;
+  enableVoiceInput?: boolean;
+  alternateBackground?: 'primary' | 'secondary';
+  footerMessage?: string;
+  showOverrideSwitchesCSV?: string;
+};
 
 const conversationSWRPath = '/conversation/';
 

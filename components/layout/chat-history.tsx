@@ -11,8 +11,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useContext } from 'react';
 import { Command, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-import { Conversation, useConversations } from '@/components/idiot/interactive/hooks/useConversation';
-import { InteractiveConfigContext } from '@/components/idiot/interactive/InteractiveConfigContext';
+import { Conversation, useConversations } from '@/components/interactive/useConversation';
+import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
 
 export function ChatHistory() {
   const state = useContext(InteractiveConfigContext);

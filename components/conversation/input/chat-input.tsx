@@ -3,7 +3,7 @@
 import React, { ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { setCookie } from 'cookies-next';
 import { BiCollapseVertical } from 'react-icons/bi';
-import { InteractiveConfigContext } from '@/components/idiot/interactive/InteractiveConfigContext';
+import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
 import { VoiceRecorder } from '@/components/conversation/input/VoiceRecorder';
 import {
   ListUploadedFiles,

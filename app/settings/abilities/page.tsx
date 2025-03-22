@@ -4,13 +4,13 @@ import axios from 'axios';
 import { getCookie, setCookie } from 'cookies-next';
 import { useSearchParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { useAgent } from '@/components/idiot/interactive/hooks/useAgent';
+import { useAgent } from '@/components/interactive/useAgent';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import MarkdownBlock from '@/components/conversation/Message/MarkdownBlock';
-import { useCompany } from '@/components/idiot/useUser';
+import { useCompany } from '@/components/interactive/useUser';
 import { Input } from '@/components/ui/input';
 import { SidebarPage } from '@/components/layout/SidebarPage';
 
