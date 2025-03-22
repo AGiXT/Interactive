@@ -1,11 +1,22 @@
 'use client';
 
-import usePathname from '@/components/idiot/usePathname';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRouter, useSearchParams } from 'next/navigation';
-import React, { useEffect } from 'react';
-import { usePrompts } from '@/components/idiot/interactive/hooks/usePrompt';
+import React, { useEffect, useState } from 'react';
+import { usePrompts } from '@/components/interactive/usePrompt';
+import { usePathname as useNextPathname } from 'next/navigation';
+
+export function usePathname() {
+  const pathname = useNextPathname();
+  const [currentPathname, setCurrentPathname] = useState(pathname);
+
+  useEffect(() => {
+    setCurrentPathname(pathname);
+  }, [pathname]);
+
+  return currentPathname;
+}
 
 export default function PromptSelector({
   category = 'Default',

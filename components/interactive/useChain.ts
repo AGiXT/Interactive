@@ -1,6 +1,6 @@
 import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
-import { createGraphQLClient } from '@/components/idiot/interactive/hooks/lib';
+import { createGraphQLClient } from '@/components/interactive/lib';
 
 export const ChainStepPromptSchema = z.object({
   chainName: z.string().nullable(),

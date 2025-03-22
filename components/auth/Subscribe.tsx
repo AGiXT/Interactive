@@ -15,9 +15,41 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import useSWR from 'swr';
 
-// Create a custom SWR hook for a specific endpoint
-export function useProducts() {
-  return useSWR(
+type Product = {
+  name: string;
+  description: string;
+  prices: {
+    id: string;
+    amount: number;
+    currency: string;
+    interval: string;
+    interval_count: number;
+    usage_type: string;
+  }[];
+  priceAnnual: string;
+  marketing_features: { name: string }[];
+  isMostPopular: boolean;
+};
+
+type PricingCardProps = Product & {
+  isAnnual?: boolean;
+  flatRate?: boolean;
+  price: {
+    id: string;
+    amount: number;
+    currency: string;
+    interval: string;
+    interval_count: number;
+    usage_type: string;
+  };
+};
+
+export function PricingTable() {
+  const {
+    data: pricingData,
+    isLoading,
+    error,
+  } = useSWR(
     '/products',
     async () =>
       process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
@@ -35,89 +67,8 @@ export function useProducts() {
       fallbackData: [],
     },
   );
-}
-
-// const defaultPricingData = [
-//   {
-//     name: 'Free',
-//     description: 'Free forever',
-//     price: 'Free',
-//     priceAnnual: 'Free',
-//     marketing_features: ['1 user', '5 projects', 'Up to 1GB storage', 'Basic support', 'Community access'],
-//     isMostPopular: false,
-//   },
-//   {
-//     name: 'Pro',
-//     description: 'All the marketing_features of the Pro plan, plus unlimited users and storage.',
-//     price: '$49/mo',
-//     priceAnnual: '$499/yr',
-//     marketing_features: [
-//       'Unlimited users',
-//       'Unlimited public projects',
-//       'Unlimited private projects',
-//       'Dedicated phone support',
-//       'Priority email support',
-//     ],
-//     isMostPopular: true,
-//   },
-//   {
-//     name: 'Team',
-//     description: 'All the marketing_features of the Pro plan, plus unlimited users and storage.',
-//     price: '$69/mo',
-//     priceAnnual: '$699/yr',
-//     marketing_features: [
-//       'Unlimited users',
-//       'Unlimited public projects',
-//       'Unlimited private projects',
-//       'Dedicated phone support',
-//       'Priority email support',
-//     ],
-//     isMostPopular: false,
-//   },
-// ];
-type Product = {
-  name: string;
-  description: string;
-  prices: {
-    id: string;
-    amount: number;
-    currency: string;
-    interval: string;
-    interval_count: number;
-    usage_type: string;
-  }[];
-  priceAnnual: string;
-  marketing_features: { name: string }[];
-  isMostPopular: boolean;
-};
-type PricingCardProps = Product & {
-  isAnnual?: boolean;
-  price: {
-    id: string;
-    amount: number;
-    currency: string;
-    interval: string;
-    interval_count: number;
-    usage_type: string;
-  };
-};
-export function PricingTable() {
-  // const [isAnnual, setIsAnnual] = useState(false);
-  const { data: pricingData, isLoading, error } = useProducts();
   return (
     <>
-      {/* <div className='flex items-center justify-center'>
-        <Label htmlFor='payment-schedule' className='me-3'>
-          Monthly
-        </Label>
-        <Switch id='payment-schedule' checked={isAnnual} onCheckedChange={setIsAnnual} />
-        <Label htmlFor='payment-schedule' className='relative ms-3'>
-          Annual
-          <span className='absolute -top-10 start-auto -end-28'>
-            <Badge className='mt-3 uppercase'>Save up to 10%</Badge>
-          </span>
-        </Label>
-      </div> */}
       {pricingData.length > 0 && (
         <>
           <p className='mt-1 text-muted-foreground'>Whatever your status, our offers evolve according to your needs.</p>
@@ -134,7 +85,6 @@ export function PricingTable() {
 }
 
 export function PricingCard({
-  id,
   name,
   description,
   price,
@@ -227,8 +177,6 @@ export function PricingCard({
     </Card>
   );
 }
-
-export type SubscribeProps = { redirectTo?: string };
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace

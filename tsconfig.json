@@ -22,20 +22,13 @@
     ],
     "paths": {
       "@/*": ["./*"],
-      "@/idiot/*": ["./components/idiot/*"],
-      "@/auth/*": ["components/auth/*"],
-      "@/interactive/*": ["components/idiot/interactive/*"]
     }
   },
   "include": [
     "next-env.d.ts",
-    "next.config.js.old",
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "app/theme.ts",
-    "components/auth/auth.config.js",
-    "components/idiot/interactive/interactive.config.js"
-, "components/conversation/Activity/Severtities.tsx"  ],
+  ],
   "exclude": ["node_modules"]
 }

@@ -1,294 +1,38 @@
 'use client';
 
-import { SidebarContent } from '@/components/layout/SidebarContentManager';
-import { useCompany } from '@/components/idiot/useUser';
-import { Input } from '@/components/ui/input';
-import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { toast } from '@/components/layout/toast';
 import axios from 'axios';
 import { getCookie } from 'cookies-next';
-import { Badge, Check, Download, Paperclip, Pencil, Plus, Trash2, Upload } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useContext, useEffect, useState, useRef } from 'react';
 import useSWR, { mutate } from 'swr';
-import { UIProps } from '@/components/idiot/interactive/InteractiveAGiXT';
-import { InteractiveConfigContext, Overrides } from '@/components/idiot/interactive/InteractiveConfigContext';
-import { useConversations } from '@/components/idiot/interactive/hooks/useConversation';
-import ChatBar from '@/components/conversation/chat-input';
+import { useCompany } from '@/components/interactive/useUser';
+import { toast } from '@/components/layout/toast';
+import { InteractiveConfigContext, Overrides } from '@/components/interactive/InteractiveConfigContext';
+import { useConversations } from '@/components/interactive/useConversation';
 import { Activity as ChatActivity } from '@/components/conversation/activity';
 import Message from '@/components/conversation/Message/Message';
+import { Badge, Check, Download, Paperclip, Pencil, Plus, Trash2, Upload } from 'lucide-react';
+import { SidebarContent } from '@/components/layout/SidebarContentManager';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
+import { ChatBar } from '@/components/conversation/input/chat-input';
 
-export function ChatLog({
-  conversation,
-  alternateBackground,
-  loading,
-  setLoading,
-}: {
-  conversation: { role: string; message: string; timestamp: string; children: any[] }[];
-  setLoading: (loading: boolean) => void;
-  loading: boolean;
-  alternateBackground?: string;
-}): React.JSX.Element {
-  let lastUserMessage = ''; // track the last user message
-  const messagesEndRef = useRef(null);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [conversation]);
-
-  return (
-    <div className='flex flex-col-reverse flex-grow overflow-auto bg-background pb-28' style={{ flexBasis: '0px' }}>
-      <div className='flex flex-col h-min'>
-        {conversation.length > 0 && conversation.map ? (
-          conversation.map((chatItem, index: number) => {
-            if (chatItem.role === 'USER') {
-              lastUserMessage = chatItem.message;
-            }
-            const validTypes = [
-              '[ACTIVITY]',
-              '[ACTIVITY][ERROR]',
-              '[ACTIVITY][WARN]',
-              '[ACTIVITY][INFO]',
-              '[SUBACTIVITY]',
-              '[SUBACTIVITY][THOUGHT]',
-              '[SUBACTIVITY][REFLECTION]',
-              '[SUBACTIVITY][EXECUTION]',
-              '[SUBACTIVITY][ERROR]',
-              '[SUBACTIVITY][WARN]',
-              '[SUBACTIVITY][INFO]',
-            ];
-            const messageType = chatItem.message.split(' ')[0];
-            const messageBody = validTypes.some((x) => messageType.includes(x))
-              ? chatItem.message.substring(chatItem.message.indexOf(' '))
-              : chatItem.message;
-            // To-Do Fix this so the timestamp works. It's not granular enough rn and we get duplicates.
-            return validTypes.includes(messageType) ? (
-              <ChatActivity
-                key={chatItem.timestamp + '-' + messageBody}
-                activityType={
-                  messageType === '[ACTIVITY]'
-                    ? 'success'
-                    : (messageType.split('[')[2].split(']')[0].toLowerCase() as
-                        | 'error'
-                        | 'info'
-                        | 'success'
-                        | 'warn'
-                        | 'thought'
-                        | 'reflection'
-                        | 'execution'
-                        | 'diagram')
-                }
-                nextTimestamp={conversation[index + 1]?.timestamp}
-                message={messageBody}
-                timestamp={chatItem.timestamp}
-                alternateBackground={alternateBackground}
-                children={chatItem.children}
-              />
-            ) : (
-              <Message
-                key={chatItem.timestamp + '-' + messageBody}
-                chatItem={chatItem}
-                lastUserMessage={lastUserMessage}
-                setLoading={setLoading}
-              />
-            );
-          })
-        ) : (
-          <div className='max-w-4xl px-2 mx-auto space-y-2 text-center'>
-            <div>
-              <h1 className='text-4xl md:text-6xl'>
-                Welcome {process.env.NEXT_PUBLIC_APP_NAME && `to ${process.env.NEXT_PUBLIC_APP_NAME}`}
-              </h1>
-              {process.env.NEXT_PUBLIC_APP_DESCRIPTION && (
-                <p className='text-sm'>{process.env.NEXT_PUBLIC_APP_DESCRIPTION}</p>
-              )}
-            </div>
-          </div>
-        )}
-
-        <div ref={messagesEndRef} />
-      </div>
-    </div>
-  );
-}
-
-export async function getAndFormatConversastion(state): Promise<any[]> {
-  const rawConversation = await state.agixt.getConversation('', state.overrides.conversation, 100, 1);
-
-  // Create a map of activity messages for faster lookups
-  const activityMessages = {};
-  const formattedConversation = [];
-
-  // First pass: identify and store all activities
-  rawConversation.forEach((message) => {
-    const messageType = message.message.split(' ')[0];
-    if (!messageType.startsWith('[SUBACTIVITY]')) {
-      formattedConversation.push({ ...message, children: [] });
-      activityMessages[message.id] = formattedConversation[formattedConversation.length - 1];
-    }
-  });
-
-  // Second pass: handle subactivities
-  rawConversation.forEach((currentMessage) => {
-    const messageType = currentMessage.message.split(' ')[0];
-    if (messageType.startsWith('[SUBACTIVITY]')) {
-      try {
-        // Try to extract parent ID
-        const parent = messageType.split('[')[2].split(']')[0];
-        let foundParent = false;
-
-        // Look for the parent in our activity map
-        if (activityMessages[parent]) {
-          activityMessages[parent].children.push({ ...currentMessage, children: [] });
-          foundParent = true;
-        } else {
-          // If no exact match, try to find it in children
-          for (const activity of formattedConversation) {
-            const targetInChildren = activity.children.find((child) => child.id === parent);
-            if (targetInChildren) {
-              targetInChildren.children.push({ ...currentMessage, children: [] });
-              foundParent = true;
-              break;
-            }
-          }
-        }
-
-        // If still not found, add to the last activity as a fallback
-        if (!foundParent && formattedConversation.length > 0) {
-          const lastActivity = formattedConversation[formattedConversation.length - 1];
-          lastActivity.children.push({ ...currentMessage, children: [] });
-        }
-      } catch (error) {
-        // If parsing fails, add to the last activity as a fallback
-        if (formattedConversation.length > 0) {
-          const lastActivity = formattedConversation[formattedConversation.length - 1];
-          lastActivity.children.push({ ...currentMessage, children: [] });
-        } else {
-          // If no activities exist yet, convert this subactivity to an activity
-          formattedConversation.push({ ...currentMessage, children: [] });
-        }
-      }
-    }
-  });
-
-  return formattedConversation;
-}
+export type UIProps = {
+  showSelectorsCSV?: string;
+  enableFileUpload?: boolean;
+  enableVoiceInput?: boolean;
+  alternateBackground?: 'primary' | 'secondary';
+  footerMessage?: string;
+  showOverrideSwitchesCSV?: string;
+};
 
 const conversationSWRPath = '/conversation/';
-export default function Chat({
-  showChatThemeToggles,
-  alternateBackground,
-  enableFileUpload,
-  enableVoiceInput,
-  showOverrideSwitchesCSV,
-}: Overrides & UIProps): React.JSX.Element {
+
+export function ChatSidebar({ currentConversation }: { currentConversation: any }): React.JSX.Element {
   const [loading, setLoading] = useState(false);
   const state = useContext(InteractiveConfigContext);
-  const { data: conversations, isLoading: isLoadingConversations } = useConversations();
 
-  // Find the current conversation
-  const currentConversation = conversations?.find((conv) => conv.id === state.overrides.conversation);
-  const conversation = useSWR(
-    conversationSWRPath + state.overrides.conversation,
-    async () => {
-      return await getAndFormatConversastion(state);
-    },
-    {
-      fallbackData: [],
-      refreshInterval: loading ? 1000 : 0,
-    },
-  );
-  const { data: activeCompany } = useCompany();
-  useEffect(() => {
-    if (Array.isArray(state.overrides.conversation)) {
-      state.mutate((oldState) => ({
-        ...oldState,
-        overrides: { ...oldState.overrides, conversation: oldState.overrides.conversation[0] },
-      }));
-    }
-  }, [state.overrides.conversation]);
-  async function chat(messageTextBody, messageAttachedFiles): Promise<string> {
-    const messages = [];
-
-    messages.push({
-      role: 'user',
-      content: [
-        { type: 'text', text: messageTextBody },
-        ...Object.entries(messageAttachedFiles).map(([fileName, fileContent]: [string, string]) => ({
-          type: `${fileContent.split(':')[1].split('/')[0]}_url`,
-          file_name: fileName,
-          [`${fileContent.split(':')[1].split('/')[0]}_url`]: {
-            url: fileContent,
-          },
-        })), // Spread operator to include all file contents
-      ],
-      ...(activeCompany?.id ? { company_id: activeCompany?.id } : {}),
-      ...(getCookie('agixt-create-image') ? { create_image: getCookie('agixt-create-image') } : {}),
-      ...(getCookie('agixt-tts') ? { tts: getCookie('agixt-tts') } : {}),
-      ...(getCookie('agixt-websearch') ? { websearch: getCookie('agixt-websearch') } : {}),
-      ...(getCookie('agixt-analyze-user-input') ? { analyze_user_input: getCookie('agixt-analyze-user-input') } : {}),
-    });
-
-    setLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    mutate(conversationSWRPath + state.overrides.conversation);
-    try {
-      const completionResponse = await axios.post(
-        `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/chat/completions`,
-        {
-          messages: messages,
-          model: getCookie('agixt-agent'),
-          user: state.overrides.conversation,
-        },
-        {
-          headers: {
-            Authorization: getCookie('jwt'),
-          },
-        },
-      );
-      if (completionResponse.status === 200) {
-        const chatCompletion = completionResponse.data;
-
-        // Store conversation ID
-        const conversationId = chatCompletion.id;
-
-        // Update conversation state
-        state.mutate((oldState) => ({
-          ...oldState,
-          overrides: {
-            ...oldState.overrides,
-            conversation: conversationId,
-          },
-        }));
-
-        // Push route after state is updated
-        router.push(`/chat/${conversationId}`);
-
-        // Refresh data after updating conversation
-        setLoading(false);
-
-        // Trigger proper mutations
-        mutate(conversationSWRPath + conversationId);
-        mutate('/conversation');
-        mutate('/user');
-
-        if (chatCompletion?.choices[0]?.message.content.length > 0) {
-          return chatCompletion.choices[0].message.content;
-        } else {
-          throw 'Failed to get response from the agent';
-        }
-      } else {
-        throw 'Failed to get response from the agent';
-      }
-    } catch (error) {
-      setLoading(false);
-      toast({
-        title: 'Error',
-        description: 'Failed to get response from the agent',
-        duration: 5000,
-      });
-    }
-  }
   // Function to handle importing a conversation
   const handleImportConversation = async () => {
     // Create a file input element
@@ -474,6 +218,7 @@ export default function Chat({
   useEffect(() => {
     mutate(conversationSWRPath + state.overrides.conversation);
   }, [state.overrides.conversation]);
+
   useEffect(() => {
     if (!loading) {
       setTimeout(() => {
@@ -481,94 +226,353 @@ export default function Chat({
       }, 1000);
     }
   }, [loading, state.overrides.conversation]);
+
   const [renaming, setRenaming] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
   useEffect(() => {
     if (renaming) {
       setNewName(currentConversation?.name || '');
     }
   }, [renaming, currentConversation]);
+
   useEffect(() => {
     return () => {
       setLoading(false);
     };
   }, []);
+
   return (
-    <>
-      <SidebarContent>
-        <SidebarGroup>
-          {
-            <div className='w-full group-data-[collapsible=icon]:hidden'>
-              {renaming ? (
-                <Input value={newName} onChange={(e) => setNewName(e.target.value)} className='w-full' />
-              ) : (
-                <h4>{currentConversation?.name}</h4>
-              )}
-              {currentConversation && currentConversation.attachment_count > 0 && (
-                <Badge className='gap-1'>
-                  <Paperclip className='w-3 h-3' />
-                  {currentConversation.attachment_count}
-                </Badge>
+    <SidebarContent>
+      <SidebarGroup>
+        {
+          <div className='w-full group-data-[collapsible=icon]:hidden'>
+            {renaming ? (
+              <Input value={newName} onChange={(e) => setNewName(e.target.value)} className='w-full' />
+            ) : (
+              <h4>{currentConversation?.name}</h4>
+            )}
+            {currentConversation && currentConversation.attachment_count > 0 && (
+              <Badge className='gap-1'>
+                <Paperclip className='w-3 h-3' />
+                {currentConversation.attachment_count}
+              </Badge>
+            )}
+          </div>
+        }
+        <SidebarGroupLabel>Conversation Functions</SidebarGroupLabel>
+        <SidebarMenu>
+          {[
+            {
+              title: 'New Conversation',
+              icon: Plus,
+              func: () => {
+                router.push('/chat');
+              },
+              disabled: renaming,
+            },
+            {
+              title: renaming ? 'Save Name' : 'Rename Conversation',
+              icon: renaming ? Check : Pencil,
+              func: renaming
+                ? () => {
+                    handleRenameConversation(newName);
+                    setRenaming(false);
+                  }
+                : () => setRenaming(true),
+              disabled: false,
+            },
+            {
+              title: 'Import Conversation',
+              icon: Upload,
+              func: () => {
+                handleImportConversation();
+              },
+              disabled: renaming,
+            },
+            {
+              title: 'Export Conversation',
+              icon: Download,
+              func: () => handleExportConversation(),
+              disabled: renaming,
+            },
+            {
+              title: 'Delete Conversation',
+              icon: Trash2,
+              func: () => setDeleteDialogOpen(true),
+              disabled: renaming,
+            },
+          ].map(
+            (item) =>
+              item.visible !== false && (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton side='left' tooltip={item.title} onClick={item.func} disabled={item.disabled}>
+                    {item.icon && <item.icon />}
+                    <span>{item.title}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ),
+          )}
+        </SidebarMenu>
+      </SidebarGroup>
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Conversation</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this conversation? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button className='px-4 py-2 text-sm rounded hover:bg-gray-100' onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </button>
+            <button
+              className='px-4 py-2 text-sm font-semibold text-white bg-red-500 rounded hover:bg-red-600'
+              onClick={() => {
+                handleDeleteConversation();
+                setDeleteDialogOpen(false);
+              }}
+            >
+              Delete
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </SidebarContent>
+  );
+}
+
+export function ChatLog({
+  conversation,
+  alternateBackground,
+  loading,
+  setLoading,
+}: {
+  conversation: { role: string; message: string; timestamp: string; children: any[] }[];
+  setLoading: (loading: boolean) => void;
+  loading: boolean;
+  alternateBackground?: string;
+}): React.JSX.Element {
+  let lastUserMessage = ''; // track the last user message
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [conversation]);
+
+  return (
+    <div className='flex flex-col-reverse flex-grow overflow-auto bg-background pb-28' style={{ flexBasis: '0px' }}>
+      <div className='flex flex-col h-min'>
+        {conversation.length > 0 && conversation.map ? (
+          conversation.map((chatItem, index: number) => {
+            if (chatItem.role === 'USER') {
+              lastUserMessage = chatItem.message;
+            }
+            const validTypes = [
+              '[ACTIVITY]',
+              '[ACTIVITY][ERROR]',
+              '[ACTIVITY][WARN]',
+              '[ACTIVITY][INFO]',
+              '[SUBACTIVITY]',
+              '[SUBACTIVITY][THOUGHT]',
+              '[SUBACTIVITY][REFLECTION]',
+              '[SUBACTIVITY][EXECUTION]',
+              '[SUBACTIVITY][ERROR]',
+              '[SUBACTIVITY][WARN]',
+              '[SUBACTIVITY][INFO]',
+            ];
+            const messageType = chatItem.message.split(' ')[0];
+            const messageBody = validTypes.some((x) => messageType.includes(x))
+              ? chatItem.message.substring(chatItem.message.indexOf(' '))
+              : chatItem.message;
+            // To-Do Fix this so the timestamp works. It's not granular enough rn and we get duplicates.
+            return validTypes.includes(messageType) ? (
+              <ChatActivity
+                key={chatItem.timestamp + '-' + messageBody}
+                activityType={
+                  messageType === '[ACTIVITY]'
+                    ? 'success'
+                    : (messageType.split('[')[2].split(']')[0].toLowerCase() as
+                        | 'error'
+                        | 'info'
+                        | 'success'
+                        | 'warn'
+                        | 'thought'
+                        | 'reflection'
+                        | 'execution'
+                        | 'diagram')
+                }
+                nextTimestamp={conversation[index + 1]?.timestamp}
+                message={messageBody}
+                timestamp={chatItem.timestamp}
+                alternateBackground={alternateBackground}
+                children={chatItem.children}
+              />
+            ) : (
+              <Message
+                key={chatItem.timestamp + '-' + messageBody}
+                chatItem={chatItem}
+                lastUserMessage={lastUserMessage}
+                setLoading={setLoading}
+              />
+            );
+          })
+        ) : (
+          <div className='max-w-4xl px-2 mx-auto space-y-2 text-center'>
+            <div>
+              <h1 className='text-4xl md:text-6xl'>
+                Welcome {process.env.NEXT_PUBLIC_APP_NAME && `to ${process.env.NEXT_PUBLIC_APP_NAME}`}
+              </h1>
+              {process.env.NEXT_PUBLIC_APP_DESCRIPTION && (
+                <p className='text-sm'>{process.env.NEXT_PUBLIC_APP_DESCRIPTION}</p>
               )}
             </div>
-          }
-          <SidebarGroupLabel>Conversation Functions</SidebarGroupLabel>
-          <SidebarMenu>
-            {[
-              {
-                title: 'New Conversation',
-                icon: Plus,
-                func: () => {
-                  router.push('/chat');
-                },
-                disabled: renaming,
-              },
-              {
-                title: renaming ? 'Save Name' : 'Rename Conversation',
-                icon: renaming ? Check : Pencil,
-                func: renaming
-                  ? () => {
-                      handleRenameConversation(newName);
-                      setRenaming(false);
-                    }
-                  : () => setRenaming(true),
-                disabled: false,
-              },
-              {
-                title: 'Import Conversation',
-                icon: Upload,
-                func: () => {
-                  handleImportConversation();
-                },
-                disabled: renaming,
-              },
-              {
-                title: 'Export Conversation',
-                icon: Download,
-                func: () => handleExportConversation(),
-                disabled: renaming,
-              },
-              {
-                title: 'Delete Conversation',
-                icon: Trash2,
-                func: () => {
-                  handleDeleteConversation();
-                },
-                disabled: renaming,
-              },
-            ].map(
-              (item) =>
-                item.visible !== false && (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton side='left' tooltip={item.title} onClick={item.func} disabled={item.disabled}>
-                      {item.icon && <item.icon />}
-                      <span>{item.title}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ),
-            )}
-          </SidebarMenu>
-        </SidebarGroup>
-      </SidebarContent>
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+    </div>
+  );
+}
+
+export function Chat({
+  alternateBackground,
+  enableFileUpload,
+  enableVoiceInput,
+  showOverrideSwitchesCSV,
+}: Overrides & UIProps): React.JSX.Element {
+  const [loading, setLoading] = useState(false);
+  const state = useContext(InteractiveConfigContext);
+  const { data: conversations, isLoading: isLoadingConversations } = useConversations();
+
+  // Find the current conversation
+  const currentConversation = conversations?.find((conv) => conv.id === state.overrides.conversation);
+  const conversation = useSWR(
+    conversationSWRPath + state.overrides.conversation,
+    async () => {
+      return await getAndFormatConversastion(state);
+    },
+    {
+      fallbackData: [],
+      refreshInterval: loading ? 1000 : 0,
+    },
+  );
+  const { data: activeCompany } = useCompany();
+  useEffect(() => {
+    if (Array.isArray(state.overrides.conversation)) {
+      state.mutate((oldState) => ({
+        ...oldState,
+        overrides: { ...oldState.overrides, conversation: oldState.overrides.conversation[0] },
+      }));
+    }
+  }, [state.overrides.conversation]);
+  async function chat(messageTextBody, messageAttachedFiles): Promise<string> {
+    const messages = [];
+
+    messages.push({
+      role: 'user',
+      content: [
+        { type: 'text', text: messageTextBody },
+        ...Object.entries(messageAttachedFiles).map(([fileName, fileContent]: [string, string]) => ({
+          type: `${fileContent.split(':')[1].split('/')[0]}_url`,
+          file_name: fileName,
+          [`${fileContent.split(':')[1].split('/')[0]}_url`]: {
+            url: fileContent,
+          },
+        })), // Spread operator to include all file contents
+      ],
+      ...(activeCompany?.id ? { company_id: activeCompany?.id } : {}),
+      ...(getCookie('agixt-create-image') ? { create_image: getCookie('agixt-create-image') } : {}),
+      ...(getCookie('agixt-tts') ? { tts: getCookie('agixt-tts') } : {}),
+      ...(getCookie('agixt-websearch') ? { websearch: getCookie('agixt-websearch') } : {}),
+      ...(getCookie('agixt-analyze-user-input') ? { analyze_user_input: getCookie('agixt-analyze-user-input') } : {}),
+    });
+
+    setLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    mutate(conversationSWRPath + state.overrides.conversation);
+    try {
+      const completionResponse = await axios.post(
+        `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/chat/completions`,
+        {
+          messages: messages,
+          model: getCookie('agixt-agent'),
+          user: state.overrides.conversation,
+        },
+        {
+          headers: {
+            Authorization: getCookie('jwt'),
+          },
+        },
+      );
+      if (completionResponse.status === 200) {
+        const chatCompletion = completionResponse.data;
+
+        // Store conversation ID
+        const conversationId = chatCompletion.id;
+
+        // Update conversation state
+        state.mutate((oldState) => ({
+          ...oldState,
+          overrides: {
+            ...oldState.overrides,
+            conversation: conversationId,
+          },
+        }));
+
+        // Push route after state is updated
+        router.push(`/chat/${conversationId}`);
+
+        // Refresh data after updating conversation
+        setLoading(false);
+
+        // Trigger proper mutations
+        mutate(conversationSWRPath + conversationId);
+        mutate('/conversation');
+        mutate('/user');
+
+        if (chatCompletion?.choices[0]?.message.content.length > 0) {
+          return chatCompletion.choices[0].message.content;
+        } else {
+          throw 'Failed to get response from the agent';
+        }
+      } else {
+        throw 'Failed to get response from the agent';
+      }
+    } catch (error) {
+      setLoading(false);
+      toast({
+        title: 'Error',
+        description: 'Failed to get response from the agent',
+        duration: 5000,
+      });
+    }
+  }
+  const router = useRouter();
+
+  useEffect(() => {
+    mutate(conversationSWRPath + state.overrides.conversation);
+  }, [state.overrides.conversation]);
+
+  useEffect(() => {
+    if (!loading) {
+      setTimeout(() => {
+        mutate(conversationSWRPath + state.overrides.conversation);
+      }, 1000);
+    }
+  }, [loading, state.overrides.conversation]);
+
+  useEffect(() => {
+    return () => {
+      setLoading(false);
+    };
+  }, []);
+
+  return (
+    <>
+      <ChatSidebar currentConversation={currentConversation} />
       <ChatLog
         conversation={conversation.data}
         alternateBackground={alternateBackground}
@@ -578,7 +582,6 @@ export default function Chat({
       <ChatBar
         onSend={chat}
         disabled={loading}
-        showChatThemeToggles={showChatThemeToggles}
         enableFileUpload={enableFileUpload}
         enableVoiceInput={enableVoiceInput}
         loading={loading}
@@ -588,4 +591,66 @@ export default function Chat({
       />
     </>
   );
+}
+
+export async function getAndFormatConversastion(state): Promise<any[]> {
+  const rawConversation = await state.agixt.getConversation('', state.overrides.conversation, 100, 1);
+
+  // Create a map of activity messages for faster lookups
+  const activityMessages = {};
+  const formattedConversation = [];
+
+  // First pass: identify and store all activities
+  rawConversation.forEach((message) => {
+    const messageType = message.message.split(' ')[0];
+    if (!messageType.startsWith('[SUBACTIVITY]')) {
+      formattedConversation.push({ ...message, children: [] });
+      activityMessages[message.id] = formattedConversation[formattedConversation.length - 1];
+    }
+  });
+
+  // Second pass: handle subactivities
+  rawConversation.forEach((currentMessage) => {
+    const messageType = currentMessage.message.split(' ')[0];
+    if (messageType.startsWith('[SUBACTIVITY]')) {
+      try {
+        // Try to extract parent ID
+        const parent = messageType.split('[')[2].split(']')[0];
+        let foundParent = false;
+
+        // Look for the parent in our activity map
+        if (activityMessages[parent]) {
+          activityMessages[parent].children.push({ ...currentMessage, children: [] });
+          foundParent = true;
+        } else {
+          // If no exact match, try to find it in children
+          for (const activity of formattedConversation) {
+            const targetInChildren = activity.children.find((child) => child.id === parent);
+            if (targetInChildren) {
+              targetInChildren.children.push({ ...currentMessage, children: [] });
+              foundParent = true;
+              break;
+            }
+          }
+        }
+
+        // If still not found, add to the last activity as a fallback
+        if (!foundParent && formattedConversation.length > 0) {
+          const lastActivity = formattedConversation[formattedConversation.length - 1];
+          lastActivity.children.push({ ...currentMessage, children: [] });
+        }
+      } catch (error) {
+        // If parsing fails, add to the last activity as a fallback
+        if (formattedConversation.length > 0) {
+          const lastActivity = formattedConversation[formattedConversation.length - 1];
+          lastActivity.children.push({ ...currentMessage, children: [] });
+        } else {
+          // If no activities exist yet, convert this subactivity to an activity
+          formattedConversation.push({ ...currentMessage, children: [] });
+        }
+      }
+    }
+  });
+
+  return formattedConversation;
 }

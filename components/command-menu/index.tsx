@@ -4,7 +4,6 @@ import { DialogTitle } from '@radix-ui/react-dialog';
 
 import { ChatHistoryGroup } from '@/components/command-menu/group/chat-history';
 import { NavigationGroup } from '@/components/command-menu/group/navigation';
-import { WalletCommands } from '@/components/command-menu/group/wallet';
 import { QuickActionsGroup } from '@/components/command-menu/group/quick-actions';
 import { useCommandMenu } from '@/components/command-menu/command-menu-context';
 import { ThemeGroup } from '@/components/command-menu/group/theme';
@@ -53,7 +52,6 @@ export function CommandMenu() {
           <QuickActionsGroup />
           <ChatHistoryGroup />
           <NavigationGroup />
-          <WalletCommands />
           <CommandSeparator />
           <ThemeGroup />
         </CommandList>

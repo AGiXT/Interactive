@@ -2,8 +2,8 @@ import axios from 'axios';
 import { getCookie, setCookie } from 'cookies-next';
 import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
-import { useCompanies } from '@/components/idiot/useUser';
-import { chainMutations, createGraphQLClient } from '@/components/idiot/interactive/hooks/lib';
+import { useCompanies } from '@/components/interactive/useUser';
+import { chainMutations, createGraphQLClient } from '@/components/interactive/lib';
 import AGiXTSDK from '@/lib/sdk';
 
 export const AgentSchema = z.object({

@@ -5,9 +5,10 @@ import CodeBlock from '@/components/conversation/Message/Markdown/CodeBlock';
 import MarkdownHeading from '@/components/conversation/Message/Markdown/Heading';
 import MarkdownLink from '@/components/conversation/Message/Markdown/Link';
 import MarkdownImage from '@/components/conversation/Message/Markdown/Image';
-import { RendererXSV } from '@/components/conversation/Message/Markdown/Code/XSV';
-import LaTeX from '@/components/conversation/Message/Markdown/LaTeX';
 import textToMarkdown from '@/components/conversation/Message/Markdown/Preprocessor';
+import { DataTable } from '@/components/conversation/Message/data-table';
+import { createColumns } from '@/components/conversation/Message/data-table/data-table-columns';
+import LaTeX from '@/components/conversation/Message/Markdown/LaTeX';
 
 export type MarkdownBlockProps = {
   content: string;
@@ -16,17 +17,17 @@ export type MarkdownBlockProps = {
 };
 
 export default function MarkdownBlock({ content, chatItem, setLoading }: MarkdownBlockProps): ReactNode {
-  const renderMessage = (message: string): string => {
+  const renderMessage = (message): string => {
     return message
       ? message
-          .replace(/\n/g, ' \n')
-          .split('\n')
-          .map((line: string) => (line.trim() ? line : '\\'))
-          .join('\n')
-          .replaceAll(/[^\\\n]\n\\\n/g, '\n\n')
-          .replace(/[\n\\]+$/, '')
+          .replace(/\n/g, ' \n') // Add a space before each newline character
+          .split('\n') // Split the message into lines.
+          .map((line) => (line.trim() ? line : '\\')) // Replace empty lines (containing only \n)  with backslash.
+          .join('\n') // Recombine the split lines with newlines.
+          .replaceAll(/[^\\\n]\n\\\n/g, '\n\n') // Change the first slash following a line into a double linebreak.
+          .replace(/[\n\\]+$/, '') // Remove any newlines or backslashes at the end of the message.
           .replace(/^[\n\\]+/, '')
-      : '';
+      : ''; // Remove any newlines or backslashes at the beginning of the message.
   };
 
   const timestamp = chatItem
@@ -36,23 +37,32 @@ export default function MarkdownBlock({ content, chatItem, setLoading }: Markdow
 
   function parseMarkdownTable(markdown: string) {
     const tableLines = markdown.split('\n').filter((line) => line.includes('|'));
-    if (tableLines.length === 0) return null;
+    if (tableLines.length === 0) return { columns: [], rows: [] };
 
     const headers = tableLines[0]
       .split('|')
       .map((header) => header.trim())
       .filter(Boolean);
 
-    const rows = tableLines.slice(2).map((rowLine) =>
-      rowLine
-        .split('|')
-        .map((cell) => cell.trim())
-        .filter(Boolean),
-    );
+    const rows = tableLines.slice(2).map((rowLine, rowIndex) => ({
+      id: rowIndex + 1,
+      ...Object.fromEntries(
+        rowLine
+          .split('|')
+          .map((cell) => cell.trim())
+          .filter(Boolean)
+          .map((cell, cellIndex) => [`col${cellIndex}`, cell]),
+      ),
+    }));
 
-    return { headers, rows };
+    const columns = headers.map((header, index) => ({
+      field: `col${index}`,
+      headerName: header,
+      width: 150,
+    }));
+
+    return { columns, rows };
   }
-
   try {
     return (
       <>
@@ -61,8 +71,9 @@ export default function MarkdownBlock({ content, chatItem, setLoading }: Markdow
             return (
               <ReactMarkdown
                 key={`${index}-${segment.content}`}
-                remarkPlugins={[remarkGfm]}
+                remarkPlugins={[[remarkGfm]]}
                 className='react-markdown'
+                // disallowedElements={['code']}
                 components={{
                   h1({ children }) {
                     return <MarkdownHeading tag='h1'>{children}</MarkdownHeading>;
@@ -98,25 +109,16 @@ export default function MarkdownBlock({ content, chatItem, setLoading }: Markdow
                     return <li className='my-1'>{children}</li>;
                   },
                   table() {
-                    const tableData = parseMarkdownTable(segment.content);
-                    if (!tableData) return null;
-
-                    const xsvData = [
-                      tableData.headers.join(','),
-                      ...tableData.rows.map((row) => row.join(',')),
-                    ];
-
+                    const { columns, rows } = parseMarkdownTable(segment.content);
                     return (
-                      <div className='my-4'>
-                        <RendererXSV xsvData={xsvData} separator=',' setLoading={setLoading} />
+                      <div className='w-full'>
+                        <DataTable columns={createColumns(columns)} data={rows} />
                       </div>
                     );
                   },
                   code({ children }) {
                     return (
-                      <span className='inline p-1 mx-1 font-mono rounded-lg text-muted-foreground bg-muted'>
-                        {children}
-                      </span>
+                      <span className='inline p-1 mx-1 font-mono rounded-lg text-muted-foreground bg-muted'>{children}</span>
                     );
                   },
                   img({ src, alt }) {
@@ -130,7 +132,11 @@ export default function MarkdownBlock({ content, chatItem, setLoading }: Markdow
           } else if (segment.type === 'latex') {
             return <LaTeX key={`${index}-${segment.content}`}>{segment.content}</LaTeX>;
           } else if (segment.type === 'latex-display') {
-            return <LaTeX key={`${index}-${segment.content}`} display>{segment.content}</LaTeX>;
+            return (
+              <LaTeX key={`${index}-${segment.content}`} display>
+                {segment.content}
+              </LaTeX>
+            );
           } else {
             return (
               <CodeBlock key={`${index}-${segment.content}`} inline={segment.type === 'code'} fileName={fileName}>

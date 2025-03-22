@@ -1,6 +1,5 @@
 'use client';
 
-import { SidebarInset } from '@/components/ui/sidebar';
 import { SidebarPage } from '@/components/layout/SidebarPage';
 import { getCookie } from 'cookies-next';
 import Link from 'next/link';
@@ -12,12 +11,10 @@ export default function BadGateway({}: {}) {
     // setLink(getCookie('href')?.toString() ?? '/');
   }, [getCookie('href')]);
   return (
-    <SidebarInset>
-      <SidebarPage title=''>
-        <h2>Server unavailable!</h2>
-        <p>It appears your internet connection may have been disrupted, or our server is under maintenance.</p>
-        <Link href={link}>Try Again</Link>
-      </SidebarPage>
-    </SidebarInset>
+    <SidebarPage title=''>
+      <h2>Server unavailable!</h2>
+      <p>It appears your internet connection may have been disrupted, or our server is under maintenance.</p>
+      <Link href={link}>Try Again</Link>
+    </SidebarPage>
   );
 }

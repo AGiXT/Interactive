@@ -5,7 +5,7 @@ export default function formatDate(timestamp: string, short = true): string {
   // Convert the date to the server timezone
   const serverDate = new Date(
     date.toLocaleString('en-US', {
-      timeZone: process.env.NEXT_PUBLIC_TZ ? process.env.NEXT_PUBLIC_TZ.replace('TZ-', '') : 'America/Vancouver',
+      timeZone: process.env.NEXT_PUBLIC_TZ ? process.env.NEXT_PUBLIC_TZ.replace('TZ', '') : 'America/New_York',
     }),
   );
 

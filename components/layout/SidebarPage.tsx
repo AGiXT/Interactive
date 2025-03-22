@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Separator } from '@/components/ui/separator';
-import { SidebarTrigger } from '@/components/ui/sidebar';
+import { SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 
 interface SidebarPageProps {
@@ -11,7 +11,7 @@ interface SidebarPageProps {
 
 export function SidebarPage({ title, children, className }: SidebarPageProps) {
   return (
-    <>
+    <SidebarInset>
       <header
         className='flex shrink-0 items-center gap-2 px-6 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 w-full sticky top-0 z-20 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60'
         style={{ paddingTop: 'env(safe-area-inset-top)', height: 'calc(3rem + env(safe-area-inset-top))' }}
@@ -28,6 +28,6 @@ export function SidebarPage({ title, children, className }: SidebarPageProps) {
       >
         {children}
       </main>
-    </>
+    </SidebarInset>
   );
 }
