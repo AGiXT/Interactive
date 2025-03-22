@@ -19,6 +19,7 @@ import {
   DialogFooter,
   DialogTrigger,
   DialogClose,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { useToast } from '@/components/layout/toast';
 

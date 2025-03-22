@@ -686,6 +686,7 @@ export default function TeamPage() {
             </TooltipProvider>
           </div>
         </div>
+        <TeamUsers />
       </div>
     </SidebarPage>
   );
