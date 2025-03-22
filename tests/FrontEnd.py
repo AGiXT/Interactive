@@ -13,7 +13,8 @@ import sys
 import nest_asyncio
 import cv2
 import numpy as np
-import openai
+import time
+import requests
 import pyotp
 import soundfile as sf
 from agixtsdk import AGiXTSDK
@@ -25,9 +26,9 @@ from tqdm import tqdm
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
-openai.base_url = os.getenv("EZLOCALAI_URI")
-openai.api_key = os.getenv("EZLOCALAI_API_KEY", "none")
-
+# API configuration
+EZLOCAL_API_URL = ""
+EZLOCAL_API_KEY = ""
 
 async def print_args(msg):
     for arg in msg.args:
@@ -39,10 +40,8 @@ async def print_args(msg):
             text_value = await arg.text()
             print("CONSOLE MESSAGE:", text_value)
 
-
 def is_desktop():
     return not platform.system() == "Linux"
-
 
 class FrontEndTest:
 
@@ -187,6 +186,13 @@ class FrontEndTest:
                 )
 
             # Create paths for our files
+            # Check if ffmpeg is available first
+            try:
+                subprocess.run(['ffmpeg', '-version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            except Exception as ffmpeg_error:
+                logging.error("FFMPEG is not available. Please install FFMPEG to create video reports.")
+                return None
+
             final_video_path = os.path.abspath(os.path.join(os.getcwd(), "report.mp4"))
             concatenated_audio_path = os.path.join(temp_dir, "combined_audio.wav")
 
@@ -211,22 +217,83 @@ class FrontEndTest:
                     cleaned_action = action_name.replace("_", " ")
                     cleaned_action = re.sub(r"([a-z])([A-Z])", r"\1 \2", cleaned_action)
 
-                    # Generate TTS audio
-                    tts = openai.audio.speech.create(
-                        model="tts-1",
-                        voice="HAL9000",
-                        input=cleaned_action,
-                        extra_body={"language": "en"},
-                    )
-                    audio_content = base64.b64decode(tts.content)
+                    if EZLOCAL_API_URL is None:
+                        logging.error("EZLOCAL_API_URL environment variable is not set")
+                        all_audio_lengths.append(2.0)
+                        continue
+
+                    # Generate TTS audio using ezlocal with retries
+                    try:
+                        audio_content = None
+                        retry_count = 0
+                        retry_delay = 1
+                        max_retries = 3
+                        
+                        while retry_count < max_retries and audio_content is None:
+                            try:
+                                # Make request following exact API schema
+                                payload = {
+                                    "input": cleaned_action,
+                                    "model": "tts-1",
+                                    "voice": "HAL9000",
+                                    "language": "en"
+                                }
+                                logging.info(f"Making TTS request with payload: {payload}")
+                                response = requests.post(
+                                    f"{EZLOCAL_API_URL}/v1/audio/speech",
+                                    json=payload,
+                                    # headers={
+                                    #    "Authorization": f"Bearer {EZLOCAL_API_KEY}"
+                                    # }
+                                )
+                                if response.status_code == 200:
+                                    logging.info("Received 200 response from TTS API")
+                                    try:
+                                        # Response is already base64 encoded
+                                        audio_content = base64.b64decode(response.text)
+                                        logging.info(f"Decoded audio content length: {len(audio_content)} bytes")
+                                        break
+                                    except Exception as decode_error:
+                                        logging.error(f"Failed to decode API response: {decode_error}")
+                                        logging.error(f"Raw response: {response.text[:100]}...")
+                                        raise
+                                else:
+                                    error_detail = response.text
+                                    try:
+                                        error_detail = response.json()
+                                    except:
+                                        pass
+                                    raise Exception(f"API returned status code {response.status_code}: {error_detail}")
+                            except Exception as e:
+                                retry_count += 1
+                                if retry_count < max_retries:
+                                    logging.warning(f"TTS attempt {retry_count} failed: {e}. Retrying in {retry_delay}s...")
+                                    time.sleep(retry_delay)
+                                    retry_delay *= 2  # Exponential backoff
+                                else:
+                                    raise Exception(f"Failed after {max_retries} attempts: {e}")
+                        
+                        if audio_content is None:
+                            raise Exception("Failed to generate audio after all retries")
+                            
+                    except Exception as e:
+                        logging.error(f"Error generating TTS audio: {e}")
+                        all_audio_lengths.append(2.0)
+                        continue
 
                     # Write the raw audio first
                     with open(audio_path, "wb") as audio_file:
                         audio_file.write(audio_content)
 
-                    # Read the audio and get its original sample rate
-                    audio_data, sample_rate = sf.read(audio_path)
-
+                    # Read with a default sample rate of 44100Hz if soundfile can't detect it
+                    try:
+                        audio_data, sample_rate = sf.read(audio_path)
+                    except Exception as e:
+                        logging.warning(f"Could not read audio file with soundfile: {e}, using default settings")
+                        # Use default audio settings
+                        sample_rate = 44100
+                        audio_data = np.frombuffer(audio_content, dtype=np.float32)
+                    
                     # Add small silence padding at the end (0.5 seconds)
                     padding = int(0.5 * sample_rate)  # Use the actual sample rate
                     audio_data = np.pad(audio_data, (0, padding), mode="constant")
@@ -583,9 +650,81 @@ class FrontEndTest:
         pass
 
     async def handle_mandatory_context(self):
-        """Handle mandatory context scenario"""
-        # TODO: Implement mandatory context test
-        pass
+        """Test the mandatory context feature by setting and using a context in chat."""
+        # Navigate to Agent Management
+        await self.test_action(
+            "Navigate to Agent Management to begin mandatory context configuration",
+            lambda: self.page.click('span:has-text("Agent Management")'),
+        )
+
+        await self.take_screenshot("Agent Management drop down")
+
+        # Navigate directly to training URL
+        await self.test_action(
+            "Navigate to training settings",
+            lambda: self.page.goto(f"{self.base_uri}/settings/training?mode=user&")
+        )
+
+        # After navigating to Training section, screenshot the interface
+        await self.take_screenshot("Training section with mandatory context interface")
+
+        await self.test_action(
+            "Locate and enter mandatory context in text area",
+            lambda: self.page.fill(
+                "textarea[placeholder*='Enter mandatory context']",
+                "You are a helpful assistant who loves using the word 'wonderful' in responses.",
+            ),
+        )
+
+        await self.take_screenshot("Mandatory context has been entered into text area")
+        await asyncio.sleep(1)
+
+        await self.test_action(
+            "Save mandatory context settings",
+            lambda: self.page.click("text=Update Mandatory Context"),
+        )
+
+        await self.take_screenshot("Mandatory context update button clicked")
+
+        # Let handle_chat run the conversation
+        await self.handle_chat()
+
+
+    async def handle_provider_settings(self):
+        """Test provider settings page navigation and toggle interaction."""
+        # Navigate to Agent Management
+        await self.test_action(
+            "Navigate to Agent Management to begin extensions configuration",
+            lambda: self.page.click('span:has-text("Agent Management")'),
+        )
+        await self.take_screenshot("Agent Management drop down")
+
+        # Navigate to Settings
+        await self.test_action(
+            "Navigate to Settings",
+            lambda: self.page.click('span:has-text("Settings")')
+        )
+
+        # Find and click the Connect button for Google
+        await self.test_action(
+            "Click Connect button for Google provider",
+            lambda: self.page.locator('button:has-text("Connect"):right-of(:text("Google"))').first.click()
+        )
+
+        # Wait for dialog to appear and input API Key
+        await self.test_action(
+            "Input Google A-P-I key",
+            lambda: self.page.fill('[id="GOOGLE_API_KEY"]', "")
+        )
+
+        # Click Save/Connect in the dialog
+        await self.test_action(
+            "Save Google A-P-I key configuration",
+            lambda: self.page.get_by_role('button', name='Connect Provider').click()
+        )
+
+        # Take screenshot of success state
+        await self.take_screenshot("Google provider connected successfully")
 
     async def handle_email(self):
         """Handle email verification scenario"""
@@ -717,6 +856,8 @@ class FrontEndTest:
 
                 await self.handle_train_user_agent()
                 await self.handle_train_company_agent()
+                await self.handle_provider_settings()
+                await self.handle_mandatory_context()
                 await self.handle_chat()
 
                 ##
