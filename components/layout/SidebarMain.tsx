@@ -22,8 +22,6 @@ import {
   SidebarGroupLabel,
   useSidebar,
 } from '@/components/ui/sidebar';
-('use client');
-
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getTimeDifference } from '@/components/conversation/activity';
