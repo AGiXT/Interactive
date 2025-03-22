@@ -512,13 +512,6 @@ export const TeamUsers = () => {
   );
 };
 
-const ROLES = [
-  { id: 2, name: 'Admin' },
-  { id: 3, name: 'User' },
-];
-
-const AUTHORIZED_ROLES = [0, 1, 2];
-
 export default function TeamPage() {
   const [email, setEmail] = useState('');
   const [roleId, setRoleId] = useState('3');
