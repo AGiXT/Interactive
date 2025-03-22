@@ -20,7 +20,7 @@ import {
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/ui/sidebar';
 import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useUser } from '@/components/idiot/useUser';
+import { useUser } from '@/components/interactive/useUser';
 import md5 from 'md5';
 import { cn } from '@/lib/utils';
 import { setCookie, getCookie } from 'cookies-next';

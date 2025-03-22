@@ -1,9 +1,9 @@
 import useSWR, { SWRResponse } from 'swr';
 
 // Import all types from the centralized schema file
-import { RoleSchema, UserSchema } from '@/components/idiot/useUser';
+import { RoleSchema, UserSchema } from '@/components/interactive/useUser';
 import { z } from 'zod';
-import { createGraphQLClient } from '@/components/idiot/interactive/hooks/lib';
+import { createGraphQLClient } from '@/components/interactive/lib';
 
 export const ConversationMetadataSchema = z.object({
   agentId: z.string().uuid(),

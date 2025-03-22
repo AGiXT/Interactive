@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, ReactNode, useContext } from 'react';
 import { LuLightbulb as LightBulbIcon } from 'react-icons/lu';
-import { InteractiveConfigContext } from '@/components/idiot/interactive/InteractiveConfigContext';
+import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
 
 interface Column {
   field: string;

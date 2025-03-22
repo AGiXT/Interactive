@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-import { useCompany } from '@/components/idiot/useUser';
+import { useCompany } from '@/components/interactive/useUser';
 import { getCookie } from 'cookies-next';
 import { useEffect, useState } from 'react';
 
