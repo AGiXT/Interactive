@@ -16,6 +16,7 @@ import { SidebarContent } from '@/components/layout/SidebarContentManager';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
+import { ChatBar } from '@/components/conversation/input/chat-input';
 
 export type UIProps = {
   showSelectorsCSV?: string;

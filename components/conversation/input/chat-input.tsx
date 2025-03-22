@@ -5,7 +5,7 @@ import { BiCollapseVertical } from 'react-icons/bi';
 import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
 import { VoiceRecorder } from '@/components/conversation/input/VoiceRecorder';
 import { Textarea } from '@/components/ui/textarea';
-import { DropZone } from '@/components/layout/DropZone';
+import { DropZone } from '@/components/conversation/input/DropZone';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { CheckCircle as LuCheckCircle } from 'lucide-react';
