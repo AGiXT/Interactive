@@ -8,6 +8,14 @@ import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { useState } from 'react';
+import {
+  LuDatabase as Database,
+  LuMessageSquare as MessageSquare,
+  LuFileText as FileText,
+  LuSend as Send,
+} from 'react-icons/lu';
+import { BarChart3 } from 'lucide-react';
 
 const features = [
   {
