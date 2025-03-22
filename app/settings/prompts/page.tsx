@@ -8,7 +8,6 @@ import { Check, Download, Pencil, Plus, Save, Trash2, Upload } from 'lucide-reac
 import { useSearchParams } from 'next/navigation';
 import { usePrompt } from '@/components/idiot/interactive/hooks/usePrompt';
 import PromptSelector from '@/components/layout/PromptSelector';
-import { AutoResizeTextarea } from '@/components/agent/training';
 import { Label } from '@/components/ui/label';
 import axios from 'axios';
 import { getCookie } from 'cookies-next';
@@ -20,6 +19,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Textarea } from '@/components/ui/textarea';
 import { usePrompts } from '@/components/idiot/interactive/hooks/usePrompt';
 import { SidebarPage } from '@/components/layout/SidebarPage';
+import { useRef } from 'react';
 
 interface PromptDialogProps {
   open: boolean;
@@ -213,6 +213,35 @@ export function PromptTest({
     </div>
   );
 }
+
+interface AutoResizeTextareaProps {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  placeholder: string;
+}
+
+export const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({ value, onChange, placeholder }) => {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+    }
+  }, [value]);
+
+  return (
+    <div tabIndex={-1}>
+      <Textarea
+        ref={textareaRef}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className='min-h-[200px] resize-none overflow-hidden'
+      />
+    </div>
+  );
+};
 
 export default function PromptPanel() {
   const searchParams = useSearchParams();
