@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { getCookie } from 'cookies-next';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
-import { AgentSelector } from '@/components/layout/agent-selector';
 import { NavMain } from '@/components/layout/NavMain';
 import { NavUser } from '@/components/layout/NavUser';
 import { useUser } from '@/components/interactive/useUser';
