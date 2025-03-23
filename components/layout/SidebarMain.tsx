@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { getCookie } from 'cookies-next';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
-import { NavMain } from '@/components/layout/NavMain';
+import { items, Item, SubItem } from '@/app/NavMenuItems';
 import { NavUser } from '@/components/layout/NavUser';
 import { useUser } from '@/components/interactive/useUser';
 import { ViewVerticalIcon } from '@radix-ui/react-icons';
@@ -20,6 +20,9 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   useSidebar,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -27,7 +30,6 @@ import { getTimeDifference } from '@/components/conversation/activity';
 import { cn } from '@/lib/utils';
 import { DotsHorizontalIcon } from '@radix-ui/react-icons';
 import dayjs from 'dayjs';
-import { usePathname, useRouter } from 'next/navigation';
 import { useContext } from 'react';
 import { Command, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from '@/components/ui/dialog';
@@ -46,6 +48,10 @@ import { setCookie } from 'cookies-next';
 import { Check, ChevronsUpDown, Plus } from 'lucide-react';
 import { FaRobot } from 'react-icons/fa';
 import { Agent, useAgent, useAgents } from '@/components/interactive/useAgent';
+import { useMemo } from 'react';
+import { ChevronRightIcon } from '@radix-ui/react-icons';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 export function AgentSelector() {
   const { isMobile } = useSidebar('left');
@@ -274,6 +280,205 @@ function groupConversations(conversations: Conversation[]) {
   );
 
   return Object.fromEntries(Object.entries(groups).filter(([_, conversations]) => conversations.length > 0));
+}
+
+export function NavMain() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const queryParams = useSearchParams();
+  const { data: company, error: companyError, isLoading: isCompanyLoading } = useCompany();
+  const { toggleSidebar, open } = useSidebar('left');
+  const [isJwtLoaded, setIsJwtLoaded] = useState(false);
+
+  // Check JWT existence once component mounts
+  useEffect(() => {
+    setIsJwtLoaded(true);
+  }, []);
+
+  const itemsWithActiveState = useMemo(() => {
+    const filteredItems = items.filter((item) => {
+      const hasJwt = !!getCookie('jwt');
+      const hasCompany = !!company && !companyError;
+      const meetsRoleThreshold = !item.roleThreshold || (hasCompany && company.roleId <= item.roleThreshold);
+      if (!hasJwt || !hasCompany) {
+        return item.title === 'Documentation';
+      }
+      return meetsRoleThreshold;
+    });
+
+    // Auto-expand Documentation if it's the only item
+    if (filteredItems.length === 1 && filteredItems[0].title === 'Documentation') {
+      return filteredItems.map((item) => ({
+        ...item,
+        isActive: true, // Force Documentation to be active/expanded when it's alone
+      }));
+    }
+
+    return filteredItems.map((item) => ({
+      ...item,
+      isActive: isActive(item, pathname, queryParams),
+    }));
+  }, [company, companyError, pathname, queryParams]);
+
+  // Show loading state until all data is ready
+  const isLoading = !isJwtLoaded || isCompanyLoading;
+
+  if (isLoading) {
+    return (
+      <SidebarGroup>
+        <SidebarGroupLabel>Pages</SidebarGroupLabel>
+        <SidebarMenu>
+          <div className='flex items-center justify-center p-4'>
+            <div className='h-5 w-5 animate-spin rounded-full border-b-2 border-t-2 border-primary'></div>
+          </div>
+        </SidebarMenu>
+      </SidebarGroup>
+    );
+  }
+
+  return (
+    <SidebarGroup>
+      <SidebarGroupLabel>Pages</SidebarGroupLabel>
+      <SidebarMenu>
+        {itemsWithActiveState.map((item) => (
+          <Collapsible
+            key={item.title}
+            asChild
+            defaultOpen={item.isActive || (itemsWithActiveState.length === 1 && item.title === 'Documentation')}
+            className='group/collapsible'
+          >
+            <SidebarMenuItem>
+              <CollapsibleTrigger asChild>
+                <SidebarMenuButton
+                  side='left'
+                  tooltip={item.title}
+                  onClick={() => {
+                    if (!open) toggleSidebar();
+                    if (item.url) router.push(item.url);
+                  }}
+                  className={cn(item.isActive && !item.items?.length && 'bg-muted')}
+                >
+                  {item.icon && <item.icon />}
+                  <span>{item.title}</span>
+                  <ChevronRightIcon
+                    className={cn(
+                      'ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90',
+                      item.items?.length ? 'opacity-100' : 'opacity-0',
+                    )}
+                  />
+                </SidebarMenuButton>
+              </CollapsibleTrigger>
+              <CollapsibleContent hidden={!item.items?.length}>
+                <SidebarMenuSub className='pr-0 mr-0'>
+                  {item.items?.map((subItem) =>
+                    subItem.max_role && (!company?.name || company?.roleId > subItem.max_role) ? null : (
+                      <SidebarMenuSubItem key={subItem.title}>
+                        {subItem.items ? (
+                          <Collapsible asChild>
+                            <SidebarMenuItem>
+                              <CollapsibleTrigger asChild>
+                                <SidebarMenuButton
+                                  side='left'
+                                  tooltip={subItem.title}
+                                  className={cn('hover:bg-sidebar-accent hover:text-sidebar-accent-foreground')}
+                                >
+                                  {subItem.icon && <subItem.icon className='h-4 w-4' />}
+                                  <span>{subItem.title}</span>
+                                  <ChevronRightIcon className='ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90' />
+                                </SidebarMenuButton>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent>
+                                <SidebarMenuSub>
+                                  {subItem.items.map((nestedItem) => (
+                                    <SidebarMenuSubItem key={nestedItem.url}>
+                                      <SidebarMenuSubButton asChild>
+                                        <Link
+                                          href={nestedItem.url}
+                                          className={cn(
+                                            'w-full',
+                                            decodeURIComponent(pathname).replace(/\.md$/, '') === nestedItem.url &&
+                                              'bg-muted',
+                                          )}
+                                        >
+                                          <span className='flex items-center gap-2'>{nestedItem.title}</span>
+                                        </Link>
+                                      </SidebarMenuSubButton>
+                                    </SidebarMenuSubItem>
+                                  ))}
+                                </SidebarMenuSub>
+                              </CollapsibleContent>
+                            </SidebarMenuItem>
+                          </Collapsible>
+                        ) : (
+                          <SidebarMenuSubButton asChild>
+                            <Link
+                              href={
+                                subItem.queryParams
+                                  ? Object.entries(subItem.queryParams).reduce(
+                                      (url, [key, value]) => url + `${key}=${value}&`,
+                                      subItem.url + '?',
+                                    )
+                                  : subItem.url
+                              }
+                              className={cn('w-full', isSubItemActive(subItem, pathname, queryParams) && 'bg-muted')}
+                            >
+                              <span className='flex items-center gap-2'>
+                                {subItem.icon && <subItem.icon className='w-4 h-4' />}
+                                {subItem.max_role && company?.name + ' '}
+                                {subItem.title}
+                              </span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        )}
+                      </SidebarMenuSubItem>
+                    ),
+                  )}
+                </SidebarMenuSub>
+              </CollapsibleContent>
+            </SidebarMenuItem>
+          </Collapsible>
+        ))}
+      </SidebarMenu>
+    </SidebarGroup>
+  );
+}
+
+function isActive(item: Item, pathname: string, queryParams: URLSearchParams) {
+  if (item.items) {
+    return item.items.some((subItem) => {
+      if (subItem.url === pathname) {
+        if (subItem.queryParams) {
+          return Object.entries(subItem.queryParams).every(([key, value]) => queryParams.get(key) === value);
+        }
+        // If no query params are defined on the item, require URL to have no query params
+        return [...queryParams.keys()].length === 0;
+      }
+      return false;
+    });
+  }
+
+  // Root level items
+  if (item.url === pathname) {
+    if (item.queryParams) {
+      return Object.entries(item.queryParams).every(([key, value]) => queryParams.get(key) === value);
+    }
+    return [...queryParams.keys()].length === 0;
+  }
+  return false;
+}
+
+function isSubItemActive(subItem: SubItem, pathname: string, queryParams: URLSearchParams) {
+  if (subItem.url !== pathname) {
+    return false;
+  }
+
+  // If subitem has query params, they must all match
+  if (subItem.queryParams) {
+    return Object.entries(subItem.queryParams).every(([key, value]) => queryParams.get(key) === value);
+  }
+
+  // If no query params defined on subitem, URL must have no query params
+  return queryParams.size === 0;
 }
 
 export function ToggleSidebar({ side }: { side: 'left' | 'right' }) {
