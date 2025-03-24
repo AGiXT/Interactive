@@ -27,7 +27,7 @@ import MarkdownBlock from '@/components/conversation/Message/MarkdownBlock';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import axios from 'axios';
 import { getCookie } from 'cookies-next';
-import { Plus, Wrench } from 'lucide-react';
+import { Plus, Wrench, EyeIcon, EyeOffIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { LuUnlink as Unlink } from 'react-icons/lu';
 import { useProviders } from '@/components/interactive/useProvider';
@@ -312,7 +312,9 @@ export default function AgentSettings() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const { data: agentData, mutate: mutateAgent } = useAgent();
   const [editName, setEditName] = useState('');
-
+  const [walletData, setWalletData] = useState(null);
+  const [isWalletRevealed, setIsWalletRevealed] = useState(false);
+  const [isLoadingWallet, setIsLoadingWallet] = useState(false);
   const context = useInteractiveConfig();
   const router = useRouter();
   const pathname = usePathname();
@@ -356,6 +358,40 @@ export default function AgentSettings() {
     }
   };
 
+  const getAgentWallet = async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/agent/${agentData?.agent?.name}/wallet`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: getCookie('jwt'),
+          },
+        },
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get agent wallet:', error);
+    }
+  };
+  const handleRevealWallet = async () => {
+    if (walletData) {
+      setIsWalletRevealed(!isWalletRevealed);
+      return;
+    }
+
+    setIsLoadingWallet(true);
+    try {
+      const data = await getAgentWallet();
+      setWalletData(data);
+      setIsWalletRevealed(true);
+    } catch (error) {
+      console.error('Failed to retrieve wallet data:', error);
+    } finally {
+      setIsLoadingWallet(false);
+    }
+  };
+  const solanaWalletAddress = agentData?.agent?.settings.find((setting) => setting.name === 'SOLANA_WALLET_ADDRESS');
   return (
     <SidebarPage title='Settings'>
       <div className='flex items-center justify-center p-4'>
@@ -383,6 +419,65 @@ export default function AgentSettings() {
               <span className='truncate' title={agentData?.agent?.companyId}>
                 {agentData?.agent?.companyId}
               </span>
+              <span className='font-medium text-muted-foreground'>Solana Wallet Address:</span>
+              <span className='truncate' title={solanaWalletAddress?.value}>
+                {solanaWalletAddress?.value}
+              </span>
+
+              <div className='flex flex-col gap-2'>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  className='self-start flex items-center gap-2'
+                  onClick={handleRevealWallet}
+                  disabled={isLoadingWallet}
+                >
+                  {isLoadingWallet ? (
+                    <span>Loading...</span>
+                  ) : isWalletRevealed ? (
+                    <>
+                      <EyeOffIcon className='h-4 w-4' />
+                      Hide Private Keys
+                    </>
+                  ) : (
+                    <>
+                      <EyeIcon className='h-4 w-4' />
+                      Reveal Private Keys
+                    </>
+                  )}
+                </Button>
+
+                {isWalletRevealed && walletData && (
+                  <div className='mt-2 p-4 border rounded-md bg-muted/20'>
+                    <h4 className='font-medium mb-2 text-sm'>Wallet Details</h4>
+                    <div className='space-y-2 text-sm'>
+                      <div className='grid grid-cols-[auto_1fr] gap-x-2'>
+                        <span className='font-medium text-muted-foreground'>Agent Name:</span>
+                        <span>{walletData.agent_name}</span>
+                      </div>
+                      <div className='grid grid-cols-[auto_1fr] gap-x-2'>
+                        <span className='font-medium text-muted-foreground'>Private Key:</span>
+                        <div className='flex items-center'>
+                          <code className='bg-muted/50 px-2 py-1 rounded text-xs overflow-x-auto max-w-[300px]'>
+                            {walletData.private_key}
+                          </code>
+                        </div>
+                      </div>
+                      <div className='grid grid-cols-[auto_1fr] gap-x-2'>
+                        <span className='font-medium text-muted-foreground'>Passphrase:</span>
+                        <div className='flex items-center'>
+                          <code className='bg-muted/50 px-2 py-1 rounded text-xs'>{walletData.passphrase}</code>
+                        </div>
+                      </div>
+                      <Alert variant='warning' className='mt-2'>
+                        <AlertDescription>
+                          Keep these details secure. Never share your private key or passphrase with anyone.
+                        </AlertDescription>
+                      </Alert>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </CardContent>
 
