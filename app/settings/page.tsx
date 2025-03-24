@@ -38,6 +38,11 @@ type ErrorState = {
   message: string;
 } | null;
 
+type WalletKeys = {
+  private_key: string;
+  passphrase: string;
+};
+
 interface ExtensionSettings {
   agent_name: string;
   settings: Record<string, string>;
@@ -314,7 +319,7 @@ export default function AgentSettings() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const { data: agentData, mutate: mutateAgent } = useAgent();
   const [editName, setEditName] = useState('');
-  const [walletData, setWalletData] = useState(null);
+  const [walletData, setWalletData] = useState({} as WalletKeys);
   const [isWalletRevealed, setIsWalletRevealed] = useState(false);
   const [isLoadingWallet, setIsLoadingWallet] = useState(false);
   const context = useInteractiveConfig();
@@ -371,7 +376,7 @@ export default function AgentSettings() {
           },
         },
       );
-      return response.data;
+      return response.data as WalletKeys;
     } catch (error) {
       console.error('Failed to get agent wallet:', error);
     }
