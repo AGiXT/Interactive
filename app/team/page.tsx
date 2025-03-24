@@ -1,4 +1,5 @@
 'use client';
+import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -29,6 +30,9 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { DataTable } from '@/components/conversation/Message/data-table';
@@ -102,6 +106,20 @@ export const TeamUsers = () => {
   const { data: invitationsData, mutate: mutateInvitations } = useInvitations();
   const { data: activeCompany, mutate } = useActiveCompany();
   const [responseMessage, setResponseMessage] = useState('');
+  const { agixt } = useInteractiveConfig();
+  const handleChangeRole = async (targetUserId: string, newRoleId: number) => {
+    if (!activeCompany) return;
+    try {
+      await agixt.updateUserRole({
+        user_id: targetUserId,
+        company_id: activeCompany.id,
+        role_id: newRoleId,
+      });
+      mutate();
+    } catch (error) {
+      console.error('Failed to update user role:', error);
+    }
+  };
   const users_columns: ColumnDef<User>[] = [
     {
       id: 'select',
@@ -191,6 +209,10 @@ export const TeamUsers = () => {
       cell: ({ row }) => {
         const router = useRouter();
 
+        if (!activeCompany) return null;
+        const loggedInRole = activeCompany.my_role;
+        const targetRole = row.original.role_id;
+
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -208,6 +230,30 @@ export const TeamUsers = () => {
                 </Button>
               </DropdownMenuItem> */}
               <DropdownMenuItem onSelect={() => router.push(`/users/${row.original.id}`)}>View Details</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>Change Role to..</DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  {loggedInRole < 2 && targetRole !== 2 && (
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        await handleChangeRole(row.original.id, 2);
+                      }}
+                    >
+                      Company Admin
+                    </DropdownMenuItem>
+                  )}
+                  {loggedInRole < 3 && targetRole !== 3 && (
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        await handleChangeRole(row.original.id, 3);
+                      }}
+                    >
+                      User
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={(e) => {
