@@ -31,6 +31,7 @@ import { Plus, Wrench, EyeIcon, EyeOffIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { LuUnlink as Unlink } from 'react-icons/lu';
 import { useProviders } from '@/components/interactive/useProvider';
+import QRCode from 'react-qr-code';
 
 type ErrorState = {
   type: 'success' | 'error';
@@ -421,6 +422,12 @@ export default function AgentSettings() {
               </span>
               <span className='font-medium text-muted-foreground'>Solana Wallet Address:</span>
               <span className='truncate' title={solanaWalletAddress?.value}>
+                <QRCode
+                  size={128}
+                  style={{ height: 'auto', maxWidth: '30%', width: '30%' }}
+                  value={solanaWalletAddress?.value || ''}
+                  viewBox={`0 0 256 256`}
+                />
                 {solanaWalletAddress?.value}
               </span>
 
