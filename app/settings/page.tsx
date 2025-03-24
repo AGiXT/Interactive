@@ -422,71 +422,71 @@ export default function AgentSettings() {
                 <span className='truncate' title={agentData?.agent?.companyId}>
                   {agentData?.agent?.companyId}
                 </span>
-                <span className='font-medium text-muted-foreground'>Solana Wallet Address:</span>
-                <span className='truncate' title={solanaWalletAddress?.value}>
-                  <QRCode
-                    size={128}
-                    style={{ height: 'auto', maxWidth: '30%', width: '30%' }}
-                    value={solanaWalletAddress?.value || ''}
-                    viewBox={`0 0 256 256`}
-                  />
-                  {solanaWalletAddress?.value}
-                </span>
+                {solanaWalletAddress && (
+                  <>
+                    <span className='font-medium text-muted-foreground'>Solana Wallet Address:</span>
+                    <span className='truncate' title={solanaWalletAddress?.value}>
+                      <QRCode
+                        size={128}
+                        style={{ height: 'auto', maxWidth: '30%', width: '30%' }}
+                        value={solanaWalletAddress?.value || ''}
+                        viewBox={`0 0 256 256`}
+                      />
+                      Public Key: {solanaWalletAddress?.value}
+                    </span>
 
-                <div className='flex flex-col gap-2'>
-                  <Button
-                    variant='outline'
-                    size='sm'
-                    className='self-start flex items-center gap-2'
-                    onClick={handleRevealWallet}
-                    disabled={isLoadingWallet}
-                  >
-                    {isLoadingWallet ? (
-                      <span>Loading...</span>
-                    ) : isWalletRevealed ? (
-                      <>
-                        <EyeOffIcon className='h-4 w-4' />
-                        Hide Private Keys
-                      </>
-                    ) : (
-                      <>
-                        <EyeIcon className='h-4 w-4' />
-                        Reveal Private Keys
-                      </>
-                    )}
-                  </Button>
+                    <div className='flex flex-col gap-2'>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        className='self-start flex items-center gap-2'
+                        onClick={handleRevealWallet}
+                        disabled={isLoadingWallet}
+                      >
+                        {isLoadingWallet ? (
+                          <span>Loading...</span>
+                        ) : isWalletRevealed ? (
+                          <>
+                            <EyeOffIcon className='h-4 w-4' />
+                            Hide Private Keys
+                          </>
+                        ) : (
+                          <>
+                            <EyeIcon className='h-4 w-4' />
+                            Reveal Private Keys
+                          </>
+                        )}
+                      </Button>
 
-                  {isWalletRevealed && walletData && (
-                    <div className='mt-2 p-4 border rounded-md bg-muted/20'>
-                      <h4 className='font-medium mb-2 text-sm'>Wallet Details</h4>
-                      <div className='space-y-2 text-sm'>
-                        <div className='grid grid-cols-[auto_1fr] gap-x-2'>
-                          <span className='font-medium text-muted-foreground'>Agent Name:</span>
-                          <span>{walletData.agent_name}</span>
-                        </div>
-                        <div className='grid grid-cols-[auto_1fr] gap-x-2'>
-                          <span className='font-medium text-muted-foreground'>Private Key:</span>
-                          <div className='flex items-center'>
-                            <code className='bg-muted/50 px-2 py-1 rounded text-xs overflow-x-auto max-w-[300px]'>
-                              {walletData.private_key}
-                            </code>
+                      {isWalletRevealed && walletData && (
+                        <div className='mt-2 p-4 border rounded-md bg-muted/20'>
+                          <h4 className='font-medium mb-2 text-sm'>Wallet Details</h4>
+                          <div className='space-y-2 text-sm'>
+                            <div className='grid grid-cols-[auto_1fr] gap-x-2'>
+                              <span className='font-medium text-muted-foreground'>Private Key:</span>
+                              <div className='flex items-center'>
+                                <code className='bg-muted/50 px-2 py-1 rounded text-xs overflow-x-auto max-w-[300px]'>
+                                  {walletData.private_key}
+                                </code>
+                              </div>
+                            </div>
+                            <div className='grid grid-cols-[auto_1fr] gap-x-2'>
+                              <span className='font-medium text-muted-foreground'>Passphrase:</span>
+                              <div className='flex items-center'>
+                                <code className='bg-muted/50 px-2 py-1 rounded text-xs'>{walletData.passphrase}</code>
+                              </div>
+                            </div>
+                            <Alert variant='warning' className='mt-2'>
+                              <AlertDescription>
+                                Keep these details secure. Never share your private key or passphrase with anyone.
+                              </AlertDescription>
+                            </Alert>
                           </div>
                         </div>
-                        <div className='grid grid-cols-[auto_1fr] gap-x-2'>
-                          <span className='font-medium text-muted-foreground'>Passphrase:</span>
-                          <div className='flex items-center'>
-                            <code className='bg-muted/50 px-2 py-1 rounded text-xs'>{walletData.passphrase}</code>
-                          </div>
-                        </div>
-                        <Alert variant='warning' className='mt-2'>
-                          <AlertDescription>
-                            Keep these details secure. Never share your private key or passphrase with anyone.
-                          </AlertDescription>
-                        </Alert>
-                      </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </>
+                )}
               </div>
             </CardContent>
 
