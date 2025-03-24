@@ -28,10 +28,12 @@ export type UIProps = {
 };
 
 const conversationSWRPath = '/conversation/';
+const DEFAULT_AGENT = 'XT';
 
 export function ChatSidebar({ currentConversation }: { currentConversation: any }): React.JSX.Element {
   const [loading, setLoading] = useState(false);
   const state = useContext(InteractiveConfigContext);
+  const agentName = getCookie('agixt-agent') || process.env.NEXT_PUBLIC_AGIXT_AGENT || DEFAULT_AGENT;
 
   // Function to handle importing a conversation
   const handleImportConversation = async () => {
@@ -164,7 +166,7 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
 
   const handleRenameConversation = async (newName: string): Promise<void> => {
     try {
-      await state.agixt.renameConversation(state.agent, currentConversation?.id || '-', newName);
+      await state.agixt.renameConversation(agentName, currentConversation?.id || '-', newName);
 
       // Properly invalidate both the conversation list and the specific conversation
       await mutate('/conversations'); // Assuming this is the key used in useConversations()
@@ -243,12 +245,14 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
   }, []);
 
   return (
-    <SidebarContent>
+    <SidebarContent title=''>
       <SidebarGroup>
         {
-          <div className='w-full group-data-[collapsible=icon]:hidden'>
+          <div 
+            className={renaming ? 'w-full': 'w-full group-data-[collapsible=icon]:hidden'}
+          >
             {renaming ? (
-              <Input value={newName} onChange={(e) => setNewName(e.target.value)} className='w-full' />
+              <Input required autoFocus value={newName} onChange={(e) => setNewName(e.target.value)} className='w-full' />
             ) : (
               <h4>{currentConversation?.name}</h4>
             )}
@@ -276,6 +280,15 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
               icon: renaming ? Check : Pencil,
               func: renaming
                 ? () => {
+                    if (newName.trim() === '') {
+                      toast({
+                        title: 'Error',
+                        description: 'Conversation name cannot be empty',
+                        duration: 3000,
+                        variant: 'destructive',
+                      });
+                      return;
+                    }
                     handleRenameConversation(newName);
                     setRenaming(false);
                   }
