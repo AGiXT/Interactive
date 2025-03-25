@@ -72,7 +72,6 @@ export default function MarkdownBlock({ content, chatItem, setLoading }: Markdow
               <ReactMarkdown
                 key={`${index}-${segment.content}`}
                 remarkPlugins={[[remarkGfm]]}
-                className='react-markdown'
                 // disallowedElements={['code']}
                 components={{
                   h1({ children }) {
