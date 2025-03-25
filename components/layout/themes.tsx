@@ -10,14 +10,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 
 const icons = {
   dark: <Moon className='h-[1.2rem] w-[1.2rem]' />,
-  colorblind: <Eye className='h-[1.2rem] w-[1.2rem]' />,
   light: <Sun className='h-[1.2rem] w-[1.2rem]' />,
 };
 
 export function ThemeToggle({ initialTheme }: { initialTheme?: string }) {
   const { currentTheme, themes, setTheme } = useTheme([], initialTheme);
 
-  const Icon = icons[currentTheme.includes('colorblind') ? 'colorblind' : currentTheme.includes('dark') ? 'dark' : 'light'];
+  const Icon = icons[currentTheme.includes('dark') ? 'dark' : 'light'];
 
   return (
     <DropdownMenu>
@@ -53,13 +52,13 @@ export function IconButton({ Icon, label, description, ...props }) {
   );
 }
 
-const defaultThemes = ['default', 'dark', 'colorblind', 'colorblind-dark'];
+const defaultThemes = ['light', 'dark'];
 
 export const useTheme = (customThemes?: string[], initialTheme?: string) => {
   const [themes, setThemes] = useState(() => {
     return Array.from(new Set([...defaultThemes, ...(customThemes ?? [])]));
   });
-  const [currentTheme, setCurrentTheme] = useState(() => initialTheme ?? 'default');
+  const [currentTheme, setCurrentTheme] = useState(() => initialTheme ?? 'light');
 
   const setTheme = (newTheme: string) => {
     const classList = document.body.classList;
