@@ -3,12 +3,10 @@
 @tailwind utilities;
 
 @layer base {
-  :root,
-  .colorblind {
+  :root {
     color-scheme: light;
   }
-  .dark,
-  .colorblind-dark {
+  .dark {
     color-scheme: dark;
   }
 
@@ -93,62 +91,6 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .colorblind {
-    --background: 0 0% 95%;
-    --foreground: 0 0% 4%;
-    --card: 0 0% 90%;
-    --card-foreground: 0 0% 10%;
-    --popover: 0 0% 95%;
-    --popover-foreground: 0 0% 4%;
-    --primary: 0 0% 57.8%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 70%;
-    --secondary-foreground: 0 0% 0%;
-    --muted: 0 0% 85%;
-    --muted-foreground: 0 0% 35%;
-    --accent: 0 0% 80%;
-    --accent-foreground: 0 0% 10%;
-    --destructive: 0 0% 30%;
-    --destructive-foreground: 0 0% 90%;
-    --warning: 0 0% 75%;
-    --warning-foreground: 0 0% 15%;
-    --success: 0 0% 75%;
-    --success-foreground: 0 0% 15%;
-    --info: 0 0% 75%;
-    --info-foreground: 0 0% 15%;
-    --border: 0 0% 50%;
-    --input: 0 0% 18%;
-    --ring: 0 0% 57.8%;
-  }
-
-  .colorblind-dark {
-    --background: 0 0% 5%;
-    --foreground: 0 0% 90%;
-    --card: 0 0% 4%;
-    --card-foreground: 0 0% 90%;
-    --popover: 0 0% 5%;
-    --popover-foreground: 0 0% 90%;
-    --primary: 0 0% 57.8%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 10%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 60%;
-    --accent: 0 0% 15%;
-    --accent-foreground: 0 0% 90%;
-    --destructive: 0 0% 30%;
-    --destructive-foreground: 0 0% 90%;
-    --warning: 0 0% 25%;
-    --warning-foreground: 0 0% 85%;
-    --success: 0 0% 25%;
-    --success-foreground: 0 0% 85%;
-    --info: 0 0% 25%;
-    --info-foreground: 0 0% 85%;
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 0 0% 57.8%;
   }
 }
 
