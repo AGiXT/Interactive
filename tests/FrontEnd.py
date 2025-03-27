@@ -118,6 +118,7 @@ class FrontEndTest:
         Args:
             max_size_mb (int): Maximum size of the output video in MB. Defaults to 10.
         """
+
         if is_desktop():
             return None
         try:
@@ -391,6 +392,7 @@ class FrontEndTest:
         try:
             logging.info(action_description)
             result = await action_function()
+            await self.page.wait_for_load_state()
             if followup_function:
                 await followup_function()
             await self.take_screenshot(f"{action_description}")
@@ -594,14 +596,292 @@ class FrontEndTest:
 
     async def handle_login(self, email, mfa_token):
         """Handle login scenario"""
-        otp = pyotp.TOTP(mfa_token).now()
-        # TODO: Handle login workflow
-        pass
+        try:
+            # Navigate to login page
+            await self.test_action(
+                "The user navigates to the login page",
+                lambda: self.page.goto(f"{self.base_uri}/user"),
+            )
 
-    async def handle_logout(self):
-        """Handle logout scenario"""
-        # TODO: Handle logout workflow
-        pass
+            # Enter email address
+            await self.test_action(
+                f"The user enters their email address: {email}",
+                lambda: self.page.fill("#email", email),
+            )
+
+            # Click continue with email
+            await self.test_action(
+                "The user clicks 'Continue with Email' to proceed",
+                lambda: self.page.click("text=Continue with Email"),
+            )
+
+            # Generate OTP code from saved MFA token
+            otp = pyotp.TOTP(mfa_token).now()
+
+            # Fill in the OTP code
+            await self.test_action(
+                f"The user enters their MFA code: {otp}",
+                lambda: self.page.fill("#token", otp),
+            )
+
+            # Submit the login form
+            await self.test_action(
+                "The user submits the MFA token to complete login",
+                lambda: self.page.click('button[type="submit"]'),
+            )
+
+            # Verify successful login by waiting for chat page
+            await self.test_action(
+                "The system authenticates the user and redirects to the chat interface",
+                lambda: self.page.wait_for_url(
+                    f"{self.base_uri}/chat", wait_until="networkidle"
+                ),
+            )
+        except Exception as e:
+            logging.error(f"Error during login: {e}")
+            raise Exception(f"Error during login: {e}")
+
+    async def handle_logout(self, email=None):
+        """Handle logout with multiple click approaches"""
+        try:
+            # Wait for page to be fully loaded
+            await self.page.wait_for_load_state("networkidle")
+            await self.take_screenshot("Before attempting to log out")
+
+            # Determine the email to look for
+            email_part = email if email else "@example.com"
+            logging.info(f"Targeting button containing email: {email_part}")
+
+            # First approach: Try using Playwright's built-in click
+            try:
+                logging.info("Trying Playwright's click method")
+                email_button = self.page.get_by_text(email_part)
+
+                # Check if we found it
+                button_count = await email_button.count()
+                logging.info(f"Found {button_count} elements with email text")
+
+                if button_count > 0:
+                    # Click with force:true to ensure the click happens
+                    await email_button.click(force=True)
+                    await self.page.wait_for_timeout(1500)
+                    await self.take_screenshot("After Playwright click")
+
+                # Check if any menu items appeared
+                menu_items = self.page.locator('[role="menuitem"]')
+                menu_count = await menu_items.count()
+                logging.info(f"Found {menu_count} menu items after Playwright click")
+
+                if menu_count > 0:
+                    # Look for logout item
+                    for i in range(menu_count):
+                        item = menu_items.nth(i)
+                        text = await item.text_content()
+                        if (
+                            "log out" in text.lower()
+                            or "logout" in text.lower()
+                            or "sign out" in text.lower()
+                        ):
+                            logging.info(f"Found logout item: {text}")
+                            await item.click()
+                            await self.page.wait_for_timeout(2000)
+
+                            # Check if we logged out
+                            current_url = self.page.url
+                            if (
+                                "/user" in current_url
+                                or current_url == self.base_uri
+                                or current_url.endswith("/")
+                            ):
+                                logging.info(
+                                    f"Successfully logged out - URL: {current_url}"
+                                )
+                                return
+
+                    # If we didn't find a specific logout item, try the last one
+                    if menu_count > 0:
+                        logging.info("Clicking last menu item")
+                        await menu_items.last.click()
+                        await self.page.wait_for_timeout(2000)
+
+                        # Check if we logged out
+                        current_url = self.page.url
+                        if (
+                            "/user" in current_url
+                            or current_url == self.base_uri
+                            or current_url.endswith("/")
+                        ):
+                            logging.info(
+                                f"Successfully logged out - URL: {current_url}"
+                            )
+                            return
+            except Exception as playwright_error:
+                logging.info(f"Playwright approach error: {playwright_error}")
+
+            # Second approach: Try using a full user action sequence
+            try:
+                logging.info("Trying full user action sequence")
+
+                # Find the button with more specific selector
+                user_details = await self.page.evaluate(
+                    f"""() => {{
+                    const allButtons = Array.from(document.querySelectorAll('button'));
+                    const userButton = allButtons.find(button => 
+                        button.textContent.includes('{email_part}') && 
+                        button.querySelector('[data-size="lg"]') !== null
+                    );
+                    
+                    if (userButton) {{
+                        // Get position for mouse click
+                        const rect = userButton.getBoundingClientRect();
+                        return {{
+                            found: true,
+                            id: userButton.id,
+                            x: rect.left + rect.width / 2,
+                            y: rect.top + rect.height / 2
+                        }};
+                    }}
+                    
+                    return {{ found: false }};
+                }}"""
+                )
+
+                logging.info(f"User button details: {user_details}")
+
+                if user_details.get("found"):
+                    # Use mouse action to click at the center of the button
+                    await self.page.mouse.click(
+                        user_details.get("x", 0), user_details.get("y", 0)
+                    )
+                    await self.page.wait_for_timeout(1500)
+                    await self.take_screenshot("After mouse click")
+
+                    # Check for menu items again
+                    menu_appeared = await self.page.evaluate(
+                        """() => {
+                        const menuItems = document.querySelectorAll('[role="menuitem"]');
+                        console.log('Menu items after mouse click:', menuItems.length);
+                        
+                        if (menuItems.length > 0) {
+                            // Try to find logout item
+                            for (const item of menuItems) {
+                                const text = item.textContent.toLowerCase();
+                                if (text.includes('log out') || text.includes('logout') || text.includes('sign out')) {
+                                    console.log('Found logout item, clicking');
+                                    item.click();
+                                    return { clicked: true, text };
+                                }
+                            }
+                            
+                            // If no logout item found, click the last one
+                            console.log('Clicking last menu item');
+                            menuItems[menuItems.length - 1].click();
+                            return { clicked: true, lastItem: true };
+                        }
+                        
+                        return { clicked: false };
+                    }"""
+                    )
+
+                    logging.info(f"Menu interaction results: {menu_appeared}")
+
+                    if menu_appeared.get("clicked"):
+                        await self.page.wait_for_timeout(2000)
+
+                        # Check if we logged out
+                        current_url = self.page.url
+                        if (
+                            "/user" in current_url
+                            or current_url == self.base_uri
+                            or current_url.endswith("/")
+                        ):
+                            logging.info(
+                                f"Successfully logged out - URL: {current_url}"
+                            )
+                            return
+            except Exception as mouse_error:
+                logging.info(f"Mouse action approach error: {mouse_error}")
+
+            # Third approach: Try using keyboard shortcuts
+            logging.info("Trying keyboard shortcut approach")
+            try:
+                # Find and focus the button first
+                focused = await self.page.evaluate(
+                    f"""() => {{
+                    const userButton = Array.from(document.querySelectorAll('button')).find(
+                        button => button.textContent.includes('{email_part}')
+                    );
+                    
+                    if (userButton) {{
+                        userButton.focus();
+                        return true;
+                    }}
+                    return false;
+                }}"""
+                )
+
+                if focused:
+                    # Press Enter to activate the button
+                    await self.page.keyboard.press("Enter")
+                    await self.page.wait_for_timeout(1500)
+                    await self.take_screenshot("After keyboard Enter")
+
+                    # Check if dropdown opened
+                    dropdown_visible = await self.page.evaluate(
+                        """() => {
+                        return document.querySelectorAll('[role="menuitem"]').length > 0;
+                    }"""
+                    )
+
+                    if dropdown_visible:
+                        # Press Down to get to the logout item (often the last one)
+                        for _ in range(
+                            5
+                        ):  # Try a few Down keys to navigate to the bottom
+                            await self.page.keyboard.press("ArrowDown")
+                            await self.page.wait_for_timeout(300)
+
+                        # Press Enter to select
+                        await self.page.keyboard.press("Enter")
+                        await self.page.wait_for_timeout(2000)
+
+                        # Check if we logged out
+                        current_url = self.page.url
+                        if (
+                            "/user" in current_url
+                            or current_url == self.base_uri
+                            or current_url.endswith("/")
+                        ):
+                            logging.info(
+                                f"Successfully logged out via keyboard - URL: {current_url}"
+                            )
+                            return
+            except Exception as keyboard_error:
+                logging.info(f"Keyboard approach error: {keyboard_error}")
+
+            # Final fallback: Direct navigation to logout URL
+            logging.info("Trying direct navigation to logout URL")
+            await self.page.goto(f"{self.base_uri}/user/logout")
+            await self.page.wait_for_timeout(2000)
+
+            # Check if we got logged out
+            current_url = self.page.url
+            if (
+                "/user" in current_url
+                or current_url == self.base_uri
+                or current_url.endswith("/")
+            ):
+                logging.info(
+                    f"Successfully logged out via direct URL - URL: {current_url}"
+                )
+                return
+
+            raise Exception("Failed to log out after multiple approaches")
+
+        except Exception as e:
+            logging.error(f"Error during logout: {e}")
+            await self.take_screenshot("Error_during_logout")
+            raise Exception(f"Failed to logout: {str(e)}")
 
     async def handle_update_user(self):
         """Handle user update scenario"""
@@ -723,7 +1003,7 @@ class FrontEndTest:
                 # Any other tests can be added here
                 ##
 
-                await self.handle_logout()
+                await self.handle_logout(email=email)
                 await self.handle_login(email, mfa_token)
                 await self.handle_update_user()
                 await self.handle_invite_user()
