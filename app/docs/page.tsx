@@ -9,7 +9,7 @@ async function getContent(slug: string[]) {
   try {
     // If no specific slug, use the Introduction page
     if (!slug || slug.length === 0) {
-      const introPath = path.join(process.cwd(), 'docs-agixt', 'README.md');
+      const introPath = path.join(process.cwd(), 'docs-agixt', '0-Introduction.md');
       return fs.readFileSync(introPath, 'utf8');
     }
 
