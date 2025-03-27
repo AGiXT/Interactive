@@ -144,7 +144,7 @@ export const items: Item[] = [
         icon: Rocket,
         url: '/docs',
         items: [
-          { title: 'Introduction', url: '/docs/0-Introduction' },
+          { title: 'Introduction', url: '/docs/README' },
           { title: 'Quick Start', url: '/docs/1-Getting started/0-Quick Start' },
           { title: 'Environment', url: '/docs/1-Getting started/1-Environment Variables' },
           { title: 'Examples', url: '/docs/1-Getting started/2-Examples' },
