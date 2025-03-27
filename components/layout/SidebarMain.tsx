@@ -1,13 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { getCookie } from 'cookies-next';
+import { useEffect, useMemo, useState, useContext } from 'react';
+import { getCookie, setCookie } from 'cookies-next';
 import Link from 'next/link';
-import { ChevronLeft } from 'lucide-react';
+import { Check, ChevronLeft, ChevronsUpDown, Plus } from 'lucide-react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { FaRobot } from 'react-icons/fa';
+import { ViewVerticalIcon, DotsHorizontalIcon, ChevronRightIcon } from '@radix-ui/react-icons';
+import dayjs from 'dayjs';
+
 import { items, Item, SubItem } from '@/app/NavMenuItems';
 import { NavUser } from '@/components/layout/NavUser';
-import { useUser } from '@/components/interactive/useUser';
-import { ViewVerticalIcon } from '@radix-ui/react-icons';
+import { useUser, useCompany } from '@/components/interactive/useUser';
+import { Agent, useAgent, useAgents } from '@/components/interactive/useAgent';
+import { ConversationEdge, useConversations } from '@/components/interactive/useConversation';
+import { InteractiveConfigContext, InteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
+import { getTimeDifference } from '@/components/conversation/activity';
+import { cn } from '@/lib/utils';
+
 import {
   Sidebar,
   SidebarContent,
@@ -25,17 +35,9 @@ import {
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
 import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { getTimeDifference } from '@/components/conversation/activity';
-import { cn } from '@/lib/utils';
-import { DotsHorizontalIcon } from '@radix-ui/react-icons';
-import dayjs from 'dayjs';
-import { useContext } from 'react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Command, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-import { Conversation, useConversations } from '@/components/interactive/useConversation';
-import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
-import { useCompany } from '@/components/interactive/useUser';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,13 +46,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { setCookie } from 'cookies-next';
-import { Check, ChevronsUpDown, Plus } from 'lucide-react';
-import { FaRobot } from 'react-icons/fa';
-import { Agent, useAgent, useAgents } from '@/components/interactive/useAgent';
-import { useMemo } from 'react';
-import { ChevronRightIcon } from '@radix-ui/react-icons';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 export function AgentSelector() {
@@ -59,10 +54,13 @@ export function AgentSelector() {
   const { data: activeCompany, mutate: mutateActiveCompany, error: companyError } = useCompany();
   const { data: agentsData } = useAgents();
   const router = useRouter();
-  console.error({ agentError, companyError });
+  
+  // Log errors for debugging purposes
+  if (process.env.NODE_ENV === 'development' && (agentError || companyError)) {
+    console.error({ agentError, companyError });
+  }
 
   const switchAgents = (agent: Agent) => {
-    // setActiveAgent(agent);
     setCookie('agixt-agent', agent.name, {
       domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
     });
@@ -78,6 +76,7 @@ export function AgentSelector() {
             <SidebarMenuButton
               side='left'
               size='lg'
+              tooltip='Switch Active Agent'
               className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
             >
               <div className='flex items-center justify-center rounded-lg aspect-square size-8 bg-sidebar-primary text-sidebar-primary-foreground'>
@@ -106,7 +105,7 @@ export function AgentSelector() {
                 >
                   <div className='flex flex-col'>
                     <span>{agent.name}</span>
-                    <span className='text-xs text-muted-foreground'>{agent.companyName}</span>
+                    <span className='text-xs text-muted-foreground'>{agent.companyId}</span>
                   </div>
                   {activeAgent?.agent?.id === agent.id && <Check className='w-4 h-4 ml-2' />}
                 </DropdownMenuItem>
@@ -141,7 +140,7 @@ export function ChatHistory() {
   const handleOpenConversation = ({ conversationId }: { conversationId: string | number }) => {
     router.push(`/chat/${conversationId}`);
 
-    state?.mutate?.((oldState) => ({
+    state?.mutate?.((oldState: InteractiveConfig) => ({
       ...oldState,
       overrides: { ...oldState.overrides, conversation: conversationId },
     }));
@@ -162,6 +161,7 @@ export function ChatHistory() {
                   <TooltipTrigger asChild>
                     <SidebarMenuButton
                       side='left'
+                      tooltip={conversation.name}
                       onClick={() => handleOpenConversation({ conversationId: conversation.id })}
                       className={cn(
                         'flex items-center justify-between w-full transition-colors',
@@ -206,7 +206,7 @@ export function ChatHistory() {
           {conversationData && conversationData?.length > 10 && (
             <ChatSearch {...{ conversationData, handleOpenConversation }}>
               <SidebarMenuItem>
-                <SidebarMenuButton className='text-sidebar-foreground/70' side='left'>
+                <SidebarMenuButton className='text-sidebar-foreground/70' side='left' tooltip="View More Conversations">
                   <DotsHorizontalIcon className='text-sidebar-foreground/70' />
                   <span>More</span>
                 </SidebarMenuButton>
@@ -224,7 +224,7 @@ function ChatSearch({
   handleOpenConversation,
   children,
 }: {
-  conversationData: any[];
+  conversationData: ConversationEdge[];
   handleOpenConversation: ({ conversationId }: { conversationId: string | number }) => void;
   children: React.ReactNode;
 }) {
@@ -249,7 +249,7 @@ function ChatSearch({
   );
 }
 
-function groupConversations(conversations: Conversation[]) {
+function groupConversations(conversations: ConversationEdge[]) {
   const today = new Date();
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
@@ -264,7 +264,7 @@ function groupConversations(conversations: Conversation[]) {
   };
 
   const groups = conversations.slice(0, 7).reduce(
-    (groups: { [key: string]: Conversation[] }, conversation: Conversation) => {
+    (groups: { [key: string]: ConversationEdge[] }, conversation: ConversationEdge) => {
       if (isToday(conversation.updatedAt)) {
         groups['Today'].push(conversation);
       } else if (isYesterday(conversation.updatedAt)) {
@@ -279,7 +279,7 @@ function groupConversations(conversations: Conversation[]) {
     { Today: [], Yesterday: [], 'Past Week': [], Older: [] },
   );
 
-  return Object.fromEntries(Object.entries(groups).filter(([_, conversations]) => conversations.length > 0));
+  return Object.fromEntries(Object.entries(groups).filter(([, conversationArray]) => conversationArray.length > 0));
 }
 
 export function NavMain() {
@@ -375,7 +375,7 @@ export function NavMain() {
                       <SidebarMenuSubItem key={subItem.title}>
                         {subItem.items ? (
                           <Collapsible asChild>
-                            <SidebarMenuItem>
+                                                          <div className='w-full'>
                               <CollapsibleTrigger asChild>
                                 <SidebarMenuButton
                                   side='left'
@@ -407,7 +407,7 @@ export function NavMain() {
                                   ))}
                                 </SidebarMenuSub>
                               </CollapsibleContent>
-                            </SidebarMenuItem>
+                            </div>
                           </Collapsible>
                         ) : (
                           <SidebarMenuSubButton asChild>
@@ -444,37 +444,37 @@ export function NavMain() {
 }
 
 function isActive(item: Item, pathname: string, queryParams: URLSearchParams) {
+  // Handle items with sub-items
   if (item.items) {
-    return item.items.some((subItem) => {
-      if (subItem.url === pathname) {
-        if (subItem.queryParams) {
-          return Object.entries(subItem.queryParams).every(([key, value]) => queryParams.get(key) === value);
-        }
-        // If no query params are defined on the item, require URL to have no query params
-        return [...queryParams.keys()].length === 0;
-      }
-      return false;
-    });
+    return item.items.some((subItem) => isSubItemActive(subItem, pathname, queryParams));
   }
 
   // Root level items
   if (item.url === pathname) {
+    // Check if queryParams match
     if (item.queryParams) {
-      return Object.entries(item.queryParams).every(([key, value]) => queryParams.get(key) === value);
+      return Object.entries(item.queryParams).every(
+        ([key, value]) => queryParams.get(key) === value
+      );
     }
-    return [...queryParams.keys()].length === 0;
+    // If no query params are defined, URL should have no query params
+    return queryParams.size === 0;
   }
+  
   return false;
 }
 
 function isSubItemActive(subItem: SubItem, pathname: string, queryParams: URLSearchParams) {
+  // Check if URL matches
   if (subItem.url !== pathname) {
     return false;
   }
 
   // If subitem has query params, they must all match
   if (subItem.queryParams) {
-    return Object.entries(subItem.queryParams).every(([key, value]) => queryParams.get(key) === value);
+    return Object.entries(subItem.queryParams).every(
+      ([key, value]) => queryParams.get(key) === value
+    );
   }
 
   // If no query params defined on subitem, URL must have no query params
@@ -485,7 +485,7 @@ export function ToggleSidebar({ side }: { side: 'left' | 'right' }) {
   const { toggleSidebar } = useSidebar(side);
 
   return (
-    <SidebarMenuButton onClick={toggleSidebar}>
+    <SidebarMenuButton onClick={toggleSidebar} tooltip='Toggle Sidebar'>
       <ViewVerticalIcon className='w-7 h-7' />
       <span>Toggle Sidebar</span>
     </SidebarMenuButton>
@@ -493,47 +493,42 @@ export function ToggleSidebar({ side }: { side: 'left' | 'right' }) {
 }
 
 export function SidebarMain({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const [hasStarted, setHasStarted] = useState(false);
   const pathname = usePathname();
   const { data: user } = useUser();
   const isAuthenticated = !!user?.email;
 
-  useEffect(() => {
-    if (getCookie('agixt-has-started') === 'true') {
-      setHasStarted(true);
-    }
-  }, [getCookie('agixt-has-started')]);
-
+  // Don't render the sidebar on home page or user pages (except manage)
   if (pathname === '/' || (pathname.startsWith('/user') && pathname !== '/user/manage')) return null;
 
   return (
-    <Sidebar collapsible='icon' {...props} className='hide-scrollbar'>
-      <SidebarHeader>
-        {isAuthenticated ? (
-          <AgentSelector />
-        ) : (
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <Link href='/' passHref>
-                <SidebarMenuButton side='left' size='lg' className='gap-2'>
-                  <ChevronLeft className='h-4 w-4' />
-                  Back to Home
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        )}
-      </SidebarHeader>
-      <SidebarContent>
-        <NavMain />
-        {isAuthenticated && <ChatHistory />}
-      </SidebarContent>
-      <SidebarFooter>
-        {/* <NotificationsNavItem /> */}
-        <ToggleSidebar side='left' />
-        {isAuthenticated && <NavUser />}
-      </SidebarFooter>
-      <SidebarRail side='left' />
-    </Sidebar>
+    <TooltipProvider delayDuration={300}>
+      <Sidebar collapsible='icon' {...props} className='hide-scrollbar'>
+        <SidebarHeader>
+          {isAuthenticated ? (
+            <AgentSelector />
+          ) : (
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <Link href='/' passHref>
+                  <SidebarMenuButton side='left' size='lg' className='gap-2' tooltip='Return to Home'>
+                    <ChevronLeft className='h-4 w-4' />
+                    Back to Home
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          )}
+        </SidebarHeader>
+        <SidebarContent>
+          <NavMain />
+          {isAuthenticated && <ChatHistory />}
+        </SidebarContent>
+        <SidebarFooter>
+          <ToggleSidebar side='left' />
+          {isAuthenticated && <NavUser />}
+        </SidebarFooter>
+        <SidebarRail side='left' />
+      </Sidebar>
+    </TooltipProvider>
   );
 }
