@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { cn } from '@/lib/utils';
 import { SidebarInset } from '@/components/ui/sidebar';
 import Link from 'next/link';
+import { useMediaQuery } from 'react-responsive';
+import React, { useState, useEffect } from 'react';
 
 interface AuthCardProps extends React.PropsWithChildren {
   showBackButton?: boolean;
@@ -13,6 +15,17 @@ interface AuthCardProps extends React.PropsWithChildren {
 }
 
 export default function AuthCard({ children, showBackButton, title, description, responseMessage }: AuthCardProps) {
+  const isMobile = useMediaQuery({ maxWidth: 768 });
+  const [cardWidth, setCardWidth] = useState('max-w-md');
+  
+  useEffect(() => {
+    if (isMobile) {
+      setCardWidth('max-w-[90%] w-full');
+    } else {
+      setCardWidth('max-w-md');
+    }
+  }, [isMobile]);
+  
   return (
     <SidebarInset className='flex flex-col w-full h-full'>
       <header
@@ -25,8 +38,8 @@ export default function AuthCard({ children, showBackButton, title, description,
           </Link>
         </div>
       </header>
-      <div className='flex flex-col items-center justify-center flex-1 w-full'>
-        <Card className='max-w-md mx-auto min-w-96'>
+      <div className='flex flex-col items-center justify-center flex-1 w-full p-4'>
+        <Card className={cn('mx-auto min-w-[320px]', cardWidth)}>
           <CardHeader>
             <div className='flex items-center justify-between'>
               <div className='min-w-8'>
@@ -37,13 +50,13 @@ export default function AuthCard({ children, showBackButton, title, description,
                   </Button>
                 )}
               </div>
-              <CardTitle className='text-2xl'>{title}</CardTitle>
+              <CardTitle className={cn('text-2xl', isMobile ? 'text-xl' : '')}>{title}</CardTitle>
               <div className='w-8' /> {/* Spacer for alignment */}
             </div>
-            <CardDescription className='text-center'>{description}</CardDescription>
+            <CardDescription className={cn('text-center', isMobile ? 'text-sm' : '')}>{description}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className='grid gap-6'>{children}</div>
+            <div className={cn('grid gap-6', isMobile ? 'gap-4' : '')}>{children}</div>
             {responseMessage && <ResponseMessage>{responseMessage}</ResponseMessage>}
           </CardContent>
         </Card>

@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { Inter } from 'next/font/google';
 import { cookies } from 'next/headers';
 import { ReactNode } from 'react';
+import { useMediaQuery } from 'react-responsive';
 import './globals.css';
 import { metadata, viewport } from './metadata';
 
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: { children: ReactNode }): React
           property='og:image'
           content={process.env.NEXT_PUBLIC_APP_LOGO_URI || `${process.env.NEXT_PUBLIC_APP_URI}/favicon.ico`}
         />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
       </head>
       <body className={cn(inter.className, theme, appearance)}>
         <InteractiveConfigContextWrapper>
@@ -46,9 +48,10 @@ export default function RootLayout({ children }: { children: ReactNode }): React
             <SidebarContentProvider>
               <SidebarProvider className='flex-1' defaultRightOpen={false}>
                 <SidebarMain side='left' />
-                {children}
+                <div className="w-full overflow-x-hidden">
+                  {children}
+                </div>
                 <Toaster />
-                {/* <ThemeSetter /> */}
                 <CommandMenu />
                 <SidebarContext side='right' />
               </SidebarProvider>

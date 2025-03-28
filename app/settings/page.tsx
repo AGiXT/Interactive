@@ -28,10 +28,12 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import axios from 'axios';
 import { getCookie } from 'cookies-next';
 import { Plus, Wrench, EyeIcon, EyeOffIcon } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { LuUnlink as Unlink } from 'react-icons/lu';
 import { useProviders } from '@/components/interactive/useProvider';
 import QRCode from 'react-qr-code';
+import { useMediaQuery } from 'react-responsive';
+import { cn } from '@/lib/utils';
 
 type ErrorState = {
   type: 'success' | 'error';
@@ -54,6 +56,7 @@ export function Providers() {
   const [error, setError] = useState<ErrorState>(null);
   const agent_name = getCookie('agixt-agent') || process.env.NEXT_PUBLIC_AGIXT_AGENT;
   const { data: providerData } = useProviders();
+  const isMobile = useMediaQuery({ maxWidth: 768 });
 
   // Filter connected providers
   const providers = useMemo(() => {
@@ -157,9 +160,14 @@ export function Providers() {
                     <p className='text-sm text-muted-foreground'>Connected</p>
                   </div>
                 </div>
-                <Button variant='outline' size='sm' className='gap-2' onClick={() => handleDisconnect(provider.name)}>
+                <Button 
+                  variant='outline' 
+                  size={isMobile ? 'sm' : 'default'} 
+                  className={cn('gap-2', isMobile ? 'px-2' : '')} 
+                  onClick={() => handleDisconnect(provider.name)}
+                >
                   <Unlink className='w-4 h-4' />
-                  Disconnect
+                  {!isMobile && 'Disconnect'}
                 </Button>
               </div>
               <div className='text-sm text-muted-foreground'>
@@ -186,8 +194,8 @@ export function Providers() {
                   <DialogTrigger asChild>
                     <Button
                       variant='outline'
-                      size='sm'
-                      className='gap-2'
+                      size={isMobile ? 'sm' : 'default'}
+                      className={cn('gap-2', isMobile ? 'px-2' : '')}
                       onClick={() => {
                         // Initialize settings with the default values from provider.settings
                         setSettings(
@@ -199,10 +207,10 @@ export function Providers() {
                       }}
                     >
                       <Plus className='w-4 h-4' />
-                      Connect
+                      {!isMobile && 'Connect'}
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className='sm:max-w-[425px]'>
+                  <DialogContent className={cn('sm:max-w-[425px]', isMobile ? 'w-[90%] p-4' : '')}>
                     <DialogHeader>
                       <DialogTitle>Configure {provider.name}</DialogTitle>
                       <DialogDescription>
@@ -263,6 +271,7 @@ export function AgentDialog({ open, setOpen }: { open: boolean; setOpen: (open: 
   const { mutate: mutateActiveAgent } = useAgent();
   const { mutate: mutateActiveCompany } = useCompany();
   const [newAgentName, setNewAgentName] = useState('');
+  const isMobile = useMediaQuery({ maxWidth: 768 });
 
   const handleNewAgent = async () => {
     try {
@@ -286,7 +295,7 @@ export function AgentDialog({ open, setOpen }: { open: boolean; setOpen: (open: 
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent>
+      <DialogContent className={isMobile ? 'w-[90%] max-w-sm p-4' : ''}>
         <DialogHeader>
           <DialogTitle>Create New Agent</DialogTitle>
         </DialogHeader>
@@ -299,15 +308,15 @@ export function AgentDialog({ open, setOpen }: { open: boolean; setOpen: (open: 
               id='agent-name'
               value={newAgentName}
               onChange={(e) => setNewAgentName(e.target.value)}
-              className='col-span-3'
+              className='col-span-3 w-full'
             />
           </div>
         </div>
-        <DialogFooter>
-          <Button variant='outline' onClick={() => setOpen(false)}>
+        <DialogFooter className={isMobile ? 'flex-col gap-2' : ''}>
+          <Button variant='outline' onClick={() => setOpen(false)} className={isMobile ? 'w-full' : ''}>
             Cancel
           </Button>
-          <Button onClick={handleNewAgent}>Create Agent</Button>
+          <Button onClick={handleNewAgent} className={isMobile ? 'w-full' : ''}>Create Agent</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -326,6 +335,7 @@ export default function AgentSettings() {
   const router = useRouter();
   const pathname = usePathname();
   const { data: companyData, mutate: mutateCompany } = useCompany();
+  const isMobile = useMediaQuery({ maxWidth: 768 });
 
   const handleDelete = async () => {
     try {
@@ -382,7 +392,7 @@ export default function AgentSettings() {
     }
   };
   const handleRevealWallet = async () => {
-    if (walletData) {
+    if (walletData && Object.keys(walletData).length > 0) {
       setIsWalletRevealed(!isWalletRevealed);
       return;
     }
@@ -403,7 +413,7 @@ export default function AgentSettings() {
     <SidebarPage title='Settings'>
       {searchParams.get('mode') != 'company' ? (
         <div className='flex items-center justify-center p-4'>
-          <Card className='w-full shadow-lg'>
+          <Card className={cn('w-full shadow-lg', isMobile ? 'p-2' : '')}>
             <CardHeader className='pb-2'>
               <div className='flex justify-between items-center'>
                 <CardTitle className='text-xl font-bold'>{agentData?.agent?.name}</CardTitle>
@@ -433,11 +443,19 @@ export default function AgentSettings() {
                     <span className='truncate' title={solanaWalletAddress?.value}>
                       <QRCode
                         size={128}
-                        style={{ height: 'auto', maxWidth: '30%', width: '30%' }}
+                        style={{ 
+                          height: 'auto', 
+                          maxWidth: isMobile ? '50%' : '30%', 
+                          width: isMobile ? '50%' : '30%' 
+                        }}
                         value={solanaWalletAddress?.value || ''}
                         viewBox={`0 0 256 256`}
                       />
-                      Public Key: {solanaWalletAddress?.value}
+                      <div className={isMobile ? 'text-xs' : ''}>
+                        Public Key: {isMobile 
+                          ? `${solanaWalletAddress?.value.substring(0, 10)}...` 
+                          : solanaWalletAddress?.value}
+                      </div>
                     </span>
 
                     <div className='flex flex-col gap-2'>
@@ -463,14 +481,17 @@ export default function AgentSettings() {
                         )}
                       </Button>
 
-                      {isWalletRevealed && walletData && (
+                      {isWalletRevealed && walletData && Object.keys(walletData).length > 0 && (
                         <div className='mt-2 p-4 border rounded-md bg-muted/20'>
                           <h4 className='font-medium mb-2 text-sm'>Wallet Details</h4>
                           <div className='space-y-2 text-sm'>
                             <div className='grid grid-cols-[auto_1fr] gap-x-2'>
                               <span className='font-medium text-muted-foreground'>Private Key:</span>
                               <div className='flex items-center'>
-                                <code className='bg-muted/50 px-2 py-1 rounded text-xs overflow-x-auto max-w-[300px]'>
+                                <code className={cn(
+                                  'bg-muted/50 px-2 py-1 rounded overflow-x-auto',
+                                  isMobile ? 'text-[10px] max-w-[150px]' : 'text-xs max-w-[300px]'
+                                )}>
                                   {walletData.private_key}
                                 </code>
                               </div>
@@ -478,7 +499,12 @@ export default function AgentSettings() {
                             <div className='grid grid-cols-[auto_1fr] gap-x-2'>
                               <span className='font-medium text-muted-foreground'>Passphrase:</span>
                               <div className='flex items-center'>
-                                <code className='bg-muted/50 px-2 py-1 rounded text-xs'>{walletData.passphrase}</code>
+                                <code className={cn(
+                                  'bg-muted/50 px-2 py-1 rounded',
+                                  isMobile ? 'text-[10px]' : 'text-xs'
+                                )}>
+                                  {walletData.passphrase}
+                                </code>
                               </div>
                             </div>
                             <Alert variant='warning' className='mt-2'>
@@ -495,8 +521,16 @@ export default function AgentSettings() {
               </div>
             </CardContent>
 
-            <CardFooter className='flex justify-end gap-2 pt-2'>
-              <Button variant='outline' size='sm' className='flex items-center' onClick={() => setIsCreateDialogOpen(true)}>
+            <CardFooter className={cn(
+              'pt-2', 
+              isMobile ? 'flex-wrap gap-2 justify-center' : 'flex justify-end gap-2'
+            )}>
+              <Button 
+                variant='outline' 
+                size='sm' 
+                className='flex items-center' 
+                onClick={() => setIsCreateDialogOpen(true)}
+              >
                 <LuPlus className='h-4 w-4 mr-1' />
                 Create Agent
               </Button>
@@ -508,7 +542,7 @@ export default function AgentSettings() {
                     Edit
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className={isMobile ? 'w-[90%] max-w-sm p-4' : ''}>
                   <DialogHeader>
                     <DialogTitle>Edit Agent</DialogTitle>
                   </DialogHeader>
@@ -516,12 +550,12 @@ export default function AgentSettings() {
                     <Label htmlFor='name'>Agent Name</Label>
                     <Input id='name' value={editName} onChange={(e) => setEditName(e.target.value)} className='mt-1' />
                   </div>
-                  <DialogFooter>
+                  <DialogFooter className={isMobile ? 'flex-col gap-2' : ''}>
                     <DialogClose asChild>
-                      <Button variant='outline'>Cancel</Button>
+                      <Button variant='outline' className={isMobile ? 'w-full' : ''}>Cancel</Button>
                     </DialogClose>
                     <DialogClose asChild>
-                      <Button onClick={handleSaveEdit}>Save</Button>
+                      <Button onClick={handleSaveEdit} className={isMobile ? 'w-full' : ''}>Save</Button>
                     </DialogClose>
                   </DialogFooter>
                 </DialogContent>
