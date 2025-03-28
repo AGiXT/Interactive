@@ -398,7 +398,7 @@ export default function AgentSettings() {
       setIsLoadingWallet(false);
     }
   };
-  const solanaWalletAddress = agentData?.agent?.settings.find((setting) => setting.name === 'SOLANA_WALLET_ADDRESS');
+  const solanaWalletAddress = agentData?.agent?.settings?.find((setting) => setting.name === 'SOLANA_WALLET_ADDRESS');
   return (
     <SidebarPage title='Settings'>
       {searchParams.get('mode') != 'company' ? (

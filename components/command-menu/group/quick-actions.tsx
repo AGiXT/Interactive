@@ -67,7 +67,7 @@ export const quickActions = [
     label: 'Theme',
     icon: Palette,
     description: 'Change the theme',
-    keywords: ['theme', 'colour', 'blind', 'mode', 'color', 'dark', 'light', 'system', 'colourblind', 'colourblind-dark'],
+    keywords: ['theme', 'mode', 'color', 'dark', 'light', 'system'],
     subPage: 'theme',
   },
 ];
