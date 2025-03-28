@@ -22,20 +22,26 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { useToast } from '@/components/layout/toast';
-
+import { useSearchParams } from 'next/navigation';
 import MarkdownBlock from '@/components/conversation/Message/MarkdownBlock';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import axios from 'axios';
 import { getCookie } from 'cookies-next';
-import { Plus, Wrench } from 'lucide-react';
+import { Plus, Wrench, EyeIcon, EyeOffIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { LuUnlink as Unlink } from 'react-icons/lu';
 import { useProviders } from '@/components/interactive/useProvider';
+import QRCode from 'react-qr-code';
 
 type ErrorState = {
   type: 'success' | 'error';
   message: string;
 } | null;
+
+type WalletKeys = {
+  private_key: string;
+  passphrase: string;
+};
 
 interface ExtensionSettings {
   agent_name: string;
@@ -309,10 +315,13 @@ export function AgentDialog({ open, setOpen }: { open: boolean; setOpen: (open: 
 }
 
 export default function AgentSettings() {
+  const searchParams = useSearchParams();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const { data: agentData, mutate: mutateAgent } = useAgent();
   const [editName, setEditName] = useState('');
-
+  const [walletData, setWalletData] = useState({} as WalletKeys);
+  const [isWalletRevealed, setIsWalletRevealed] = useState(false);
+  const [isLoadingWallet, setIsLoadingWallet] = useState(false);
   const context = useInteractiveConfig();
   const router = useRouter();
   const pathname = usePathname();
@@ -356,87 +365,190 @@ export default function AgentSettings() {
     }
   };
 
+  const getAgentWallet = async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/agent/${agentData?.agent?.name}/wallet`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: getCookie('jwt'),
+          },
+        },
+      );
+      return response.data as WalletKeys;
+    } catch (error) {
+      console.error('Failed to get agent wallet:', error);
+    }
+  };
+  const handleRevealWallet = async () => {
+    if (walletData) {
+      setIsWalletRevealed(!isWalletRevealed);
+      return;
+    }
+
+    setIsLoadingWallet(true);
+    try {
+      const data = await getAgentWallet();
+      setWalletData(data);
+      setIsWalletRevealed(true);
+    } catch (error) {
+      console.error('Failed to retrieve wallet data:', error);
+    } finally {
+      setIsLoadingWallet(false);
+    }
+  };
+  const solanaWalletAddress = agentData?.agent?.settings?.find((setting) => setting.name === 'SOLANA_WALLET_ADDRESS');
   return (
     <SidebarPage title='Settings'>
-      <div className='flex items-center justify-center p-4'>
-        <Card className='w-full shadow-lg'>
-          <CardHeader className='pb-2'>
-            <div className='flex justify-between items-center'>
-              <CardTitle className='text-xl font-bold'>{agentData?.agent?.name}</CardTitle>
-              {agentData?.agent?.default && (
-                <Badge variant='secondary' className='ml-2'>
-                  Default
-                </Badge>
-              )}
-            </div>
-            <p className='text-muted-foreground'>{companyData?.name}</p>
-          </CardHeader>
+      {searchParams.get('mode') != 'company' ? (
+        <div className='flex items-center justify-center p-4'>
+          <Card className='w-full shadow-lg'>
+            <CardHeader className='pb-2'>
+              <div className='flex justify-between items-center'>
+                <CardTitle className='text-xl font-bold'>{agentData?.agent?.name}</CardTitle>
+                {agentData?.agent?.default && (
+                  <Badge variant='secondary' className='ml-2'>
+                    Default
+                  </Badge>
+                )}
+              </div>
+              <p className='text-muted-foreground'>{companyData?.name}</p>
+            </CardHeader>
 
-          <CardContent className='space-y-2 pb-2'>
-            <div className='grid grid-cols-[auto_1fr] gap-x-2 text-sm'>
-              <span className='font-medium text-muted-foreground'>Agent ID:</span>
-              <span className='truncate' title={agentData?.agent?.id}>
-                {agentData?.agent?.id}
-              </span>
+            <CardContent className='space-y-2 pb-2'>
+              <div className='grid grid-cols-[auto_1fr] gap-x-2 text-sm'>
+                <span className='font-medium text-muted-foreground'>Agent ID:</span>
+                <span className='truncate' title={agentData?.agent?.id}>
+                  {agentData?.agent?.id}
+                </span>
 
-              <span className='font-medium text-muted-foreground'>Company ID:</span>
-              <span className='truncate' title={agentData?.agent?.companyId}>
-                {agentData?.agent?.companyId}
-              </span>
-            </div>
-          </CardContent>
+                <span className='font-medium text-muted-foreground'>Company ID:</span>
+                <span className='truncate' title={agentData?.agent?.companyId}>
+                  {agentData?.agent?.companyId}
+                </span>
+                {solanaWalletAddress && (
+                  <>
+                    <span className='font-medium text-muted-foreground'>Solana Wallet Address:</span>
+                    <span className='truncate' title={solanaWalletAddress?.value}>
+                      <QRCode
+                        size={128}
+                        style={{ height: 'auto', maxWidth: '30%', width: '30%' }}
+                        value={solanaWalletAddress?.value || ''}
+                        viewBox={`0 0 256 256`}
+                      />
+                      Public Key: {solanaWalletAddress?.value}
+                    </span>
 
-          <CardFooter className='flex justify-end gap-2 pt-2'>
-            <Button variant='outline' size='sm' className='flex items-center' onClick={() => setIsCreateDialogOpen(true)}>
-              <LuPlus className='h-4 w-4 mr-1' />
-              Create Agent
-            </Button>
+                    <div className='flex flex-col gap-2'>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        className='self-start flex items-center gap-2'
+                        onClick={handleRevealWallet}
+                        disabled={isLoadingWallet}
+                      >
+                        {isLoadingWallet ? (
+                          <span>Loading...</span>
+                        ) : isWalletRevealed ? (
+                          <>
+                            <EyeOffIcon className='h-4 w-4' />
+                            Hide Private Keys
+                          </>
+                        ) : (
+                          <>
+                            <EyeIcon className='h-4 w-4' />
+                            Reveal Private Keys
+                          </>
+                        )}
+                      </Button>
 
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant='outline' size='sm' className='flex items-center'>
-                  <LuPencil className='h-4 w-4 mr-1' />
-                  Edit
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Edit Agent</DialogTitle>
-                </DialogHeader>
-                <div className='py-4'>
-                  <Label htmlFor='name'>Agent Name</Label>
-                  <Input id='name' value={editName} onChange={(e) => setEditName(e.target.value)} className='mt-1' />
-                </div>
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button variant='outline'>Cancel</Button>
-                  </DialogClose>
-                  <DialogClose asChild>
-                    <Button onClick={handleSaveEdit}>Save</Button>
-                  </DialogClose>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                      {isWalletRevealed && walletData && (
+                        <div className='mt-2 p-4 border rounded-md bg-muted/20'>
+                          <h4 className='font-medium mb-2 text-sm'>Wallet Details</h4>
+                          <div className='space-y-2 text-sm'>
+                            <div className='grid grid-cols-[auto_1fr] gap-x-2'>
+                              <span className='font-medium text-muted-foreground'>Private Key:</span>
+                              <div className='flex items-center'>
+                                <code className='bg-muted/50 px-2 py-1 rounded text-xs overflow-x-auto max-w-[300px]'>
+                                  {walletData.private_key}
+                                </code>
+                              </div>
+                            </div>
+                            <div className='grid grid-cols-[auto_1fr] gap-x-2'>
+                              <span className='font-medium text-muted-foreground'>Passphrase:</span>
+                              <div className='flex items-center'>
+                                <code className='bg-muted/50 px-2 py-1 rounded text-xs'>{walletData.passphrase}</code>
+                              </div>
+                            </div>
+                            <Alert variant='warning' className='mt-2'>
+                              <AlertDescription>
+                                Keep these details secure. Never share your private key or passphrase with anyone.
+                              </AlertDescription>
+                            </Alert>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </CardContent>
 
-            <Button variant='outline' size='sm' className='flex items-center' onClick={handleExport}>
-              <LuDownload className='h-4 w-4 mr-1' />
-              Export
-            </Button>
+            <CardFooter className='flex justify-end gap-2 pt-2'>
+              <Button variant='outline' size='sm' className='flex items-center' onClick={() => setIsCreateDialogOpen(true)}>
+                <LuPlus className='h-4 w-4 mr-1' />
+                Create Agent
+              </Button>
 
-            <Button
-              variant='destructive'
-              size='sm'
-              className='flex items-center'
-              disabled={agentData?.agent?.default}
-              onClick={handleDelete}
-            >
-              <LuTrash2 className='h-4 w-4 mr-1' />
-              Delete
-            </Button>
-          </CardFooter>
-        </Card>
-        <AgentDialog open={isCreateDialogOpen} setOpen={setIsCreateDialogOpen} />
-      </div>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant='outline' size='sm' className='flex items-center'>
+                    <LuPencil className='h-4 w-4 mr-1' />
+                    Edit
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Edit Agent</DialogTitle>
+                  </DialogHeader>
+                  <div className='py-4'>
+                    <Label htmlFor='name'>Agent Name</Label>
+                    <Input id='name' value={editName} onChange={(e) => setEditName(e.target.value)} className='mt-1' />
+                  </div>
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button variant='outline'>Cancel</Button>
+                    </DialogClose>
+                    <DialogClose asChild>
+                      <Button onClick={handleSaveEdit}>Save</Button>
+                    </DialogClose>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <Button variant='outline' size='sm' className='flex items-center' onClick={handleExport}>
+                <LuDownload className='h-4 w-4 mr-1' />
+                Export
+              </Button>
+
+              <Button
+                variant='destructive'
+                size='sm'
+                className='flex items-center'
+                disabled={agentData?.agent?.default}
+                onClick={handleDelete}
+              >
+                <LuTrash2 className='h-4 w-4 mr-1' />
+                Delete
+              </Button>
+            </CardFooter>
+          </Card>
+          <AgentDialog open={isCreateDialogOpen} setOpen={setIsCreateDialogOpen} />
+        </div>
+      ) : (
+        <></>
+      )}
       <Providers />
     </SidebarPage>
   );

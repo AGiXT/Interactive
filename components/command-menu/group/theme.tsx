@@ -51,17 +51,5 @@ export const themeGroup: CommandMenuGroup = {
       description: 'Use system theme',
       keywords: ['theme', 'system', 'mode', 'color'],
     },
-    {
-      label: 'Colour Blind',
-      icon: Eye,
-      description: 'Enable colour blind mode',
-      keywords: ['theme', 'colour', 'blind', 'mode', 'color'],
-    },
-    {
-      label: 'Colour Blind Dark',
-      icon: Eye,
-      description: 'Enable colour blind dark mode',
-      keywords: ['theme', 'colour', 'blind', 'mode', 'color'],
-    },
   ],
 };

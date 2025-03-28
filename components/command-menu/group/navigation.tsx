@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation';
 import { CommandItemComponent, CommandMenuGroup } from '@/components/command-menu/index';
 import { useCommandMenu } from '@/components/command-menu/command-menu-context';
 import { CommandGroup, CommandSeparator } from '@/components/ui/command';
-import { items } from '@/components/layout/NavMain';
+import { items } from '@/app/NavMenuItems';
 
 export function NavigationGroup() {
   const router = useRouter();
