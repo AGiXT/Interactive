@@ -220,6 +220,17 @@ export const TeamUsers = () => {
             <DropdownMenuContent align='end' className={cn('w-[160px]', isMobile ? 'w-[120px]' : '')}>
               <DropdownMenuLabel>User Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
+              {/* <DropdownMenuItem onClick={(e) => e.preventDefault()} className='p-0'>
+                <Button 
+                  variant='ghost' 
+                  className={cn(
+                    'justify-start w-full',
+                    isMobile ? 'text-sm' : ''
+                  )}
+                >
+                  Edit User
+                </Button>
+              </DropdownMenuItem> */}
               <DropdownMenuItem onSelect={() => router.push(`/users/${row.original.id}`)}>View Details</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem

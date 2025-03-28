@@ -5,7 +5,7 @@ import axios, { AxiosError } from 'axios';
 import { getCookie } from 'cookies-next';
 import QRCode from 'react-qr-code';
 import ReCAPTCHA from 'react-google-recaptcha';
-import { LuCheck as Check, LuCopy as Copy } from 'react-icons/lu';
+import { LuCheck as Check, LuCopy as Copy, LuMessageSquare as MessageSquare } from 'react-icons/lu';
 import AuthCard from '@/components/layout/AuthCard';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -194,6 +194,18 @@ export default function Login({ searchParams }: { searchParams: { otp_uri?: stri
                 )}
                 Send Email Code
               </Button>
+
+              {/* <Button
+                onClick={handleSMSSend}
+                disabled={missingAuthState.loading.sms}
+                variant='outline'
+                type='button'
+                size={isMobile ? 'sm' : 'default'}
+                className='flex w-full gap-2 bg-transparent'
+              >
+                {missingAuthState.loading.sms ? <Loader2 className='w-4 h-4 animate-spin' /> : <MessageSquare className='w-4 h-4' />}
+                Send SMS Code
+              </Button> */}
             </div>
           </DisclosureContent>
         </Disclosure>

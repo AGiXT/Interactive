@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { getCookie } from 'cookies-next';
+import { useEffect, useMemo, useState, useContext } from 'react';
+import { getCookie, setCookie } from 'cookies-next';
 import Link from 'next/link';
 import { Check, ChevronLeft, ChevronsUpDown, Plus } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -80,19 +80,14 @@ export function AgentSelector() {
               tooltip='Switch Active Agent'
               className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
             >
-              {() => (
-                <>
-                  <div className='flex items-center justify-center rounded-lg aspect-square size-8 bg-sidebar-primary text-sidebar-primary-foreground'>
-                    <FaRobot className='size-4' />
-                  </div>
-                  <div className='grid flex-1 text-sm leading-tight text-left'>
-                    <span className='font-semibold truncate'>{activeAgent?.agent?.name}</span>
-
-                    <span className='text-xs truncate'>{activeCompany?.name}</span>
-                  </div>
-                  <ChevronsUpDown className='ml-auto' />
-                </>
-              )}
+              <div className='flex items-center justify-center rounded-lg aspect-square size-8 bg-sidebar-primary text-sidebar-primary-foreground'>
+                <FaRobot className='size-4' />
+              </div>
+              <div className='grid flex-1 text-sm leading-tight text-left'>
+                <span className='font-semibold truncate'>{activeAgent?.agent?.name}</span>
+                <span className='text-xs truncate'>{activeCompany?.name}</span>
+              </div>
+              <ChevronsUpDown className='ml-auto' />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -136,6 +131,7 @@ export function AgentSelector() {
 }
 
 export function ChatHistory() {
+  const state = useContext(InteractiveConfigContext);
   const pathname = usePathname();
   const router = useRouter();
   const { data: conversationData, isLoading } = useConversations();
@@ -144,6 +140,12 @@ export function ChatHistory() {
 
   const handleOpenConversation = ({ conversationId }: { conversationId: string | number }) => {
     router.push(`/chat/${conversationId}`);
+    
+    // RESTORED: Update the conversation state in the context
+    state?.mutate?.((oldState: InteractiveConfig) => ({
+      ...oldState,
+      overrides: { ...oldState.overrides, conversation: conversationId },
+    }));
   };
 
   if (!conversationData || !conversationData.length || isLoading) return null;
@@ -201,6 +203,22 @@ export function ChatHistory() {
           </SidebarMenu>
         </div>
       ))}
+      
+      {/* RESTORED: "View More Conversations" button */}
+      <SidebarMenu>
+        <SidebarMenuItem>
+          {conversationData && conversationData?.length > 10 && (
+            <ChatSearch {...{ conversationData, handleOpenConversation }}>
+              <SidebarMenuItem>
+                <SidebarMenuButton className='text-sidebar-foreground/70' side='left' tooltip="View More Conversations">
+                  <DotsHorizontalIcon className='text-sidebar-foreground/70' />
+                  <span>More</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </ChatSearch>
+          )}
+        </SidebarMenuItem>
+      </SidebarMenu>
     </SidebarGroup>
   );
 }
@@ -223,7 +241,8 @@ function ChatSearch({
           <CommandList>
             {conversationData.map((conversation) => (
               <CommandItem key={conversation.id} asChild>
-                <DialogClose className="w-full" onSelect={() => handleOpenConversation({ conversationId: conversation.id })}>
+                {/* FIXED: Changed onSelect to onClick to maintain original behavior */}
+                <DialogClose className="w-full" onClick={() => handleOpenConversation({ conversationId: conversation.id })}>
                   <span className="px-2">{conversation.name}</span>
                 </DialogClose>
               </CommandItem>
@@ -267,6 +286,8 @@ function groupConversations(conversations: ConversationEdge[]) {
 
   return Object.fromEntries(Object.entries(groups).filter(([, conversationArray]) => conversationArray.length > 0));
 }
+
+// Fixed version of the NavMain component
 
 export function NavMain() {
   const router = useRouter();
@@ -323,6 +344,13 @@ export function NavMain() {
     );
   }
 
+  // Handle navigation and only close sidebar on mobile if navigating to a final destination
+  const handleNavigation = (url, shouldCloseSidebar = false) => {
+    if (url) router.push(url);
+    // Only close the sidebar if explicitly requested (for leaf items)
+    if (isMobile && shouldCloseSidebar) toggleSidebar();
+  };
+
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Pages</SidebarGroupLabel>
@@ -341,8 +369,10 @@ export function NavMain() {
                   tooltip={item.title}
                   onClick={() => {
                     if (!open) toggleSidebar();
-                    if (item.url) router.push(item.url);
-                    if (isMobile) toggleSidebar(); // Close sidebar after navigation on mobile
+                    // Only navigate if there's a URL and no sub-items
+                    if (item.url && !item.items?.length) {
+                      handleNavigation(item.url, true);
+                    }
                   }}
                   className={cn(item.isActive && !item.items?.length && 'bg-muted')}
                 >
@@ -382,7 +412,16 @@ export function NavMain() {
                                       <SidebarMenuSubButton 
                                         asChild
                                         onClick={() => {
-                                          if (isMobile) toggleSidebar(); // Close sidebar after navigation on mobile
+                                          // This is a leaf node, so close sidebar on mobile
+                                          handleNavigation(
+                                            nestedItem.queryParams
+                                              ? Object.entries(nestedItem.queryParams).reduce(
+                                                  (url, [key, value]) => url + `${key}=${value}&`,
+                                                  nestedItem.url + '?',
+                                                )
+                                              : nestedItem.url,
+                                            true
+                                          );
                                         }}
                                       >
                                         <Link
@@ -413,7 +452,16 @@ export function NavMain() {
                           <SidebarMenuSubButton 
                             asChild
                             onClick={() => {
-                              if (isMobile) toggleSidebar(); // Close sidebar after navigation on mobile
+                              // This is a leaf node, so close sidebar on mobile
+                              handleNavigation(
+                                subItem.queryParams
+                                  ? Object.entries(subItem.queryParams).reduce(
+                                      (url, [key, value]) => url + `${key}=${value}&`,
+                                      subItem.url + '?',
+                                    )
+                                  : subItem.url,
+                                true
+                              );
                             }}
                           >
                             <Link

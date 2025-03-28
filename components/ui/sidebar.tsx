@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -14,9 +14,13 @@ import { setCookie } from 'cookies-next';
 import * as React from 'react';
 import { useMediaQuery } from 'react-responsive';
 
+const SIDEBAR_COOKIE_NAME = 'sidebar:state';
+const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = '16rem';
 const SIDEBAR_WIDTH_MOBILE = '18rem';
 const SIDEBAR_WIDTH_ICON = '3rem';
+const SIDEBAR_KEYBOARD_SHORTCUT = 'b';
+const MOBILE_BREAKPOINT = 768;
 
 type SidebarContextMap = {
   left?: SidebarContext;
@@ -50,7 +54,7 @@ function useSidebar(side: SidebarSide = 'left') {
   return sidebarContext;
 }
 
-const SidebarProvider = React.forwardRef
+const SidebarProvider = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<'div'> & {
     defaultLeftOpen?: boolean;
@@ -72,24 +76,9 @@ const SidebarProvider = React.forwardRef
     },
     ref,
   ) => {
-    const MOBILE_BREAKPOINT = 768;
-    function useIsMobile() {
-      const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined);
-
-      React.useEffect(() => {
-        const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
-        const onChange = () => {
-          setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-        };
-        mql.addEventListener('change', onChange);
-        setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-        return () => mql.removeEventListener('change', onChange);
-      }, []);
-
-      return !!isMobile;
-    }
-
-    const isMobile = useIsMobile();
+    // FIXED: Use react-responsive for consistent mobile detection
+    const isMobile = useMediaQuery({ maxWidth: MOBILE_BREAKPOINT - 1 });
+    
     const [leftOpenMobile, setLeftOpenMobile] = React.useState(false);
     const [rightOpenMobile, setRightOpenMobile] = React.useState(false);
     const [leftWidth, setLeftWidth] = React.useState(256);
@@ -138,7 +127,7 @@ const SidebarProvider = React.forwardRef
           state: leftOpen ? 'expanded' : 'collapsed',
           open: leftOpen,
           setOpen: createSetOpen('left', onLeftOpenChange),
-          isMobile,
+          isMobile: !!isMobile, // Ensure boolean type
           openMobile: leftOpenMobile,
           setOpenMobile: setLeftOpenMobile,
           toggleSidebar: createToggleSidebar('left'),
@@ -149,7 +138,7 @@ const SidebarProvider = React.forwardRef
           state: rightOpen ? 'expanded' : 'collapsed',
           open: rightOpen,
           setOpen: createSetOpen('right', onRightOpenChange),
-          isMobile,
+          isMobile: !!isMobile, // Ensure boolean type
           openMobile: rightOpenMobile,
           setOpenMobile: setRightOpenMobile,
           toggleSidebar: createToggleSidebar('right'),
@@ -194,7 +183,7 @@ const SidebarProvider = React.forwardRef
 );
 SidebarProvider.displayName = 'SidebarProvider';
 
-const Sidebar = React.forwardRef
+const Sidebar = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<'div'> & {
     side?: 'left' | 'right';
@@ -239,7 +228,20 @@ const Sidebar = React.forwardRef
           }
           side={side}
         >
-          <div className='flex flex-col w-full h-full mobile-sidebar'>{children}</div>
+          {/* Add SheetTitle for accessibility - visually hidden */}
+          <div className="sr-only">
+            <SheetTitle>Navigation Menu</SheetTitle>
+          </div>
+          
+          {/* Stop propagation of click events to prevent sidebar from closing */}
+          <div 
+            className='flex flex-col w-full h-full mobile-sidebar'
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+          >
+            {children}
+          </div>
         </SheetContent>
       </Sheet>
     );
@@ -291,12 +293,41 @@ const Sidebar = React.forwardRef
 });
 Sidebar.displayName = 'Sidebar';
 
-const SidebarTrigger = React.forwardRef
+const SidebarTrigger = React.forwardRef<
   React.ElementRef<typeof Button>,
   React.ComponentProps<typeof Button> & { side?: SidebarSide }
 >(({ side = 'left', className, onClick, ...props }, ref) => {
   const { toggleSidebar } = useSidebar(side);
-  const isMobile = useMediaQuery({ maxWidth: 768 });
+  // FIXED: Use react-responsive for consistent mobile detection
+  const isMobile = useMediaQuery({ maxWidth: MOBILE_BREAKPOINT - 1 });
+  
+  // For SSR/hydration safety, render a basic version until client-side
+  const [isClient, setIsClient] = React.useState(false);
+  
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Default styling for SSR that works for both mobile and desktop
+  if (!isClient) {
+    return (
+      <Button
+        ref={ref}
+        data-sidebar='trigger'
+        variant='ghost'
+        size='icon'
+        className={cn('h-7 w-7', className)}
+        onClick={(event) => {
+          onClick?.(event);
+          toggleSidebar();
+        }}
+        {...props}
+      >
+        <ViewVerticalIcon />
+        <span className='sr-only'>Toggle Sidebar</span>
+      </Button>
+    );
+  }
 
   return (
     <Button
@@ -304,7 +335,12 @@ const SidebarTrigger = React.forwardRef
       data-sidebar='trigger'
       variant={isMobile ? 'default' : 'ghost'}
       size='icon'
-      className={cn('h-7 w-7', isMobile ? 'fixed bottom-4 right-4 z-50 rounded-full shadow-lg w-12 h-12' : '', className)}
+      className={cn(
+        isMobile 
+          ? 'fixed bottom-4 right-4 z-50 rounded-full shadow-lg w-12 h-12' 
+          : 'relative h-7 w-7',
+        className
+      )}
       onClick={(event) => {
         onClick?.(event);
         toggleSidebar();
@@ -318,7 +354,7 @@ const SidebarTrigger = React.forwardRef
 });
 SidebarTrigger.displayName = 'SidebarTrigger';
 
-const SidebarRail = React.forwardRef
+const SidebarRail = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<'button'> & {
     side?: SidebarSide;
@@ -331,7 +367,7 @@ const SidebarRail = React.forwardRef
   const startXRef = React.useRef(0);
   const startWidthRef = React.useRef(0);
   const lastWidthRef = React.useRef(width);
-  const isMobile = useMediaQuery({ maxWidth: 768 });
+  const isMobile = useMediaQuery({ maxWidth: MOBILE_BREAKPOINT - 1 });
   
   // Hide rail on mobile devices
   if (isMobile) {
@@ -425,7 +461,7 @@ const SidebarRail = React.forwardRef
 SidebarRail.displayName = 'SidebarRail';
 
 const SidebarInset = React.forwardRef<HTMLDivElement, React.ComponentProps<'main'>>(({ className, ...props }, ref) => {
-  const isMobile = useMediaQuery({ maxWidth: 768 });
+  const isMobile = useMediaQuery({ maxWidth: MOBILE_BREAKPOINT - 1 });
   
   return (
     <main
@@ -511,6 +547,8 @@ const SidebarGroup = React.forwardRef<HTMLDivElement, React.ComponentProps<'div'
 });
 SidebarGroup.displayName = 'SidebarGroup';
 
+// Rest of the components remain unchanged
+
 const SidebarGroupLabel = React.forwardRef<HTMLDivElement, React.ComponentProps<'div'> & { asChild?: boolean }>(
   ({ className, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : 'div';
@@ -589,7 +627,7 @@ const sidebarMenuButtonVariants = cva(
   },
 );
 
-const SidebarMenuButton = React.forwardRef
+const SidebarMenuButton = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<'button'> & {
     side?: SidebarSide;
@@ -646,7 +684,7 @@ const SidebarMenuButton = React.forwardRef
 );
 SidebarMenuButton.displayName = 'SidebarMenuButton';
 
-const SidebarMenuAction = React.forwardRef
+const SidebarMenuAction = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<'button'> & {
     asChild?: boolean;
@@ -694,7 +732,7 @@ const SidebarMenuBadge = React.forwardRef<HTMLDivElement, React.ComponentProps<'
 ));
 SidebarMenuBadge.displayName = 'SidebarMenuBadge';
 
-const SidebarMenuSkeleton = React.forwardRef
+const SidebarMenuSkeleton = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<'div'> & {
     showIcon?: boolean;
@@ -746,7 +784,7 @@ const SidebarMenuSubItem = React.forwardRef<HTMLLIElement, React.ComponentProps<
 ));
 SidebarMenuSubItem.displayName = 'SidebarMenuSubItem';
 
-const SidebarMenuSubButton = React.forwardRef
+const SidebarMenuSubButton = React.forwardRef<
   HTMLAnchorElement,
   React.ComponentProps<'a'> & {
     asChild?: boolean;

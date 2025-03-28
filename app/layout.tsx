@@ -11,19 +11,17 @@ import { cn } from '@/lib/utils';
 import { Inter } from 'next/font/google';
 import { cookies } from 'next/headers';
 import { ReactNode } from 'react';
-import { useMediaQuery } from 'react-responsive';
 import './globals.css';
 import { metadata, viewport } from './metadata';
 
 const inter = Inter({ subsets: ['latin'] });
-
 export { metadata, viewport };
 
 export default function RootLayout({ children }: { children: ReactNode }): ReactNode {
   const cookieStore = cookies();
   const theme = cookieStore.get('theme')?.value ?? process.env.NEXT_PUBLIC_THEME_DEFAULT_MODE;
   const appearance = cookieStore.get('appearance')?.value ?? '';
-
+  
   return (
     <html lang='en'>
       <head>
@@ -52,6 +50,7 @@ export default function RootLayout({ children }: { children: ReactNode }): React
                   {children}
                 </div>
                 <Toaster />
+                {/* <ThemeSetter /> */}
                 <CommandMenu />
                 <SidebarContext side='right' />
               </SidebarProvider>
