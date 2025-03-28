@@ -391,8 +391,11 @@ class FrontEndTest:
         """
         try:
             logging.info(action_description)
+            await asyncio.sleep(1)
+            await self.page.wait_for_load_state()
             result = await action_function()
             await self.page.wait_for_load_state()
+            await asyncio.sleep(1)
             if followup_function:
                 await followup_function()
             await self.take_screenshot(f"{action_description}")
@@ -600,18 +603,22 @@ class FrontEndTest:
             # Navigate to login page
             await self.test_action(
                 "The user navigates to the login page",
+                lambda: self.page.wait_for_selector("input#email", state="visible"),
                 lambda: self.page.goto(f"{self.base_uri}/user"),
             )
 
-            # Enter email address
             await self.test_action(
                 f"The user enters their email address: {email}",
+                lambda: self.page.wait_for_selector("#email", state="visible"),
                 lambda: self.page.fill("#email", email),
             )
 
             # Click continue with email
             await self.test_action(
                 "The user clicks 'Continue with Email' to proceed",
+                lambda: self.page.wait_for_selector(
+                    "text=Continue with Email", state="visible"
+                ),
                 lambda: self.page.click("text=Continue with Email"),
             )
 
@@ -621,12 +628,16 @@ class FrontEndTest:
             # Fill in the OTP code
             await self.test_action(
                 f"The user enters their MFA code: {otp}",
+                lambda: self.page.wait_for_selector("#token", state="visible"),
                 lambda: self.page.fill("#token", otp),
             )
 
             # Submit the login form
             await self.test_action(
                 "The user submits the MFA token to complete login",
+                lambda: self.page.wait_for_selector(
+                    'button[type="submit"]', state="visible"
+                ),
                 lambda: self.page.click('button[type="submit"]'),
             )
 
@@ -639,33 +650,36 @@ class FrontEndTest:
             )
         except Exception as e:
             logging.error(f"Error during login: {e}")
-            raise Exception(f"Error during login: {e}")
+            raise Exception(f"Error during login: {str(e)}")
 
     async def handle_logout(self, email=None):
         """Handle logout with multiple click approaches"""
         try:
             # Wait for page to be fully loaded
-            await self.page.wait_for_load_state("networkidle")
+            await self.test_action(
+                "Waiting for page to load for logout",
+                lambda: self.page.wait_for_load_state("networkidle"),
+            )
+
             await self.take_screenshot("Before attempting to log out")
 
             # Determine the email to look for
             email_part = email if email else "@example.com"
             logging.info(f"Targeting button containing email: {email_part}")
 
-            # First approach: Try using Playwright's built-in click
+            # First approach: Try using Playwright's click method
             try:
                 logging.info("Trying Playwright's click method")
-                email_button = self.page.get_by_text(email_part)
+                await self.test_action(
+                    "Finding user button with email",
+                    lambda: self.page.wait_for_selector(
+                        f'text="{email_part}"', state="visible"
+                    ),
+                    lambda: self.page.click(f'text="{email_part}"', force=True),
+                )
 
-                # Check if we found it
-                button_count = await email_button.count()
-                logging.info(f"Found {button_count} elements with email text")
-
-                if button_count > 0:
-                    # Click with force:true to ensure the click happens
-                    await email_button.click(force=True)
-                    await self.page.wait_for_timeout(1500)
-                    await self.take_screenshot("After Playwright click")
+                await self.page.wait_for_timeout(1500)
+                await self.take_screenshot("After Playwright click")
 
                 # Check if any menu items appeared
                 menu_items = self.page.locator('[role="menuitem"]')
@@ -683,7 +697,14 @@ class FrontEndTest:
                             or "sign out" in text.lower()
                         ):
                             logging.info(f"Found logout item: {text}")
-                            await item.click()
+                            await self.test_action(
+                                "Clicking logout menu item",
+                                lambda: self.page.wait_for_selector(
+                                    f'[role="menuitem"]:has-text("{text}")',
+                                    state="visible",
+                                ),
+                                lambda: item.click(),
+                            )
                             await self.page.wait_for_timeout(2000)
 
                             # Check if we logged out
@@ -701,7 +722,13 @@ class FrontEndTest:
                     # If we didn't find a specific logout item, try the last one
                     if menu_count > 0:
                         logging.info("Clicking last menu item")
-                        await menu_items.last.click()
+                        await self.test_action(
+                            "Clicking last menu item",
+                            lambda: self.page.wait_for_selector(
+                                '[role="menuitem"]:last-child', state="visible"
+                            ),
+                            lambda: menu_items.last.click(),
+                        )
                         await self.page.wait_for_timeout(2000)
 
                         # Check if we logged out
@@ -723,64 +750,78 @@ class FrontEndTest:
                 logging.info("Trying full user action sequence")
 
                 # Find the button with more specific selector
-                user_details = await self.page.evaluate(
-                    f"""() => {{
-                    const allButtons = Array.from(document.querySelectorAll('button'));
-                    const userButton = allButtons.find(button => 
-                        button.textContent.includes('{email_part}') && 
-                        button.querySelector('[data-size="lg"]') !== null
-                    );
-                    
-                    if (userButton) {{
-                        // Get position for mouse click
-                        const rect = userButton.getBoundingClientRect();
-                        return {{
-                            found: true,
-                            id: userButton.id,
-                            x: rect.left + rect.width / 2,
-                            y: rect.top + rect.height / 2
-                        }};
-                    }}
-                    
-                    return {{ found: false }};
-                }}"""
+                user_details = await self.test_action(
+                    "Finding user button with specific details",
+                    lambda: self.page.wait_for_selector("body", state="visible"),
+                    lambda: self.page.evaluate(
+                        f"""() => {{
+                        const allButtons = Array.from(document.querySelectorAll('button'));
+                        const userButton = allButtons.find(button => 
+                            button.textContent.includes('{email_part}') && 
+                            button.querySelector('[data-size="lg"]') !== null
+                        );
+                        
+                        if (userButton) {{
+                            // Get position for mouse click
+                            const rect = userButton.getBoundingClientRect();
+                            return {{
+                                found: true,
+                                id: userButton.id,
+                                x: rect.left + rect.width / 2,
+                                y: rect.top + rect.height / 2
+                            }};
+                        }}
+                        
+                        return {{ found: false }};
+                    }}"""
+                    ),
                 )
 
                 logging.info(f"User button details: {user_details}")
 
                 if user_details.get("found"):
                     # Use mouse action to click at the center of the button
-                    await self.page.mouse.click(
-                        user_details.get("x", 0), user_details.get("y", 0)
+                    await self.test_action(
+                        "Clicking user button using mouse coordinates",
+                        lambda: self.page.wait_for_selector("body", state="visible"),
+                        lambda: self.page.mouse.click(
+                            user_details.get("x", 0), user_details.get("y", 0)
+                        ),
                     )
                     await self.page.wait_for_timeout(1500)
                     await self.take_screenshot("After mouse click")
 
                     # Check for menu items again
-                    menu_appeared = await self.page.evaluate(
-                        """() => {
-                        const menuItems = document.querySelectorAll('[role="menuitem"]');
-                        console.log('Menu items after mouse click:', menuItems.length);
-                        
-                        if (menuItems.length > 0) {
-                            // Try to find logout item
-                            for (const item of menuItems) {
-                                const text = item.textContent.toLowerCase();
-                                if (text.includes('log out') || text.includes('logout') || text.includes('sign out')) {
-                                    console.log('Found logout item, clicking');
-                                    item.click();
-                                    return { clicked: true, text };
+                    menu_appeared = await self.test_action(
+                        "Checking for menu items after mouse click",
+                        lambda: self.page.wait_for_selector(
+                            '[role="menuitem"]', state="visible", timeout=5000
+                        ),
+                        lambda: self.page.evaluate(
+                            """() => {
+                            const menuItems = document.querySelectorAll('[role="menuitem"]');
+                            console.log('Menu items after mouse click:', menuItems.length);
+                            
+                            if (menuItems.length > 0) {
+                                // Try to find logout item
+                                for (const item of menuItems) {
+                                    const text = item.textContent.toLowerCase();
+                                    if (text.includes('log out') || text.includes('logout') || text.includes('sign out')) {
+                                        console.log('Found logout item, clicking');
+                                        item.click();
+                                        return { clicked: true, text };
+                                    }
                                 }
+                                
+                                // If no logout item found, click the last one
+                                console.log('Clicking last menu item');
+                                menuItems[menuItems.length - 1].click();
+                                return { clicked: true, lastItem: true };
                             }
                             
-                            // If no logout item found, click the last one
-                            console.log('Clicking last menu item');
-                            menuItems[menuItems.length - 1].click();
-                            return { clicked: true, lastItem: true };
-                        }
-                        
-                        return { clicked: false };
-                    }"""
+                            return { clicked: false };
+                        }"""
+                        ),
                     )
 
                     logging.info(f"Menu interaction results: {menu_appeared}")
@@ -806,31 +847,47 @@ class FrontEndTest:
             logging.info("Trying keyboard shortcut approach")
             try:
                 # Find and focus the button first
-                focused = await self.page.evaluate(
-                    f"""() => {{
-                    const userButton = Array.from(document.querySelectorAll('button')).find(
-                        button => button.textContent.includes('{email_part}')
-                    );
-                    
-                    if (userButton) {{
-                        userButton.focus();
-                        return true;
-                    }}
-                    return false;
-                }}"""
+                focused = await self.test_action(
+                    "Finding and focusing user button",
+                    lambda: self.page.wait_for_selector("body", state="visible"),
+                    lambda: self.page.evaluate(
+                        f"""() => {{
+                        const userButton = Array.from(document.querySelectorAll('button')).find(
+                            button => button.textContent.includes('{email_part}')
+                        );
+                        
+                        if (userButton) {{
+                            userButton.focus();
+                            return true;
+                        }}
+                        return false;
+                    }}"""
+                    ),
                 )
 
                 if focused:
                     # Press Enter to activate the button
-                    await self.page.keyboard.press("Enter")
+                    await self.test_action(
+                        "Pressing Enter to activate user button",
+                        lambda: self.page.wait_for_selector(
+                            "button:focus", state="visible"
+                        ),
+                        lambda: self.page.keyboard.press("Enter"),
+                    )
                     await self.page.wait_for_timeout(1500)
                     await self.take_screenshot("After keyboard Enter")
 
                     # Check if dropdown opened
-                    dropdown_visible = await self.page.evaluate(
-                        """() => {
-                        return document.querySelectorAll('[role="menuitem"]').length > 0;
-                    }"""
+                    dropdown_visible = await self.test_action(
+                        "Checking for menu items after keyboard Enter",
+                        lambda: self.page.wait_for_selector(
+                            '[role="menuitem"]', state="visible", timeout=5000
+                        ),
+                        lambda: self.page.evaluate(
+                            """() => {
+                            return document.querySelectorAll('[role="menuitem"]').length > 0;
+                        }"""
+                        ),
                     )
 
                     if dropdown_visible:
@@ -838,11 +895,24 @@ class FrontEndTest:
                         for _ in range(
                             5
                         ):  # Try a few Down keys to navigate to the bottom
-                            await self.page.keyboard.press("ArrowDown")
+                            await self.test_action(
+                                "Navigating menu with arrow down",
+                                lambda: self.page.wait_for_selector(
+                                    '[role="menuitem"]', state="visible"
+                                ),
+                                lambda: self.page.keyboard.press("ArrowDown"),
+                            )
                             await self.page.wait_for_timeout(300)
 
                         # Press Enter to select
-                        await self.page.keyboard.press("Enter")
+                        await self.test_action(
+                            "Pressing Enter to select logout menu item",
+                            lambda: self.page.wait_for_selector(
+                                '[role="menuitem"][data-selected="true"]',
+                                state="visible",
+                            ),
+                            lambda: self.page.keyboard.press("Enter"),
+                        )
                         await self.page.wait_for_timeout(2000)
 
                         # Check if we logged out
@@ -861,7 +931,11 @@ class FrontEndTest:
 
             # Final fallback: Direct navigation to logout URL
             logging.info("Trying direct navigation to logout URL")
-            await self.page.goto(f"{self.base_uri}/user/logout")
+            await self.test_action(
+                "Navigating to logout URL",
+                lambda: self.page.wait_for_selector("body", state="visible"),
+                lambda: self.page.goto(f"{self.base_uri}/user/logout"),
+            )
             await self.page.wait_for_timeout(2000)
 
             # Check if we got logged out
@@ -889,6 +963,7 @@ class FrontEndTest:
             # Navigate to user management page
             await self.test_action(
                 "The user navigates to the account management page",
+                lambda: self.page.wait_for_selector("body", state="visible"),
                 lambda: self.page.goto(f"{self.base_uri}/user/manage"),
             )
 
@@ -918,6 +993,9 @@ class FrontEndTest:
             if last_name_input:
                 await self.test_action(
                     f"The user updates their last name to '{new_last_name}'",
+                    lambda: self.page.wait_for_selector(
+                        last_name_input, state="visible"
+                    ),
                     lambda: self.page.fill(last_name_input, new_last_name),
                 )
             else:
@@ -925,9 +1003,11 @@ class FrontEndTest:
 
             # Take a more general approach for finding selectable fields
             # Let's try to find and interact with any dropdown/select elements
-
             await self.test_action(
                 "The user looks for any dropdown fields on the page to update",
+                lambda: self.page.wait_for_selector(
+                    "select", state="visible", timeout=5000
+                ),
                 lambda: self.page.evaluate(
                     """() => {
                     // Find all dropdowns or select elements
@@ -965,6 +1045,7 @@ class FrontEndTest:
                 if count > 0:
                     await self.test_action(
                         "The user clicks the button to save their profile changes",
+                        lambda: self.page.wait_for_selector(selector, state="visible"),
                         lambda: self.page.click(selector),
                     )
                     update_button_found = True
@@ -976,6 +1057,7 @@ class FrontEndTest:
                 )
                 await self.test_action(
                     "The user submits the form to save changes",
+                    lambda: self.page.wait_for_selector("form", state="visible"),
                     lambda: self.page.evaluate(
                         "document.querySelector('form').submit()"
                     ),
@@ -1002,6 +1084,7 @@ class FrontEndTest:
             # Navigate to team page
             await self.test_action(
                 "The user navigates to the team management page",
+                lambda: self.page.wait_for_selector("body", state="visible"),
                 lambda: self.page.goto(f"{self.base_uri}/team"),
             )
 
@@ -1017,6 +1100,7 @@ class FrontEndTest:
             # Find and fill the email field
             await self.test_action(
                 f"The user enters '{invite_email}' in the email field to invite a new user",
+                lambda: self.page.wait_for_selector("input#email", state="visible"),
                 lambda: self.page.fill("input#email", invite_email),
             )
 
@@ -1030,7 +1114,7 @@ class FrontEndTest:
                 await self.test_action(
                     "The user confirms the role selector is present",
                     lambda: self.page.wait_for_selector(
-                        ".select-content", timeout=1000
+                        ".select-content", state="visible", timeout=1000
                     ),
                 )
             else:
@@ -1042,6 +1126,9 @@ class FrontEndTest:
             # Click Send Invitation button
             await self.test_action(
                 "The user clicks 'Send Invitation' to invite the new team member",
+                lambda: self.page.wait_for_selector(
+                    'button:has-text("Send Invitation")', state="visible"
+                ),
                 lambda: self.page.click('button:has-text("Send Invitation")'),
             )
 
@@ -1054,14 +1141,14 @@ class FrontEndTest:
                 await self.test_action(
                     "The system shows a confirmation message about successful invitation",
                     lambda: self.page.wait_for_selector(
-                        'text="sent successfully"', timeout=10000
+                        'text="sent successfully"', state="visible", timeout=10000
                     ),
                 )
             else:
                 await self.test_action(
                     "The system shows pending invitations section",
                     lambda: self.page.wait_for_selector(
-                        'text="Pending Invitations"', timeout=10000
+                        'text="Pending Invitations"', state="visible", timeout=10000
                     ),
                 )
 
@@ -1074,7 +1161,7 @@ class FrontEndTest:
                 await self.test_action(
                     f"The invited email '{invite_email}' appears in the pending invitations list",
                     lambda: self.page.wait_for_selector(
-                        f'text="{invite_email}"', timeout=5000
+                        f'text="{invite_email}"', state="visible", timeout=5000
                     ),
                 )
             else:
