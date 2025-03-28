@@ -298,7 +298,6 @@ const SidebarTrigger = React.forwardRef<
   React.ComponentProps<typeof Button> & { side?: SidebarSide }
 >(({ side = 'left', className, onClick, ...props }, ref) => {
   const { toggleSidebar } = useSidebar(side);
-  // FIXED: Use react-responsive for consistent mobile detection
   const isMobile = useMediaQuery({ maxWidth: MOBILE_BREAKPOINT - 1 });
   
   // For SSR/hydration safety, render a basic version until client-side
@@ -308,7 +307,12 @@ const SidebarTrigger = React.forwardRef<
     setIsClient(true);
   }, []);
 
-  // Default styling for SSR that works for both mobile and desktop
+  // Don't render anything on mobile - we'll use custom buttons instead
+  if (isMobile) {
+    return null;
+  }
+
+  // Default styling for SSR that works for desktop
   if (!isClient) {
     return (
       <Button
@@ -329,18 +333,14 @@ const SidebarTrigger = React.forwardRef<
     );
   }
 
+  // Desktop only version
   return (
     <Button
       ref={ref}
       data-sidebar='trigger'
-      variant={isMobile ? 'default' : 'ghost'}
+      variant='ghost'
       size='icon'
-      className={cn(
-        isMobile 
-          ? 'fixed bottom-4 right-4 z-50 rounded-full shadow-lg w-12 h-12' 
-          : 'relative h-7 w-7',
-        className
-      )}
+      className={cn('relative h-7 w-7', className)}
       onClick={(event) => {
         onClick?.(event);
         toggleSidebar();

@@ -18,6 +18,7 @@ import { ConversationEdge, useConversations } from '@/components/interactive/use
 import { InteractiveConfigContext, InteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
 import { getTimeDifference } from '@/components/conversation/activity';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 import {
   Sidebar,
@@ -539,22 +540,43 @@ export function ToggleSidebar({ side }: { side: 'left' | 'right' }) {
   const isMobile = useMediaQuery({ maxWidth: 768 });
 
   return (
-    <SidebarMenuButton 
-      onClick={toggleSidebar} 
-      tooltip="Toggle Sidebar"
-      className={isMobile ? 'fixed bottom-4 right-4 z-50 rounded-full shadow-lg bg-primary text-primary-foreground' : ''}
-    >
-      <ViewVerticalIcon className="w-7 h-7" />
-      <span>Toggle Sidebar</span>
-    </SidebarMenuButton>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          onClick={toggleSidebar}
+          variant="default"
+          size="icon"
+          className={cn(
+            // Base styling
+            "flex items-center justify-center",
+            // Mobile styling with fixed positioning
+            isMobile 
+              ? "fixed z-50 rounded-full shadow-lg size-12 bg-primary text-primary-foreground" 
+              : "relative h-8 w-8",
+            // Position the button differently based on which sidebar it's for
+            isMobile && side === 'left' ? "top-4 left-4" : "",
+            isMobile && side === 'right' ? "top-4 right-4" : ""
+          )}
+          data-testid={`toggle-${side}-sidebar`}
+        >
+          <ViewVerticalIcon className="size-5" />
+          <span className="sr-only">{side === 'left' ? 'Toggle Main Menu' : 'Toggle Details'}</span>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side={side === 'left' ? 'right' : 'left'}>
+        {side === 'left' ? 'Toggle Main Menu' : 'Toggle Details'}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
+// Use this unified toggle for both sidebars instead of two separate components
 export function SidebarMain({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const { data: user } = useUser();
   const isAuthenticated = !!user?.email;
   const isMobile = useMediaQuery({ maxWidth: 768 });
+  const isOnChatPage = pathname.includes('/chat');
 
   // Don't render the sidebar on home page or user pages (except manage)
   if (pathname === '/' || (pathname.startsWith('/user') && pathname !== '/user/manage')) return null;
@@ -586,12 +608,23 @@ export function SidebarMain({ ...props }: React.ComponentProps<typeof Sidebar>) 
           <NavMain />
           {isAuthenticated && <ChatHistory />}
         </SidebarContent>
-        <SidebarFooter>
-          <ToggleSidebar side='left' />
+        <SidebarFooter className="flex flex-col gap-4 pb-6">
+          {/* Only show the toggle button in the sidebar on desktop */}
+          {!isMobile && (
+            <div>
+              <ToggleSidebar side='left' />
+            </div>
+          )}
           {isAuthenticated && <NavUser />}
         </SidebarFooter>
         <SidebarRail side='left' />
       </Sidebar>
+      
+      {/* Add fixed position buttons for mobile */}
+      {isMobile && <ToggleSidebar side='left' />}
+      
+      {/* Add right sidebar toggle for mobile ONLY on chat pages */}
+      {isMobile && isOnChatPage && <ToggleSidebar side='right' />}
     </TooltipProvider>
   );
 }
