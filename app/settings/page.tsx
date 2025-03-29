@@ -57,7 +57,6 @@ export function Providers() {
   const agent_name = getCookie('agixt-agent') || process.env.NEXT_PUBLIC_AGIXT_AGENT;
   const { data: providerData } = useProviders();
   const isMobile = useMediaQuery({ maxWidth: 768 });
-
   // Filter connected providers
   const providers = useMemo(() => {
     // Return empty arrays if no data
@@ -160,10 +159,10 @@ export function Providers() {
                     <p className='text-sm text-muted-foreground'>Connected</p>
                   </div>
                 </div>
-                <Button 
-                  variant='outline' 
-                  size={isMobile ? 'sm' : 'default'} 
-                  className={cn('gap-2', isMobile ? 'px-2' : '')} 
+                <Button
+                  variant='outline'
+                  size={isMobile ? 'sm' : 'default'}
+                  className={cn('gap-2', isMobile ? 'px-2' : '')}
                   onClick={() => handleDisconnect(provider.name)}
                 >
                   <Unlink className='w-4 h-4' />
@@ -316,7 +315,9 @@ export function AgentDialog({ open, setOpen }: { open: boolean; setOpen: (open: 
           <Button variant='outline' onClick={() => setOpen(false)} className={isMobile ? 'w-full' : ''}>
             Cancel
           </Button>
-          <Button onClick={handleNewAgent} className={isMobile ? 'w-full' : ''}>Create Agent</Button>
+          <Button onClick={handleNewAgent} className={isMobile ? 'w-full' : ''}>
+            Create Agent
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -326,20 +327,32 @@ export function AgentDialog({ open, setOpen }: { open: boolean; setOpen: (open: 
 export default function AgentSettings() {
   const searchParams = useSearchParams();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const { data: agentData, mutate: mutateAgent } = useAgent();
+  const { data: agentData, mutate: mutateAgent } = useAgent(true);
   const [editName, setEditName] = useState('');
   const [walletData, setWalletData] = useState({} as WalletKeys);
   const [isWalletRevealed, setIsWalletRevealed] = useState(false);
   const [isLoadingWallet, setIsLoadingWallet] = useState(false);
+  const [solanaWalletAddress, setSolanaWalletAddress] = useState<string | null>(null);
   const context = useInteractiveConfig();
   const router = useRouter();
   const pathname = usePathname();
   const { data: companyData, mutate: mutateCompany } = useCompany();
   const isMobile = useMediaQuery({ maxWidth: 768 });
-
+  useEffect(() => {
+    if (agentData) {
+      // If settings exist somewhere, try to find the wallet address
+      if (agentData?.settings) {
+        const setting = agentData?.settings.find((s) => s.name === 'SOLANA_WALLET_ADDRESS');
+        if (setting) {
+          setSolanaWalletAddress(setting.value);
+        }
+        console.log('Found in agentData.settings?', !!setting, setting);
+      }
+    }
+  }, [agentData]);
   const handleDelete = async () => {
     try {
-      await context.agixt.deleteAgent(agentData?.agent?.name || '');
+      await context.agixt.deleteAgent(agentData?.name || '');
       mutateCompany();
       mutateAgent();
       router.push(pathname);
@@ -350,11 +363,11 @@ export default function AgentSettings() {
 
   const handleExport = async () => {
     try {
-      const agentConfig = await context.agixt.getAgentConfig(agentData?.agent?.name || '');
+      const agentConfig = await context.agixt.getAgentConfig(agentData?.name || '');
       const element = document.createElement('a');
       const file = new Blob([JSON.stringify(agentConfig)], { type: 'application/json' });
       element.href = URL.createObjectURL(file);
-      element.download = `${agentData?.agent?.name}.json`;
+      element.download = `${agentData?.name}.json`;
       document.body.appendChild(element);
       element.click();
       document.body.removeChild(element);
@@ -365,7 +378,7 @@ export default function AgentSettings() {
 
   const handleSaveEdit = async () => {
     try {
-      await context.agixt.renameAgent(agentData?.agent?.name || '', editName);
+      await context.agixt.renameAgent(agentData?.name || '', editName);
       setCookie('agixt-agent', editName, {
         domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
       });
@@ -377,15 +390,12 @@ export default function AgentSettings() {
 
   const getAgentWallet = async () => {
     try {
-      const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/agent/${agentData?.agent?.name}/wallet`,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: getCookie('jwt'),
-          },
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/agent/${agentData?.name}/wallet`, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: getCookie('jwt'),
         },
-      );
+      });
       return response.data as WalletKeys;
     } catch (error) {
       console.error('Failed to get agent wallet:', error);
@@ -408,7 +418,6 @@ export default function AgentSettings() {
       setIsLoadingWallet(false);
     }
   };
-  const solanaWalletAddress = agentData?.agent?.settings?.find((setting) => setting.name === 'SOLANA_WALLET_ADDRESS');
   return (
     <SidebarPage title='Settings'>
       {searchParams.get('mode') != 'company' ? (
@@ -416,7 +425,7 @@ export default function AgentSettings() {
           <Card className={cn('w-full shadow-lg', isMobile ? 'p-2' : '')}>
             <CardHeader className='pb-2'>
               <div className='flex justify-between items-center'>
-                <CardTitle className='text-xl font-bold'>{agentData?.agent?.name}</CardTitle>
+                <CardTitle className='text-xl font-bold'>{agentData?.name}</CardTitle>
                 {agentData?.agent?.default && (
                   <Badge variant='secondary' className='ml-2'>
                     Default
@@ -429,32 +438,20 @@ export default function AgentSettings() {
             <CardContent className='space-y-2 pb-2'>
               <div className='grid grid-cols-[auto_1fr] gap-x-2 text-sm'>
                 <span className='font-medium text-muted-foreground'>Agent ID:</span>
-                <span className='truncate' title={agentData?.agent?.id}>
-                  {agentData?.agent?.id}
+                <span className='truncate' title={agentData?.id}>
+                  {agentData?.id}
                 </span>
 
                 <span className='font-medium text-muted-foreground'>Company ID:</span>
-                <span className='truncate' title={agentData?.agent?.companyId}>
-                  {agentData?.agent?.companyId}
+                <span className='truncate' title={agentData?.companyId}>
+                  {agentData?.companyId}
                 </span>
                 {solanaWalletAddress && (
                   <>
                     <span className='font-medium text-muted-foreground'>Solana Wallet Address:</span>
-                    <span className='truncate' title={solanaWalletAddress?.value}>
-                      <QRCode
-                        size={128}
-                        style={{ 
-                          height: 'auto', 
-                          maxWidth: isMobile ? '50%' : '30%', 
-                          width: isMobile ? '50%' : '30%' 
-                        }}
-                        value={solanaWalletAddress?.value || ''}
-                        viewBox={`0 0 256 256`}
-                      />
+                    <span className='truncate' title={solanaWalletAddress}>
                       <div className={isMobile ? 'text-xs' : ''}>
-                        Public Key: {isMobile 
-                          ? `${solanaWalletAddress?.value.substring(0, 10)}...` 
-                          : solanaWalletAddress?.value}
+                        {isMobile ? `${solanaWalletAddress.substring(0, 10)}...` : solanaWalletAddress}
                       </div>
                     </span>
 
@@ -488,10 +485,12 @@ export default function AgentSettings() {
                             <div className='grid grid-cols-[auto_1fr] gap-x-2'>
                               <span className='font-medium text-muted-foreground'>Private Key:</span>
                               <div className='flex items-center'>
-                                <code className={cn(
-                                  'bg-muted/50 px-2 py-1 rounded overflow-x-auto',
-                                  isMobile ? 'text-[10px] max-w-[150px]' : 'text-xs max-w-[300px]'
-                                )}>
+                                <code
+                                  className={cn(
+                                    'bg-muted/50 px-2 py-1 rounded overflow-x-auto',
+                                    isMobile ? 'text-[10px] max-w-[150px]' : 'text-xs max-w-[300px]',
+                                  )}
+                                >
                                   {walletData.private_key}
                                 </code>
                               </div>
@@ -499,10 +498,7 @@ export default function AgentSettings() {
                             <div className='grid grid-cols-[auto_1fr] gap-x-2'>
                               <span className='font-medium text-muted-foreground'>Passphrase:</span>
                               <div className='flex items-center'>
-                                <code className={cn(
-                                  'bg-muted/50 px-2 py-1 rounded',
-                                  isMobile ? 'text-[10px]' : 'text-xs'
-                                )}>
+                                <code className={cn('bg-muted/50 px-2 py-1 rounded', isMobile ? 'text-[10px]' : 'text-xs')}>
                                   {walletData.passphrase}
                                 </code>
                               </div>
@@ -521,16 +517,8 @@ export default function AgentSettings() {
               </div>
             </CardContent>
 
-            <CardFooter className={cn(
-              'pt-2', 
-              isMobile ? 'flex-wrap gap-2 justify-center' : 'flex justify-end gap-2'
-            )}>
-              <Button 
-                variant='outline' 
-                size='sm' 
-                className='flex items-center' 
-                onClick={() => setIsCreateDialogOpen(true)}
-              >
+            <CardFooter className={cn('pt-2', isMobile ? 'flex-wrap gap-2 justify-center' : 'flex justify-end gap-2')}>
+              <Button variant='outline' size='sm' className='flex items-center' onClick={() => setIsCreateDialogOpen(true)}>
                 <LuPlus className='h-4 w-4 mr-1' />
                 Create Agent
               </Button>
@@ -552,10 +540,14 @@ export default function AgentSettings() {
                   </div>
                   <DialogFooter className={isMobile ? 'flex-col gap-2' : ''}>
                     <DialogClose asChild>
-                      <Button variant='outline' className={isMobile ? 'w-full' : ''}>Cancel</Button>
+                      <Button variant='outline' className={isMobile ? 'w-full' : ''}>
+                        Cancel
+                      </Button>
                     </DialogClose>
                     <DialogClose asChild>
-                      <Button onClick={handleSaveEdit} className={isMobile ? 'w-full' : ''}>Save</Button>
+                      <Button onClick={handleSaveEdit} className={isMobile ? 'w-full' : ''}>
+                        Save
+                      </Button>
                     </DialogClose>
                   </DialogFooter>
                 </DialogContent>

@@ -454,7 +454,7 @@ export function ChainSteps() {
     const result = await context.agixt.addStep(
       chainData.chainName,
       chainData.steps.length + 1,
-      lastStep ? lastStep.agentName : (agentData?.agent?.name ?? ''),
+      lastStep ? lastStep.agentName : (agentData?.name ?? ''),
       lastStep ? lastStep.promptType : 'Prompt',
       lastStep
         ? lastStep.prompt
