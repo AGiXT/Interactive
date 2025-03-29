@@ -44,6 +44,7 @@ export function useAgent(
 ): SWRResponse<{
   agent: Agent | null;
   commands: string[];
+  settings: any[];
 }> {
   const getDefaultAgent = () => {
     const primaryCompany = companies.find((c) => c.primary);
