@@ -53,7 +53,6 @@ const getIconByName = (name: string): ReactNode => {
     case 'microsoft':
       return <Microsoft />;
     case 'x':
-    case 'twitter':
       return <BsTwitterX />;
     case 'tesla':
       return <SiTesla />;
