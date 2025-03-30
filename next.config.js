@@ -31,8 +31,6 @@ let nextConfig = {
     NEXT_PUBLIC_ADSENSE_ACCOUNT: process.env.ADSENSE_ACCOUNT || '',
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY || '',
     NEXT_PUBLIC_STRIPE_PRICING_TABLE_ID: process.env.STRIPE_PRICING_TABLE_ID || '',
-    NEXT_PUBLIC_AGIXT_API_KEY: process.env.AGIXT_API_KEY || '',
-    NEXT_PUBLIC_AGIXT_CONVERSATION_NAME: process.env.AGIXT_CONVERSATION || '-',
     // UI Options
     NEXT_PUBLIC_AGIXT_FOOTER_MESSAGE: process.env.AGIXT_FOOTER_MESSAGE || 'Powered by AGiXT',
     NEXT_PUBLIC_AGIXT_RLHF: process.env.AGIXT_RLHF || 'true',
@@ -42,7 +40,7 @@ let nextConfig = {
     NEXT_PUBLIC_AGIXT_ALLOW_MESSAGE_DELETION: process.env.AGIXT_ALLOW_MESSAGE_DELETION || 'true',
     NEXT_PUBLIC_AGIXT_SHOW_OVERRIDE_SWITCHES: process.env.AGIXT_SHOW_OVERRIDE_SWITCHES || 'tts,websearch',
     // State Options
-    NEXT_PUBLIC_AGIXT_AGENT: process.env.AGIXT_AGENT || 'AGiXT',
+    NEXT_PUBLIC_AGIXT_AGENT: process.env.AGIXT_AGENT || 'XT',
   },
   images: AGIXT_SERVER && {
     remotePatterns: [
