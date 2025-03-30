@@ -109,7 +109,13 @@
     padding-top: env(safe-area-inset-top);
   }
 }
+.nopan {
+  pointer-events: auto !important;
+}
 
+.react-flow__pane .nopan {
+  pointer-events: auto !important;
+}
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
