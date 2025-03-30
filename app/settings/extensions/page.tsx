@@ -5,9 +5,8 @@ import { getCookie } from 'cookies-next';
 import { useSearchParams } from 'next/navigation';
 import { useAgent } from '@/components/interactive/useAgent';
 import { useCompany } from '@/components/interactive/useUser';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, ReactNode } from 'react';
 import OAuth2Login from 'react-simple-oauth2-login';
-import { providers as oAuth2Providers } from '@/components/auth/OAuth';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -23,6 +22,48 @@ import { Plus, Unlink, Wrench } from 'lucide-react';
 import MarkdownBlock from '@/components/conversation/Message/MarkdownBlock';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RiGithubFill as GitHub, RiGoogleFill as Google, RiMicrosoftFill as Microsoft } from 'react-icons/ri';
+import { BsTwitterX } from 'react-icons/bs';
+import { SiTesla } from 'react-icons/si';
+import { FaAws } from 'react-icons/fa';
+import { FaDiscord } from 'react-icons/fa';
+import { TbBrandWalmart } from 'react-icons/tb';
+
+// Provider type definition
+interface Provider {
+  name: string;
+  scopes: string;
+  authorize: string;
+  client_id: string;
+}
+
+// Icon mapping function based on provider name
+const getIconByName = (name: string): ReactNode => {
+  const lowercaseName = name.toLowerCase();
+
+  switch (lowercaseName) {
+    case 'discord':
+      return <FaDiscord />;
+    case 'github':
+      return <GitHub />;
+    case 'google':
+      return <Google />;
+    case 'microsoft':
+      return <Microsoft />;
+    case 'x':
+    case 'twitter':
+      return <BsTwitterX />;
+    case 'tesla':
+      return <SiTesla />;
+    case 'amazon':
+      return <FaAws />;
+    case 'walmart':
+      return <TbBrandWalmart />;
+    default:
+      // Default icon or null for providers without specific icons
+      return null;
+  }
+};
 
 export function Extension({
   extension,
@@ -134,10 +175,12 @@ const providerDescriptions = {
     'Connect your Amazon account to enable AI interactions with your shopping experience. Agents can help manage your orders, track deliveries, and assist with product recommendations.',
   X: 'Connect your X (Twitter) account to enable AI interactions with your social media. Agents can help manage your posts, analyze engagement, and assist with content creation.',
   Walmart: 'Connect your Walmart account to enable AI interactions with your shopping experience.',
+  Discord: 'Connect your Discord account to enable AI interactions with your server and users.',
 };
 
 export const ConnectedServices = () => {
   const [connectedServices, setConnectedServices] = useState<ConnectedService[]>([]);
+  const [providers, setProviders] = useState<Provider[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [disconnectDialog, setDisconnectDialog] = useState<{
@@ -148,6 +191,23 @@ export const ConnectedServices = () => {
     provider: null,
   });
 
+  // Fetch OAuth providers from the API
+  useEffect(() => {
+    const fetchProviders = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/oauth`);
+        if (response.ok) {
+          const data = await response.json();
+          setProviders(data.providers || []);
+        }
+      } catch (err) {
+        console.error('Error loading OAuth providers:', err);
+      }
+    };
+
+    fetchProviders();
+  }, []);
+
   const fetchConnections = async () => {
     try {
       setLoading(true);
@@ -157,14 +217,14 @@ export const ConnectedServices = () => {
         },
       });
 
-      const allServices = Object.keys(oAuth2Providers)
-        .filter((key) => oAuth2Providers[key].client_id)
-        .map((key) => ({
-          provider: key,
-          connected: response.data.includes(key.toLowerCase()),
+      if (providers.length > 0) {
+        const allServices = providers.map((provider) => ({
+          provider: provider.name.charAt(0).toUpperCase() + provider.name.slice(1),
+          connected: response.data.includes(provider.name.toLowerCase()),
         }));
 
-      setConnectedServices(allServices);
+        setConnectedServices(allServices);
+      }
       setError(null);
     } catch (err) {
       console.error('Error fetching connections:', err);
@@ -175,8 +235,10 @@ export const ConnectedServices = () => {
   };
 
   useEffect(() => {
-    fetchConnections();
-  }, []);
+    if (providers.length > 0) {
+      fetchConnections();
+    }
+  }, [providers]);
 
   const handleDisconnect = async (provider: string) => {
     try {
@@ -231,6 +293,10 @@ export const ConnectedServices = () => {
     }
   };
 
+  if (loading && providers.length === 0) {
+    return <div>Loading connected services...</div>;
+  }
+
   return (
     <>
       {error && (
@@ -241,12 +307,15 @@ export const ConnectedServices = () => {
 
       <div className='grid gap-4'>
         {connectedServices.map((service) => {
-          const provider = oAuth2Providers[service.provider];
+          const providerData = providers.find((p) => p.name.toLowerCase() === service.provider.toLowerCase());
+
+          if (!providerData) return null;
+
           return (
             <div key={service.provider} className='flex flex-col space-y-4 p-4 border rounded-lg'>
               <div className='flex items-center justify-between'>
                 <div className='flex items-center space-x-4'>
-                  {provider.icon}
+                  {getIconByName(service.provider)}
                   <div>
                     <p className='font-medium'>{service.provider}</p>
                     <p className='text-sm text-muted-foreground'>{service.connected ? 'Connected' : 'Not connected'}</p>
@@ -270,12 +339,12 @@ export const ConnectedServices = () => {
                   </Button>
                 ) : (
                   <OAuth2Login
-                    authorizationUrl={provider.uri}
+                    authorizationUrl={providerData.authorize}
                     responseType='code'
-                    clientId={provider.client_id}
+                    clientId={providerData.client_id}
                     state={getCookie('jwt')}
                     redirectUri={`${process.env.NEXT_PUBLIC_APP_URI}/user/close/${service.provider.toLowerCase()}`}
-                    scope={provider.scope}
+                    scope={providerData.scopes}
                     onSuccess={onSuccess}
                     onFailure={onSuccess}
                     isCrossOrigin
