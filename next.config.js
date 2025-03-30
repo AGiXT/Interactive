@@ -29,27 +29,8 @@ let nextConfig = {
     NEXT_PUBLIC_THEME_DEFAULT_MODE: process.env.DEFAULT_THEME_MODE || 'dark',
     NEXT_PUBLIC_TZ: process.env.TZ || 'America/New_York', // Server timezone
     NEXT_PUBLIC_ADSENSE_ACCOUNT: process.env.ADSENSE_ACCOUNT || '',
-    NEXT_PUBLIC_AMAZON_CLIENT_ID: process.env.AMAZON_CLIENT_ID || '',
-    NEXT_PUBLIC_AMAZON_SCOPES: process.env.AMAZON_SCOPES || '',
-    NEXT_PUBLIC_GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID || '',
-    NEXT_PUBLIC_GITHUB_SCOPES: process.env.GITHUB_SCOPES || 'repo user:email read:user workflow',
-    NEXT_PUBLIC_GITLAB_CLIENT_ID: process.env.GITLAB_CLIENT_ID || '',
-    NEXT_PUBLIC_GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
-    NEXT_PUBLIC_GOOGLE_SCOPES:
-      process.env.GOOGLE_SCOPES ||
-      'https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/calendar.events.owned https://www.googleapis.com/auth/contacts.readonly https://www.googleapis.com/auth/gmail.modify',
-    NEXT_PUBLIC_MICROSOFT_CLIENT_ID: process.env.MICROSOFT_CLIENT_ID || '',
-    NEXT_PUBLIC_MICROSOFT_SCOPES:
-      process.env.MICROSOFT_SCOPES || 'offline_access User.Read Mail.Send Calendars.ReadWrite Calendars.ReadWrite.Shared',
-    NEXT_PUBLIC_TESLA_CLIENT_ID: process.env.TESLA_CLIENT_ID || '',
-    NEXT_PUBLIC_TESLA_SCOPES:
-      process.env.TESLA_SCOPES ||
-      'openid offline_access user_data vehicle_device_data vehicle_cmds vehicle_charging_cmds vehicle_location',
-    NEXT_PUBLIC_X_CLIENT_ID: process.env.X_CLIENT_ID || '',
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY || '',
     NEXT_PUBLIC_STRIPE_PRICING_TABLE_ID: process.env.STRIPE_PRICING_TABLE_ID || '',
-    NEXT_PUBLIC_AGIXT_API_KEY: process.env.AGIXT_API_KEY || '',
-    NEXT_PUBLIC_AGIXT_CONVERSATION_NAME: process.env.AGIXT_CONVERSATION || '-',
     // UI Options
     NEXT_PUBLIC_AGIXT_FOOTER_MESSAGE: process.env.AGIXT_FOOTER_MESSAGE || 'Powered by AGiXT',
     NEXT_PUBLIC_AGIXT_RLHF: process.env.AGIXT_RLHF || 'true',
@@ -59,7 +40,7 @@ let nextConfig = {
     NEXT_PUBLIC_AGIXT_ALLOW_MESSAGE_DELETION: process.env.AGIXT_ALLOW_MESSAGE_DELETION || 'true',
     NEXT_PUBLIC_AGIXT_SHOW_OVERRIDE_SWITCHES: process.env.AGIXT_SHOW_OVERRIDE_SWITCHES || 'tts,websearch',
     // State Options
-    NEXT_PUBLIC_AGIXT_AGENT: process.env.AGIXT_AGENT || 'AGiXT',
+    NEXT_PUBLIC_AGIXT_AGENT: process.env.AGIXT_AGENT || 'XT',
   },
   images: AGIXT_SERVER && {
     remotePatterns: [

@@ -3,7 +3,7 @@
 import { useAgent } from '@/components/interactive/useAgent';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { ReactNode, useCallback } from 'react';
+import { ReactNode, useCallback, useEffect, useState } from 'react';
 import OAuth2Login from 'react-simple-oauth2-login';
 import {
   RiGithubFill as GitHub,
@@ -13,106 +13,196 @@ import {
 } from 'react-icons/ri';
 import { BsTwitterX } from 'react-icons/bs';
 import { SiTesla } from 'react-icons/si';
-import { FaAws } from 'react-icons/fa';
+import { FaAws, FaDiscord } from 'react-icons/fa';
 import { TbBrandWalmart } from 'react-icons/tb';
 
-export const providers = {
-  Amazon: {
-    client_id: process.env.NEXT_PUBLIC_AMAZON_CLIENT_ID,
-    scope: 'profile',
-    uri: 'https://www.amazon.com/ap/oa',
-    params: {},
-    icon: <FaAws />,
-  },
-  Tesla: {
-    client_id: process.env.NEXT_PUBLIC_TESLA_CLIENT_ID,
-    scope: 'openid offline_access user_data vehicle_device_data vehicle_cmds vehicle_charging_cmds vehicle_location',
-    uri: 'https://auth.tesla.com/oauth2/v3/authorize',
-    params: {},
-    icon: <SiTesla />,
-  },
-  GitHub: {
-    client_id: process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID,
-    scope: process.env.NEXT_PUBLIC_GITHUB_SCOPES || 'user:email',
-    uri: 'https://github.com/login/oauth/authorize',
-    params: {},
-    icon: <GitHub />,
-  },
-  Google: {
-    client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-    scope: process.env.NEXT_PUBLIC_GOOGLE_SCOPES || 'profile email https://www.googleapis.com/auth/gmail.send',
-    uri: 'https://accounts.google.com/o/oauth2/v2/auth',
-    params: {
-      access_type: 'offline',
-    },
-    icon: <Google />,
-  },
-  Microsoft: {
-    client_id: process.env.NEXT_PUBLIC_MICROSOFT_CLIENT_ID,
-    scope:
-      process.env.NEXT_PUBLIC_MICROSOFT_SCOPES ||
-      'https://graph.microsoft.com/User.Read https://graph.microsoft.com/Mail.Send https://graph.microsoft.com/Calendars.ReadWrite.Shared',
-    uri: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
-    params: {},
-    icon: <Microsoft />,
-  },
-  X: {
-    client_id: process.env.NEXT_PUBLIC_X_CLIENT_ID,
-    scope:
-      'tweet.read tweet.write users.read offline.access like.read like.write follows.read follows.write dm.read dm.write',
-    uri: 'https://twitter.com/i/oauth2/authorize',
-    params: {},
-    icon: <BsTwitterX />,
-  },
-  Walmart: {
-    client_id: process.env.NEXT_PUBLIC_WALMART_CLIENT_ID,
-    scope: 'orders items inventory pricing reports returns',
-    uri: 'https://developer.walmart.com/api/oauth/authorize',
-    params: {},
-    icon: <TbBrandWalmart />,
-  },
+// Type definitions for provider data
+interface ApiProvider {
+  name: string;
+  scopes: string;
+  authorize: string;
+  client_id: string;
+}
+
+interface ProviderWithIcon {
+  client_id: string;
+  scope: string;
+  uri: string;
+  params: Record<string, any>;
+  icon: ReactNode;
+}
+
+// Empty providers object that will be populated from the API
+export const providers: Record<string, ProviderWithIcon> = {};
+
+// Global loading state to track if providers have been loaded
+let providersLoaded = false;
+let loadingPromise: Promise<void> | null = null;
+
+// Icon mapping function based on provider name
+const getIconByName = (name: string): ReactNode => {
+  const lowercaseName = name.toLowerCase();
+
+  switch (lowercaseName) {
+    case 'discord':
+      return <FaDiscord />;
+    case 'github':
+      return <GitHub />;
+    case 'google':
+      return <Google />;
+    case 'microsoft':
+      return <Microsoft />;
+    case 'x':
+      return <BsTwitterX />;
+    case 'tesla':
+      return <SiTesla />;
+    case 'amazon':
+      return <FaAws />;
+    case 'walmart':
+      return <TbBrandWalmart />;
+    default:
+      // Default icon for providers without specific icons
+      return <ShoppingCartOutlined />;
+  }
 };
+
+// Function to load providers data
+export const loadProviders = async (): Promise<void> => {
+  if (providersLoaded) {
+    return;
+  }
+
+  if (!loadingPromise) {
+    loadingPromise = (async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/oauth`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch OAuth providers');
+        }
+
+        const data = await response.json();
+        const fetchedProviders = data.providers || [];
+
+        // Clear existing providers
+        Object.keys(providers).forEach((key) => delete providers[key]);
+
+        // Populate providers object
+        fetchedProviders.forEach((provider: ApiProvider) => {
+          const name = provider.name.charAt(0).toUpperCase() + provider.name.slice(1);
+          providers[name] = {
+            client_id: provider.client_id,
+            scope: provider.scopes,
+            uri: provider.authorize,
+            params: name.toLowerCase() === 'google' ? { access_type: 'offline' } : {},
+            icon: getIconByName(provider.name),
+          };
+        });
+
+        providersLoaded = true;
+      } catch (err) {
+        console.error('Error loading OAuth providers:', err);
+        // Reset loading promise so we can try again
+        loadingPromise = null;
+      }
+    })();
+  }
+
+  return loadingPromise;
+};
+
+// Load providers immediately (but don't block rendering)
+loadProviders();
 
 export default function OAuth(): ReactNode {
   const router = useRouter();
   const { mutate } = useAgent();
+  const [loading, setLoading] = useState(!providersLoaded);
+  const [error, setError] = useState<string | null>(null);
+  const [apiProviders, setApiProviders] = useState<ApiProvider[]>([]);
+
+  // Ensure providers are loaded before rendering
+  useEffect(() => {
+    if (!providersLoaded) {
+      setLoading(true);
+      loadProviders()
+        .then(() => {
+          setApiProviders(
+            Object.entries(providers).map(([key, value]) => ({
+              name: key.toLowerCase(),
+              scopes: value.scope,
+              authorize: value.uri,
+              client_id: value.client_id,
+            })),
+          );
+          setLoading(false);
+        })
+        .catch((err) => {
+          setError('Error loading OAuth providers');
+          setLoading(false);
+          console.error(err);
+        });
+    } else {
+      // Providers already loaded, just set them in state
+      setApiProviders(
+        Object.entries(providers).map(([key, value]) => ({
+          name: key.toLowerCase(),
+          scopes: value.scope,
+          authorize: value.uri,
+          client_id: value.client_id,
+        })),
+      );
+      setLoading(false);
+    }
+  }, []);
+
   const onOAuth2 = useCallback(
     (response: any) => {
       mutate();
       document.location.href = `${process.env.NEXT_PUBLIC_APP_URI}/chat`;
     },
-    [router],
+    [mutate],
   );
+
+  if (loading) {
+    return <div>Loading authentication options...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
+
   return (
     <>
-      {Object.entries(providers).map(([key, provider]) => {
-        return (
-          provider.client_id && (
+      {apiProviders
+        .filter((provider) => provider.client_id) // Only show providers with client_id
+        .sort((a, b) => a.name.localeCompare(b.name)) // Sort alphabetically by name
+        .map((provider) => {
+          const name = provider.name.charAt(0).toUpperCase() + provider.name.slice(1);
+          return (
             <OAuth2Login
-              key={key}
-              authorizationUrl={provider.uri}
+              key={provider.name}
+              authorizationUrl={provider.authorize}
               responseType='code'
               clientId={provider.client_id}
-              scope={provider.scope}
-              redirectUri={`${process.env.NEXT_PUBLIC_APP_URI}/user/close/${key.replaceAll('.', '-').replaceAll(' ', '-').replaceAll('_', '-').toLowerCase()}`}
+              scope={provider.scopes}
+              redirectUri={`${process.env.NEXT_PUBLIC_APP_URI}/user/close/${provider.name.replaceAll('.', '-').replaceAll(' ', '-').replaceAll('_', '-').toLowerCase()}`}
               onSuccess={onOAuth2}
               onFailure={onOAuth2}
-              extraParams={provider.params}
+              extraParams={provider.name.toLowerCase() === 'google' ? { access_type: 'offline' } : {}}
               isCrossOrigin
               render={(renderProps) => (
                 <Button variant='outline' type='button' className='space-x-1 bg-transparent' onClick={renderProps.onClick}>
-                  <span className='text-lg'>{provider.icon}</span>
-                  {key === 'X' ? (
+                  <span className='text-lg'>{getIconByName(provider.name)}</span>
+                  {provider.name.toLowerCase() === 'x' ? (
                     <span>Continue with &#120143; (Twitter) account</span>
                   ) : (
-                    <span>Continue with {key} account</span>
+                    <span>Continue with {name} account</span>
                   )}
                 </Button>
               )}
             />
-          )
-        );
-      })}
+          );
+        })}
     </>
   );
 }
