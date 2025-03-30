@@ -2,131 +2,14 @@
 import axios, { AxiosError } from 'axios';
 import { getCookie } from 'cookies-next';
 import { useRouter } from 'next/navigation';
-import React, { FormEvent, ReactNode, useCallback, useEffect, useState, useRef } from 'react';
+import React, { FormEvent, ReactNode, useEffect, useState, useRef } from 'react';
 import { ReCAPTCHA } from 'react-google-recaptcha';
 import AuthCard from '@/components/layout/AuthCard';
 import { toTitleCase } from '@/components/layout/dynamic-form/DynamicForm';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { RiGithubFill as GitHub, RiGoogleFill as Google, RiMicrosoftFill as Microsoft } from 'react-icons/ri';
-import { BsTwitterX } from 'react-icons/bs';
-import { SiTesla } from 'react-icons/si';
-import { FaAws } from 'react-icons/fa';
-import { FaDiscord } from 'react-icons/fa';
-import { TbBrandWalmart } from 'react-icons/tb';
-import OAuth2Login from 'react-simple-oauth2-login';
-import { useAgent } from '@/components/interactive/useAgent';
-import { Separator } from '@/components/ui/separator';
-
-// Provider type definition
-interface Provider {
-  name: string;
-  scopes: string;
-  authorize: string;
-  client_id: string;
-}
-
-// Icon mapping function based on provider name
-const getIconByName = (name: string): ReactNode => {
-  const lowercaseName = name.toLowerCase();
-
-  switch (lowercaseName) {
-    case 'discord':
-      return <FaDiscord />;
-    case 'github':
-      return <GitHub />;
-    case 'google':
-      return <Google />;
-    case 'microsoft':
-      return <Microsoft />;
-    case 'x':
-    case 'twitter':
-      return <BsTwitterX />;
-    case 'tesla':
-      return <SiTesla />;
-    case 'amazon':
-      return <FaAws />;
-    case 'walmart':
-      return <TbBrandWalmart />;
-    default:
-      // Default icon or null for providers without specific icons
-      return null;
-  }
-};
-
-// OAuth component that fetches providers from API
-const OAuth = () => {
-  const { mutate } = useAgent();
-  const [providers, setProviders] = useState<Provider[]>([]);
-  const [isPageReady, setIsPageReady] = useState<boolean>(false);
-
-  // Fetch providers from API
-  useEffect(() => {
-    const fetchProviders = async () => {
-      try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/oauth`);
-        if (response.ok) {
-          const data = await response.json();
-          setProviders(data.providers || []);
-        }
-      } catch (err) {
-        console.error('Error loading OAuth providers:', err);
-      } finally {
-        setIsPageReady(true);
-      }
-    };
-
-    fetchProviders();
-  }, []);
-
-  const onOAuth2 = useCallback(
-    (response: any) => {
-      mutate();
-      document.location.href = `${process.env.NEXT_PUBLIC_APP_URI}/chat`;
-    },
-    [mutate],
-  );
-
-  if (!isPageReady || providers.length === 0) {
-    return null; // Don't render anything if providers aren't loaded or if there are none
-  }
-
-  return (
-    <>
-      <div className='flex items-center gap-2 my-2'>
-        <Separator className='flex-1' />
-        <span>or sign up with</span>
-        <Separator className='flex-1' />
-      </div>
-
-      {providers.map((provider) => (
-        <OAuth2Login
-          key={provider.name}
-          authorizationUrl={provider.authorize}
-          responseType='code'
-          clientId={provider.client_id}
-          scope={provider.scopes}
-          redirectUri={`${process.env.NEXT_PUBLIC_APP_URI}/user/close/${provider.name.replaceAll('.', '-').replaceAll(' ', '-').replaceAll('_', '-').toLowerCase()}`}
-          onSuccess={onOAuth2}
-          onFailure={onOAuth2}
-          extraParams={{}} // Add default params or customize based on provider if needed
-          isCrossOrigin
-          render={(renderProps) => (
-            <Button variant='outline' type='button' className='space-x-1 bg-transparent' onClick={renderProps.onClick}>
-              <span className='text-lg'>{getIconByName(provider.name)}</span>
-              {provider.name.toLowerCase() === 'x' ? (
-                <span>Continue with &#120143; (Twitter) account</span>
-              ) : (
-                <span>Continue with {provider.name.charAt(0).toUpperCase() + provider.name.slice(1)} account</span>
-              )}
-            </Button>
-          )}
-        />
-      ))}
-    </>
-  );
-};
+import OAuth from '@/components/auth/OAuth';
 
 export default function Register(): ReactNode {
   const formRef = useRef(null);
@@ -260,7 +143,9 @@ export default function Register(): ReactNode {
         </Button>
         {responseMessage && <AuthCard.ResponseMessage>{responseMessage}</AuthCard.ResponseMessage>}
       </form>
-      {invite && <OAuth />}
+
+      {/* Use the OAuth component only if there's an invitation */}
+      {invite && <OAuth showSeparator={true} separatorText='or sign up with' showLoadingMessage={false} />}
     </AuthCard>
   );
 }
