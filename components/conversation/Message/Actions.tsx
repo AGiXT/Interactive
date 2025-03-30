@@ -156,6 +156,7 @@ export function MessageActions({
                     title: 'Conversation Forked',
                     description: `New conversation created: ${data.message}`,
                   });
+                  mutate('/conversations');
                 } catch (error) {
                   toast({
                     title: 'Error',

@@ -1,16 +1,26 @@
 'use client';
 import { SidebarPage } from '@/components/layout/SidebarPage';
-import { setCookie } from 'cookies-next';
-import { usePathname, useRouter } from 'next/navigation';
-import { LuDownload, LuPencil, LuTrash2, LuPlus } from 'react-icons/lu';
+import { setCookie, getCookie } from 'cookies-next';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useMemo, useState, useEffect } from 'react';
+import { useMediaQuery } from 'react-responsive';
+import axios from 'axios';
+import { LuDownload, LuPencil, LuTrash2, LuPlus, LuUnlink as Unlink } from 'react-icons/lu';
+import { Plus, Wrench, EyeIcon, EyeOffIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/components/layout/toast';
 import { useAgent } from '@/components/interactive/useAgent';
+import { useCompany } from '@/components/interactive/useUser';
+import { useProviders } from '@/components/interactive/useProvider';
+import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
+import MarkdownBlock from '@/components/conversation/Message/MarkdownBlock';
+
+// UI Components
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useCompany } from '@/components/interactive/useUser';
-import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Dialog,
   DialogContent,
@@ -21,17 +31,6 @@ import {
   DialogClose,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { useToast } from '@/components/layout/toast';
-import { useSearchParams } from 'next/navigation';
-import MarkdownBlock from '@/components/conversation/Message/MarkdownBlock';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import axios from 'axios';
-import { getCookie } from 'cookies-next';
-import { Plus, Wrench, EyeIcon, EyeOffIcon } from 'lucide-react';
-import { useMemo, useState } from 'react';
-import { LuUnlink as Unlink } from 'react-icons/lu';
-import { useProviders } from '@/components/interactive/useProvider';
-import QRCode from 'react-qr-code';
 
 type ErrorState = {
   type: 'success' | 'error';
@@ -48,14 +47,41 @@ interface ExtensionSettings {
   settings: Record<string, string>;
 }
 
-export function Providers() {
-  const { data: agentData, mutate } = useAgent(true);
+export default function AgentSettings() {
+  // Single API calls for data
+  const { data: agentData, mutate: mutateAgent } = useAgent(true);
+  const { data: companyData, mutate: mutateCompany } = useCompany();
+  const { data: providerData } = useProviders();
+  const context = useInteractiveConfig();
+  const { toast } = useToast();
+
+  // Router and responsive hooks
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const isMobile = useMediaQuery({ maxWidth: 768 });
+
+  // Agent dialog state
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newAgentName, setNewAgentName] = useState('');
+
+  // Agent edit state
+  const [editName, setEditName] = useState('');
+
+  // Provider settings state
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [error, setError] = useState<ErrorState>(null);
-  const agent_name = getCookie('agixt-agent') || process.env.NEXT_PUBLIC_AGIXT_AGENT;
-  const { data: providerData } = useProviders();
 
-  // Filter connected providers
+  // Wallet state
+  const [walletData, setWalletData] = useState({} as WalletKeys);
+  const [isWalletRevealed, setIsWalletRevealed] = useState(false);
+  const [isLoadingWallet, setIsLoadingWallet] = useState(false);
+  const [solanaWalletAddress, setSolanaWalletAddress] = useState<string | null>(null);
+
+  // Agent name from cookie
+  const agent_name = getCookie('agixt-agent') || process.env.NEXT_PUBLIC_AGIXT_AGENT;
+
+  // Memoized providers list - computed once when data changes
   const providers = useMemo(() => {
     // Return empty arrays if no data
     if (!agentData?.settings || !providerData?.length) {
@@ -93,6 +119,17 @@ export function Providers() {
     };
   }, [agentData, providerData]);
 
+  // Find wallet address in agent settings
+  useEffect(() => {
+    if (agentData?.settings) {
+      const setting = agentData.settings.find((s) => s.name === 'SOLANA_WALLET_ADDRESS');
+      if (setting) {
+        setSolanaWalletAddress(setting.value);
+      }
+    }
+  }, [agentData]);
+
+  // Handler for saving provider settings
   const handleSaveSettings = async (extensionName: string, settings: Record<string, string>) => {
     try {
       setError(null);
@@ -123,9 +160,10 @@ export function Providers() {
         message: error.response?.data?.detail || error.message || 'Failed to connect extension',
       });
     }
-    mutate();
+    mutateAgent();
   };
 
+  // Handler for disconnecting provider
   const handleDisconnect = async (name: string) => {
     const extension = providerData?.find((ext) => ext.name === name);
     const emptySettings = extension.settings
@@ -140,130 +178,7 @@ export function Providers() {
     await handleSaveSettings(extension.name, emptySettings);
   };
 
-  return (
-    <div className='space-y-6'>
-      <div className='grid gap-4'>
-        {providers.connected?.map &&
-          providers.connected.map((provider) => (
-            <div
-              key={provider.name}
-              className='flex flex-col gap-4 p-4 transition-colors border rounded-lg bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'
-            >
-              <div className='flex items-center gap-4'>
-                <div className='flex items-center flex-1 min-w-0 gap-3.5'>
-                  <Wrench className='flex-shrink-0 w-5 h-5 text-muted-foreground' />
-                  <div>
-                    <h4 className='font-medium truncate'>{provider.name}</h4>
-                    <p className='text-sm text-muted-foreground'>Connected</p>
-                  </div>
-                </div>
-                <Button variant='outline' size='sm' className='gap-2' onClick={() => handleDisconnect(provider.name)}>
-                  <Unlink className='w-4 h-4' />
-                  Disconnect
-                </Button>
-              </div>
-              <div className='text-sm text-muted-foreground'>
-                <MarkdownBlock content={provider.description} />
-              </div>
-            </div>
-          ))}
-
-        {providers.available?.map &&
-          providers.available.map((provider) => (
-            <div
-              key={provider.name}
-              className='flex flex-col gap-4 p-4 transition-colors border rounded-lg bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'
-            >
-              <div className='flex items-center gap-4'>
-                <div className='flex items-center flex-1 min-w-0 gap-3.5'>
-                  <Wrench className='flex-shrink-0 w-5 h-5 text-muted-foreground' />
-                  <div>
-                    <h4 className='font-medium truncate'>{provider.friendlyName}</h4>
-                    <p className='text-sm text-muted-foreground'>Not Connected</p>
-                  </div>
-                </div>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      className='gap-2'
-                      onClick={() => {
-                        // Initialize settings with the default values from provider.settings
-                        setSettings(
-                          provider.settings.reduce((acc, setting) => {
-                            acc[setting.name] = setting.value;
-                            return acc;
-                          }, {}),
-                        );
-                      }}
-                    >
-                      <Plus className='w-4 h-4' />
-                      Connect
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className='sm:max-w-[425px]'>
-                    <DialogHeader>
-                      <DialogTitle>Configure {provider.name}</DialogTitle>
-                      <DialogDescription>
-                        Enter the required credentials to enable this service. {provider.description}
-                      </DialogDescription>
-                    </DialogHeader>
-
-                    <div className='grid gap-4 py-4'>
-                      {provider.settings.map((prov) => (
-                        <div key={prov.name} className='grid gap-2'>
-                          <Label htmlFor={prov.name}>{prov.name}</Label>
-                          <Input
-                            id={prov.name}
-                            type={
-                              prov.name.toLowerCase().includes('key') || prov.name.toLowerCase().includes('password')
-                                ? 'password'
-                                : 'text'
-                            }
-                            defaultValue={prov.value}
-                            value={settings[prov.name]}
-                            onChange={(e) =>
-                              setSettings((prev) => ({
-                                ...prev,
-                                [prov.name]: e.target.value,
-                              }))
-                            }
-                            placeholder={`Enter ${prov.name.toLowerCase()}`}
-                          />
-                        </div>
-                      ))}
-                    </div>
-
-                    <DialogFooter>
-                      <Button onClick={() => handleSaveSettings(provider.name, settings)}>Connect Provider</Button>
-                    </DialogFooter>
-
-                    {error && (
-                      <Alert variant={error.type === 'success' ? 'default' : 'destructive'}>
-                        <AlertDescription>{error.message}</AlertDescription>
-                      </Alert>
-                    )}
-                  </DialogContent>
-                </Dialog>
-              </div>
-              <div className='text-sm text-muted-foreground'>
-                <MarkdownBlock content={provider.description || 'No description available'} />
-              </div>
-            </div>
-          ))}
-      </div>
-    </div>
-  );
-}
-
-export function AgentDialog({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
-  const context = useInteractiveConfig();
-  const { toast } = useToast();
-  const { mutate: mutateActiveAgent } = useAgent();
-  const { mutate: mutateActiveCompany } = useCompany();
-  const [newAgentName, setNewAgentName] = useState('');
-
+  // Agent creation handler
   const handleNewAgent = async () => {
     try {
       await context.agixt.addAgent(newAgentName);
@@ -271,9 +186,9 @@ export function AgentDialog({ open, setOpen }: { open: boolean; setOpen: (open: 
         title: 'Success',
         description: `Agent "${newAgentName}" created successfully`,
       });
-      mutateActiveCompany();
-      mutateActiveAgent();
-      setOpen(false);
+      mutateCompany();
+      mutateAgent();
+      setIsCreateDialogOpen(false);
     } catch (error) {
       console.error('Failed to create agent:', error);
       toast({
@@ -284,52 +199,10 @@ export function AgentDialog({ open, setOpen }: { open: boolean; setOpen: (open: 
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create New Agent</DialogTitle>
-        </DialogHeader>
-        <div className='grid gap-4 py-4'>
-          <div className='flex flex-col items-start gap-4'>
-            <Label htmlFor='agent-name' className='text-right'>
-              New Agent Name
-            </Label>
-            <Input
-              id='agent-name'
-              value={newAgentName}
-              onChange={(e) => setNewAgentName(e.target.value)}
-              className='col-span-3'
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant='outline' onClick={() => setOpen(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleNewAgent}>Create Agent</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-export default function AgentSettings() {
-  const searchParams = useSearchParams();
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const { data: agentData, mutate: mutateAgent } = useAgent();
-  const [editName, setEditName] = useState('');
-  const [walletData, setWalletData] = useState({} as WalletKeys);
-  const [isWalletRevealed, setIsWalletRevealed] = useState(false);
-  const [isLoadingWallet, setIsLoadingWallet] = useState(false);
-  const context = useInteractiveConfig();
-  const router = useRouter();
-  const pathname = usePathname();
-  const { data: companyData, mutate: mutateCompany } = useCompany();
-
+  // Agent deletion handler
   const handleDelete = async () => {
     try {
-      await context.agixt.deleteAgent(agentData?.agent?.name || '');
+      await context.agixt.deleteAgent(agentData?.name || '');
       mutateCompany();
       mutateAgent();
       router.push(pathname);
@@ -338,13 +211,14 @@ export default function AgentSettings() {
     }
   };
 
+  // Agent export handler
   const handleExport = async () => {
     try {
-      const agentConfig = await context.agixt.getAgentConfig(agentData?.agent?.name || '');
+      const agentConfig = await context.agixt.getAgentConfig(agentData?.name || '');
       const element = document.createElement('a');
       const file = new Blob([JSON.stringify(agentConfig)], { type: 'application/json' });
       element.href = URL.createObjectURL(file);
-      element.download = `${agentData?.agent?.name}.json`;
+      element.download = `${agentData?.name}.json`;
       document.body.appendChild(element);
       element.click();
       document.body.removeChild(element);
@@ -353,9 +227,10 @@ export default function AgentSettings() {
     }
   };
 
+  // Agent rename handler
   const handleSaveEdit = async () => {
     try {
-      await context.agixt.renameAgent(agentData?.agent?.name || '', editName);
+      await context.agixt.renameAgent(agentData?.name || '', editName);
       setCookie('agixt-agent', editName, {
         domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
       });
@@ -365,24 +240,24 @@ export default function AgentSettings() {
     }
   };
 
+  // Get agent wallet handler
   const getAgentWallet = async () => {
     try {
-      const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/agent/${agentData?.agent?.name}/wallet`,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: getCookie('jwt'),
-          },
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/agent/${agentData?.name}/wallet`, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: getCookie('jwt'),
         },
-      );
+      });
       return response.data as WalletKeys;
     } catch (error) {
       console.error('Failed to get agent wallet:', error);
     }
   };
+
+  // Reveal wallet handler
   const handleRevealWallet = async () => {
-    if (walletData) {
+    if (walletData && Object.keys(walletData).length > 0) {
       setIsWalletRevealed(!isWalletRevealed);
       return;
     }
@@ -398,20 +273,15 @@ export default function AgentSettings() {
       setIsLoadingWallet(false);
     }
   };
-  const solanaWalletAddress = agentData?.agent?.settings?.find((setting) => setting.name === 'SOLANA_WALLET_ADDRESS');
+
   return (
     <SidebarPage title='Settings'>
       {searchParams.get('mode') != 'company' ? (
         <div className='flex items-center justify-center p-4'>
-          <Card className='w-full shadow-lg'>
+          <Card className={cn('w-full shadow-lg', isMobile ? 'p-2' : '')}>
             <CardHeader className='pb-2'>
               <div className='flex justify-between items-center'>
-                <CardTitle className='text-xl font-bold'>{agentData?.agent?.name}</CardTitle>
-                {agentData?.agent?.default && (
-                  <Badge variant='secondary' className='ml-2'>
-                    Default
-                  </Badge>
-                )}
+                <CardTitle className='text-xl font-bold'>{agentData?.name}</CardTitle>
               </div>
               <p className='text-muted-foreground'>{companyData?.name}</p>
             </CardHeader>
@@ -419,25 +289,21 @@ export default function AgentSettings() {
             <CardContent className='space-y-2 pb-2'>
               <div className='grid grid-cols-[auto_1fr] gap-x-2 text-sm'>
                 <span className='font-medium text-muted-foreground'>Agent ID:</span>
-                <span className='truncate' title={agentData?.agent?.id}>
-                  {agentData?.agent?.id}
+                <span className='truncate' title={agentData?.id}>
+                  {agentData?.id}
                 </span>
 
                 <span className='font-medium text-muted-foreground'>Company ID:</span>
-                <span className='truncate' title={agentData?.agent?.companyId}>
-                  {agentData?.agent?.companyId}
+                <span className='truncate' title={agentData?.companyId}>
+                  {agentData?.companyId}
                 </span>
                 {solanaWalletAddress && (
                   <>
                     <span className='font-medium text-muted-foreground'>Solana Wallet Address:</span>
-                    <span className='truncate' title={solanaWalletAddress?.value}>
-                      <QRCode
-                        size={128}
-                        style={{ height: 'auto', maxWidth: '30%', width: '30%' }}
-                        value={solanaWalletAddress?.value || ''}
-                        viewBox={`0 0 256 256`}
-                      />
-                      Public Key: {solanaWalletAddress?.value}
+                    <span className='truncate' title={solanaWalletAddress}>
+                      <div className={isMobile ? 'text-xs' : ''}>
+                        {isMobile ? `${solanaWalletAddress.substring(0, 10)}...` : solanaWalletAddress}
+                      </div>
                     </span>
 
                     <div className='flex flex-col gap-2'>
@@ -463,14 +329,19 @@ export default function AgentSettings() {
                         )}
                       </Button>
 
-                      {isWalletRevealed && walletData && (
+                      {isWalletRevealed && walletData && Object.keys(walletData).length > 0 && (
                         <div className='mt-2 p-4 border rounded-md bg-muted/20'>
                           <h4 className='font-medium mb-2 text-sm'>Wallet Details</h4>
                           <div className='space-y-2 text-sm'>
                             <div className='grid grid-cols-[auto_1fr] gap-x-2'>
                               <span className='font-medium text-muted-foreground'>Private Key:</span>
                               <div className='flex items-center'>
-                                <code className='bg-muted/50 px-2 py-1 rounded text-xs overflow-x-auto max-w-[300px]'>
+                                <code
+                                  className={cn(
+                                    'bg-muted/50 px-2 py-1 rounded overflow-x-auto',
+                                    isMobile ? 'text-[10px] max-w-[150px]' : 'text-xs max-w-[300px]',
+                                  )}
+                                >
                                   {walletData.private_key}
                                 </code>
                               </div>
@@ -478,7 +349,9 @@ export default function AgentSettings() {
                             <div className='grid grid-cols-[auto_1fr] gap-x-2'>
                               <span className='font-medium text-muted-foreground'>Passphrase:</span>
                               <div className='flex items-center'>
-                                <code className='bg-muted/50 px-2 py-1 rounded text-xs'>{walletData.passphrase}</code>
+                                <code className={cn('bg-muted/50 px-2 py-1 rounded', isMobile ? 'text-[10px]' : 'text-xs')}>
+                                  {walletData.passphrase}
+                                </code>
                               </div>
                             </div>
                             <Alert variant='warning' className='mt-2'>
@@ -495,7 +368,7 @@ export default function AgentSettings() {
               </div>
             </CardContent>
 
-            <CardFooter className='flex justify-end gap-2 pt-2'>
+            <CardFooter className={cn('pt-2', isMobile ? 'flex-wrap gap-2 justify-center' : 'flex justify-end gap-2')}>
               <Button variant='outline' size='sm' className='flex items-center' onClick={() => setIsCreateDialogOpen(true)}>
                 <LuPlus className='h-4 w-4 mr-1' />
                 Create Agent
@@ -508,7 +381,7 @@ export default function AgentSettings() {
                     Edit
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className={isMobile ? 'w-[90%] max-w-sm p-4' : ''}>
                   <DialogHeader>
                     <DialogTitle>Edit Agent</DialogTitle>
                   </DialogHeader>
@@ -516,12 +389,16 @@ export default function AgentSettings() {
                     <Label htmlFor='name'>Agent Name</Label>
                     <Input id='name' value={editName} onChange={(e) => setEditName(e.target.value)} className='mt-1' />
                   </div>
-                  <DialogFooter>
+                  <DialogFooter className={isMobile ? 'flex-col gap-2' : ''}>
                     <DialogClose asChild>
-                      <Button variant='outline'>Cancel</Button>
+                      <Button variant='outline' className={isMobile ? 'w-full' : ''}>
+                        Cancel
+                      </Button>
                     </DialogClose>
                     <DialogClose asChild>
-                      <Button onClick={handleSaveEdit}>Save</Button>
+                      <Button onClick={handleSaveEdit} className={isMobile ? 'w-full' : ''}>
+                        Save
+                      </Button>
                     </DialogClose>
                   </DialogFooter>
                 </DialogContent>
@@ -532,24 +409,166 @@ export default function AgentSettings() {
                 Export
               </Button>
 
-              <Button
-                variant='destructive'
-                size='sm'
-                className='flex items-center'
-                disabled={agentData?.agent?.default}
-                onClick={handleDelete}
-              >
+              <Button variant='destructive' size='sm' className='flex items-center' onClick={handleDelete}>
                 <LuTrash2 className='h-4 w-4 mr-1' />
                 Delete
               </Button>
             </CardFooter>
           </Card>
-          <AgentDialog open={isCreateDialogOpen} setOpen={setIsCreateDialogOpen} />
+
+          {/* Create agent dialog */}
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogContent className={isMobile ? 'w-[90%] max-w-sm p-4' : ''}>
+              <DialogHeader>
+                <DialogTitle>Create New Agent</DialogTitle>
+              </DialogHeader>
+              <div className='grid gap-4 py-4'>
+                <div className='flex flex-col items-start gap-4'>
+                  <Label htmlFor='agent-name' className='text-right'>
+                    New Agent Name
+                  </Label>
+                  <Input
+                    id='agent-name'
+                    value={newAgentName}
+                    onChange={(e) => setNewAgentName(e.target.value)}
+                    className='col-span-3 w-full'
+                  />
+                </div>
+              </div>
+              <DialogFooter className={isMobile ? 'flex-col gap-2' : ''}>
+                <Button variant='outline' onClick={() => setIsCreateDialogOpen(false)} className={isMobile ? 'w-full' : ''}>
+                  Cancel
+                </Button>
+                <Button onClick={handleNewAgent} className={isMobile ? 'w-full' : ''}>
+                  Create Agent
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       ) : (
         <></>
       )}
-      <Providers />
+
+      {/* Providers section */}
+      <div className='space-y-6'>
+        <div className='grid gap-4'>
+          {providers.connected?.map &&
+            providers.connected.map((provider) => (
+              <div
+                key={provider.name}
+                className='flex flex-col gap-4 p-4 transition-colors border rounded-lg bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'
+              >
+                <div className='flex items-center gap-4'>
+                  <div className='flex items-center flex-1 min-w-0 gap-3.5'>
+                    <Wrench className='flex-shrink-0 w-5 h-5 text-muted-foreground' />
+                    <div>
+                      <h4 className='font-medium truncate'>{provider.name}</h4>
+                      <p className='text-sm text-muted-foreground'>Connected</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant='outline'
+                    size={isMobile ? 'sm' : 'default'}
+                    className={cn('gap-2', isMobile ? 'px-2' : '')}
+                    onClick={() => handleDisconnect(provider.name)}
+                  >
+                    <Unlink className='w-4 h-4' />
+                    {!isMobile && 'Disconnect'}
+                  </Button>
+                </div>
+                <div className='text-sm text-muted-foreground'>
+                  <MarkdownBlock content={provider.description} />
+                </div>
+              </div>
+            ))}
+
+          {providers.available?.map &&
+            providers.available.map((provider) => (
+              <div
+                key={provider.name}
+                className='flex flex-col gap-4 p-4 transition-colors border rounded-lg bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'
+              >
+                <div className='flex items-center gap-4'>
+                  <div className='flex items-center flex-1 min-w-0 gap-3.5'>
+                    <Wrench className='flex-shrink-0 w-5 h-5 text-muted-foreground' />
+                    <div>
+                      <h4 className='font-medium truncate'>{provider.friendlyName}</h4>
+                      <p className='text-sm text-muted-foreground'>Not Connected</p>
+                    </div>
+                  </div>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant='outline'
+                        size={isMobile ? 'sm' : 'default'}
+                        className={cn('gap-2', isMobile ? 'px-2' : '')}
+                        onClick={() => {
+                          // Initialize settings with the default values from provider.settings
+                          setSettings(
+                            provider.settings.reduce((acc, setting) => {
+                              acc[setting.name] = setting.value;
+                              return acc;
+                            }, {}),
+                          );
+                        }}
+                      >
+                        <Plus className='w-4 h-4' />
+                        {!isMobile && 'Connect'}
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className={cn('sm:max-w-[425px]', isMobile ? 'w-[90%] p-4' : '')}>
+                      <DialogHeader>
+                        <DialogTitle>Configure {provider.name}</DialogTitle>
+                        <DialogDescription>
+                          Enter the required credentials to enable this service. {provider.description}
+                        </DialogDescription>
+                      </DialogHeader>
+
+                      <div className='grid gap-4 py-4'>
+                        {provider.settings.map((prov) => (
+                          <div key={prov.name} className='grid gap-2'>
+                            <Label htmlFor={prov.name}>{prov.name}</Label>
+                            <Input
+                              id={prov.name}
+                              type={
+                                prov.name.toLowerCase().includes('key') || prov.name.toLowerCase().includes('password')
+                                  ? 'password'
+                                  : 'text'
+                              }
+                              defaultValue={prov.value}
+                              value={settings[prov.name]}
+                              onChange={(e) =>
+                                setSettings((prev) => ({
+                                  ...prev,
+                                  [prov.name]: e.target.value,
+                                }))
+                              }
+                              placeholder={`Enter ${prov.name.toLowerCase()}`}
+                            />
+                          </div>
+                        ))}
+                      </div>
+
+                      <DialogFooter>
+                        <Button onClick={() => handleSaveSettings(provider.name, settings)}>Connect Provider</Button>
+                      </DialogFooter>
+
+                      {error && (
+                        <Alert variant={error.type === 'success' ? 'default' : 'destructive'}>
+                          <AlertDescription>{error.message}</AlertDescription>
+                        </Alert>
+                      )}
+                    </DialogContent>
+                  </Dialog>
+                </div>
+                <div className='text-sm text-muted-foreground'>
+                  <MarkdownBlock content={provider.description || 'No description available'} />
+                </div>
+              </div>
+            ))}
+        </div>
+      </div>
     </SidebarPage>
   );
 }

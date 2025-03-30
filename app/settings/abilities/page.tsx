@@ -4,6 +4,7 @@ import axios from 'axios';
 import { getCookie, setCookie } from 'cookies-next';
 import { useSearchParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { useMediaQuery } from 'react-responsive';
 import { useAgent } from '@/components/interactive/useAgent';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,6 +46,37 @@ type ErrorState = {
 } | null;
 
 export default function Abilities() {
+  // Responsive media queries
+  const isSmallScreen = useMediaQuery({ maxWidth: 640 });
+  const isMediumScreen = useMediaQuery({ maxWidth: 768 });
+  const isLargeScreen = useMediaQuery({ minWidth: 1024 });
+  
+  // Get responsive text sizes based on screen size
+  const getTitleSize = () => {
+    if (isSmallScreen) return 'text-base';
+    if (isMediumScreen) return 'text-md';
+    return 'text-lg';
+  };
+  
+  const getHeadingSize = () => {
+    if (isSmallScreen) return 'text-sm';
+    if (isMediumScreen) return 'text-base';
+    return 'text-lg';
+  };
+  
+  const getDescriptionSize = () => {
+    if (isSmallScreen) return 'text-xs';
+    return 'text-sm';
+  };
+  
+  // Get responsive grid based on screen size
+  const getGridCols = () => {
+    if (isSmallScreen) return 'grid-cols-1';
+    if (isMediumScreen) return 'grid-cols-1';
+    if (isLargeScreen) return 'grid-cols-2';
+    return 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3';
+  };
+
   const { data: agentData, mutate: mutateAgent } = useAgent();
   const [searchText, setSearchText] = useState('');
   const [error, setError] = useState<ErrorState>(null);
@@ -138,37 +170,46 @@ export default function Abilities() {
 
   return (
     <SidebarPage title='Abilities'>
-      <div className='space-y-6'>
-        <div className='flex items-center justify-between mb-4'>
-          <h3 className='text-lg font-medium'>Enabled Abilities</h3>
+      <div className='space-y-4 md:space-y-6'>
+        <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 sm:mb-4 gap-2'>
+          <h3 className={`${getTitleSize()} font-medium`}>Enabled Abilities</h3>
           <div className='flex items-center gap-2'>
-            <Label htmlFor='show-enabled-only'>Show Enabled Only</Label>
+            <Label htmlFor='show-enabled-only' className={getDescriptionSize()}>Show Enabled Only</Label>
             <Switch id='show-enabled-only' checked={showEnabledOnly} onCheckedChange={setShowEnabledOnly} />
           </div>
         </div>
 
-        <div className='grid gap-4'>
-          <Input placeholder='Search...' value={searchText} onChange={(e) => setSearchText(e.target.value)} />
+        <div className='space-y-4'>
+          <Input 
+            placeholder='Search...' 
+            value={searchText} 
+            onChange={(e) => setSearchText(e.target.value)}
+            className='w-full'
+          />
 
           {/* AGiXT Core Features Card - Only show if not in company mode and matches filters */}
           {searchParams.get('mode') !== 'company' && filteredOverrides.length > 0 && (
             <Card>
-              <CardHeader>
-                <CardTitle>Agent Capabilities</CardTitle>
-                <CardDescription>Core features and capabilities</CardDescription>
+              <CardHeader className='p-3 sm:p-4 md:p-6'>
+                <CardTitle className={getTitleSize()}>Agent Capabilities</CardTitle>
+                <CardDescription className={getDescriptionSize()}>Core features and capabilities</CardDescription>
               </CardHeader>
-              <CardContent className='space-y-4'>
-                {filteredOverrides.map(([key, extension]) => (
-                  <Card key={key} className='p-4 border border-border/50'>
-                    <div className='flex items-center mb-2'>
-                      <Switch checked={overrideStates[key] || false} onCheckedChange={() => handleToggleOverride(key)} />
-                      <div className='flex items-center ml-2'>
-                        <h4 className='text-lg font-medium'>{extension.label}</h4>
+              <CardContent className='space-y-3 sm:space-y-4 p-3 sm:p-4 md:p-6'>
+                <div className={`grid ${getGridCols()} gap-3 sm:gap-4`}>
+                  {filteredOverrides.map(([key, extension]) => (
+                    <Card key={key} className='p-2 sm:p-4 border border-border/50'>
+                      <div className='flex items-center mb-1 sm:mb-2'>
+                        <Switch checked={overrideStates[key] || false} onCheckedChange={() => handleToggleOverride(key)} />
+                        <div className='flex items-center ml-2'>
+                          <h4 className={`${getHeadingSize()} font-medium`}>{extension.label}</h4>
+                        </div>
                       </div>
-                    </div>
-                    <MarkdownBlock content={extension.description} />
-                  </Card>
-                ))}
+                      <div className={`${getDescriptionSize()} break-words`}>
+                        <MarkdownBlock content={extension.description} />
+                      </div>
+                    </Card>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           )}
@@ -176,7 +217,7 @@ export default function Abilities() {
           {/* Standard Extensions */}
           {extensionsWithCommands.length === 0 && filteredOverrides.length === 0 ? (
             <Alert>
-              <AlertDescription>
+              <AlertDescription className={getDescriptionSize()}>
                 No extensions are currently enabled. Enable extensions to see their abilities here.
               </AlertDescription>
             </Alert>
@@ -196,25 +237,31 @@ export default function Abilities() {
 
                 return (
                   <Card key={extension.extension_name}>
-                    <CardHeader>
-                      <CardTitle>{extension.extension_name}</CardTitle>
-                      <CardDescription>
+                    <CardHeader className='p-3 sm:p-4 md:p-6'>
+                      <CardTitle className={getTitleSize()}>{extension.extension_name}</CardTitle>
+                      <CardDescription className={getDescriptionSize()}>
                         <MarkdownBlock content={extension.description || 'No description available'} />
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className='space-y-4'>
-                      {filteredCommands.map((command) => (
-                        <Card key={command.command_name} className='p-4 border border-border/50'>
-                          <div className='flex items-center mb-2'>
-                            <Switch
-                              checked={command.enabled}
-                              onCheckedChange={(checked) => handleToggleCommand(command.friendly_name, checked)}
-                            />
-                            <h4 className='text-lg font-medium'>&nbsp;&nbsp;{command.friendly_name}</h4>
-                          </div>
-                          <MarkdownBlock content={command.description?.split('\nArgs')[0] || 'No description available'} />
-                        </Card>
-                      ))}
+                    <CardContent className='space-y-3 sm:space-y-4 p-3 sm:p-4 md:p-6'>
+                      <div className={`grid ${getGridCols()} gap-3 sm:gap-4`}>
+                        {filteredCommands.map((command) => (
+                          <Card key={command.command_name} className='p-2 sm:p-4 border border-border/50 overflow-hidden'>
+                            <div className='flex items-center mb-1 sm:mb-2'>
+                              <Switch
+                                checked={command.enabled}
+                                onCheckedChange={(checked) => handleToggleCommand(command.friendly_name, checked)}
+                              />
+                              <h4 className={`${getHeadingSize()} font-medium ml-2`}>{command.friendly_name}</h4>
+                            </div>
+                            <div className={`${getDescriptionSize()} break-words`}>
+                              <MarkdownBlock 
+                                content={command.description?.split('\nArgs')[0] || 'No description available'} 
+                              />
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
                     </CardContent>
                   </Card>
                 );

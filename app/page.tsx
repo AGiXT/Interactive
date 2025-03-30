@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LuDatabase as Database,
   LuMessageSquare as MessageSquare,
@@ -16,6 +16,7 @@ import {
   LuSend as Send,
 } from 'react-icons/lu';
 import { BarChart3 } from 'lucide-react';
+import { useMediaQuery } from 'react-responsive';
 
 const features = [
   {
@@ -91,6 +92,7 @@ const conversation = [
 function ExampleChat() {
   const [messages, setMessages] = useState(conversation);
   const [input, setInput] = useState('');
+  const isMobile = useMediaQuery({ maxWidth: 768 });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,7 +113,7 @@ function ExampleChat() {
   };
 
   return (
-    <div className='flex flex-col justify-center max-w-md mx-auto'>
+    <div className={`flex flex-col justify-center mx-auto ${isMobile ? 'w-full' : 'max-w-md'}`}>
       <div className='border rounded-lg shadow-sm bg-background'>
         <div className='flex flex-col space-y-1.5 p-6'>
           <h3 className='text-2xl font-semibold leading-none tracking-tight'>Example Conversation</h3>
@@ -141,11 +143,15 @@ function ExampleChat() {
     </div>
   );
 }
+
 export default function Home(searchParams: { searchParams: { [key: string]: string | string[] | undefined } }) {
   if (getCookie('jwt')) {
     redirect('/chat');
   }
 
+  const isMobile = useMediaQuery({ maxWidth: 768 });
+  const isTablet = useMediaQuery({ minWidth: 769, maxWidth: 1024 });
+  
   return (
     <div style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} className='w-full'>
       <header
@@ -158,15 +164,17 @@ export default function Home(searchParams: { searchParams: { [key: string]: stri
           </Link>
         </div>
         <div className='flex items-center gap-2'>
-          <Link href='/docs'>
-            <Button variant='ghost' size='lg' className='px-4'>
-              Documentation
-            </Button>
-          </Link>
+          {!isMobile && (
+            <Link href='/docs'>
+              <Button variant='ghost' size='lg' className='px-4'>
+                Documentation
+              </Button>
+            </Link>
+          )}
           <ThemeToggle initialTheme={getCookie('theme')?.value} />
           <Link href='/user'>
-            <Button size='lg' className='px-4 rounded-full'>
-              Login or Register
+            <Button size={isMobile ? 'sm' : 'lg'} className={`${isMobile ? 'px-2' : 'px-4'} rounded-full`}>
+              {isMobile ? 'Login' : 'Login or Register'}
             </Button>
           </Link>
         </div>
@@ -174,8 +182,12 @@ export default function Home(searchParams: { searchParams: { [key: string]: stri
       <main>
         <section className='py-24 text-foreground bg-gradient-to-r from-primary-700 to-primary-900'>
           <div className='container px-6 mx-auto text-center'>
-            <h1 className='mb-4 text-4xl font-bold md:text-6xl'>Your AI-Powered Business Intelligence Partner</h1>
-            <p className='mb-8 text-xl'>Unlock deep insights from your databases with natural language conversations</p>
+            <h1 className={`mb-4 ${isMobile ? 'text-3xl' : 'text-4xl md:text-6xl'} font-bold`}>
+              Your AI-Powered Business Intelligence Partner
+            </h1>
+            <p className={`mb-8 ${isMobile ? 'text-lg' : 'text-xl'}`}>
+              Unlock deep insights from your databases with natural language conversations
+            </p>
             <Link
               href='/user/login'
               className='inline-block px-6 py-3 font-semibold transition duration-300 border rounded-lg bg-primary text-primary-foreground hover:bg-primary-50'
@@ -188,7 +200,7 @@ export default function Home(searchParams: { searchParams: { [key: string]: stri
         <section id='features' className='py-20 bg-background'>
           <div className='container px-6 mx-auto'>
             <h2 className='mb-12 text-3xl font-bold text-center'>Advanced Analytics at Your Fingertips</h2>
-            <div className='grid grid-cols-1 gap-12 md:grid-cols-3'>
+            <div className={`grid grid-cols-1 gap-12 ${isMobile ? '' : 'md:grid-cols-3'}`}>
               {features.map((feature, index) => (
                 <div key={index} className='p-6 rounded-lg shadow-md bg-secondary-50'>
                   <h3 className='mb-4 text-xl font-semibold text-primary-700'>{feature.title}</h3>
@@ -199,7 +211,7 @@ export default function Home(searchParams: { searchParams: { [key: string]: stri
           </div>
         </section>
         <section className='max-w-6xl p-4 mx-auto'>
-          <div className='grid gap-6 lg:grid-cols-[1fr,400px] lg:gap-12 xl:grid-cols-[1fr,450px]'>
+          <div className={`grid gap-6 ${isMobile ? '' : 'lg:grid-cols-[1fr,400px] lg:gap-12 xl:grid-cols-[1fr,450px]'}`}>
             <div className='flex flex-col justify-center space-y-4 md:justify-start'>
               <div className='flex flex-col items-center space-y-2'>
                 <h2 className='text-3xl font-bold tracking-tighter sm:text-5xl'>How It Works</h2>
@@ -238,7 +250,7 @@ export default function Home(searchParams: { searchParams: { [key: string]: stri
           <PricingTable />
         </div>
         <section id='contact' className='py-20 bg-background'>
-          <div className='w-full max-w-2xl mx-auto space-y-8'>
+          <div className={`mx-auto space-y-8 ${isMobile ? 'w-full px-6' : 'w-full max-w-2xl'}`}>
             <div className='space-y-2'>
               <h1 className='text-3xl font-bold'>Contact Us</h1>
               <p className='text-gray-500 dark:text-gray-400'>Please fill in the form below to get in touch.</p>
@@ -260,7 +272,7 @@ export default function Home(searchParams: { searchParams: { [key: string]: stri
             </div>
           </div>
         </section>
-        <div className='flex flex-col items-center justify-center'>
+        <div className='flex flex-col items-center justify-center py-4'>
           <Link href='/docs/5-Reference/1-Privacy Policy'>Privacy Policy</Link>
         </div>
       </main>

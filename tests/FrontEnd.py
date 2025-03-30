@@ -458,11 +458,11 @@ class FrontEndTest:
         """
         try:
             logging.info(action_description)
-            await asyncio.sleep(1)
-            await self.page.wait_for_load_state()
+            await asyncio.sleep(5)
+            await self.page.wait_for_load_state("domcontentloaded", timeout=90000)
             result = await action_function()
-            await self.page.wait_for_load_state()
-            await asyncio.sleep(1)
+            await self.page.wait_for_load_state("domcontentloaded", timeout=90000)
+            await asyncio.sleep(5)
             if followup_function:
                 await followup_function()
             await self.take_screenshot(f"{action_description}")
@@ -742,8 +742,8 @@ class FrontEndTest:
             # Navigate to login page
             await self.test_action(
                 "The user navigates to the login page",
-                lambda: self.page.wait_for_selector("input#email", state="visible"),
                 lambda: self.page.goto(f"{self.base_uri}/user"),
+                lambda: self.page.wait_for_selector("input#email", state="visible"),
             )
 
             await self.test_action(

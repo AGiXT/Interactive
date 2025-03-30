@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 import { ColumnDef } from '@tanstack/react-table';
 import { Check, Mail, MoreHorizontal, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import useSWR from 'swr';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -35,6 +35,8 @@ import { DataTable } from '@/components/conversation/Message/data-table';
 import { DataTableColumnHeader } from '@/components/conversation/Message/data-table/data-table-column-header';
 import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
 import { SidebarPage } from '@/components/layout/SidebarPage';
+import { useMediaQuery } from 'react-responsive';
+import { cn } from '@/lib/utils';
 
 interface User {
   email: string;
@@ -102,6 +104,9 @@ export const TeamUsers = () => {
   const { data: invitationsData, mutate: mutateInvitations } = useInvitations();
   const { data: activeCompany, mutate } = useActiveCompany();
   const [responseMessage, setResponseMessage] = useState('');
+  const isMobile = useMediaQuery({ maxWidth: 768 });
+  
+  // Define columns with responsive layout
   const users_columns: ColumnDef<User>[] = [
     {
       id: 'select',
@@ -130,7 +135,12 @@ export const TeamUsers = () => {
       cell: ({ row }) => {
         return (
           <div className='flex space-x-2'>
-            <span className='max-w-[500px] truncate font-medium'>{row.getValue('first_name')}</span>
+            <span className={cn(
+              'truncate font-medium',
+              isMobile ? 'max-w-[80px]' : 'max-w-[500px]'
+            )}>
+              {row.getValue('first_name')}
+            </span>
           </div>
         );
       },
@@ -143,7 +153,10 @@ export const TeamUsers = () => {
       header: ({ column }) => <DataTableColumnHeader column={column} title='Last Name' />,
       cell: ({ row }) => {
         return (
-          <div className='flex w-[100px] items-center'>
+          <div className={cn(
+            'flex items-center',
+            isMobile ? 'w-[80px]' : 'w-[100px]'
+          )}>
             <span>{row.getValue('last_name')}</span>
           </div>
         );
@@ -161,7 +174,12 @@ export const TeamUsers = () => {
       cell: ({ row }) => {
         return (
           <div className='flex items-center'>
-            <span className='truncate'>{row.getValue('email')}</span>
+            <span className={cn(
+              'truncate',
+              isMobile ? 'max-w-[100px]' : ''
+            )}>
+              {row.getValue('email')}
+            </span>
           </div>
         );
       },
@@ -199,11 +217,17 @@ export const TeamUsers = () => {
                 <span className='sr-only'>Open menu</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align='end' className='w-[160px]'>
+            <DropdownMenuContent align='end' className={cn('w-[160px]', isMobile ? 'w-[120px]' : '')}>
               <DropdownMenuLabel>User Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {/* <DropdownMenuItem onClick={(e) => e.preventDefault()} className='p-0'>
-                <Button variant='ghost' className='justify-start w-full'>
+                <Button 
+                  variant='ghost' 
+                  className={cn(
+                    'justify-start w-full',
+                    isMobile ? 'text-sm' : ''
+                  )}
+                >
                   Edit User
                 </Button>
               </DropdownMenuItem> */}
@@ -238,6 +262,16 @@ export const TeamUsers = () => {
       },
     },
   ];
+  
+  // If mobile, hide some columns for better display
+  const filteredUsersColumns = isMobile 
+    ? users_columns.filter(col => 
+        col.id !== 'select' && 
+        col.accessorKey !== 'last_name' &&
+        col.accessorKey !== 'role'
+      )
+    : users_columns;
+  
   const invitations_columns: ColumnDef<Invitation>[] = [
     {
       id: 'select',
@@ -267,7 +301,12 @@ export const TeamUsers = () => {
         return (
           <div className='flex items-center space-x-2'>
             <Mail className='w-4 h-4 text-muted-foreground' />
-            <span className='font-medium'>{row.getValue('email')}</span>
+            <span className={cn(
+              'font-medium',
+              isMobile ? 'truncate max-w-[100px]' : ''
+            )}>
+              {row.getValue('email')}
+            </span>
           </div>
         );
       },
@@ -285,7 +324,10 @@ export const TeamUsers = () => {
           3: 'User',
         };
         return (
-          <div className='flex w-[100px] items-center'>
+          <div className={cn(
+            'flex items-center',
+            isMobile ? 'w-[80px]' : 'w-[100px]'
+          )}>
             <span>{roleMap[row.getValue('role_id') as keyof typeof roleMap]}</span>
           </div>
         );
@@ -303,7 +345,10 @@ export const TeamUsers = () => {
       cell: ({ row }) => {
         const isAccepted = row.getValue('is_accepted');
         return (
-          <div className='flex w-[100px] items-center'>
+          <div className={cn(
+            'flex items-center',
+            isMobile ? 'w-[80px]' : 'w-[100px]'
+          )}>
             <Badge variant={isAccepted ? 'default' : 'secondary'}>
               {isAccepted ? <Check className='w-3 h-3 mr-1' /> : <X className='w-3 h-3 mr-1' />}
               {isAccepted ? 'Accepted' : 'Pending'}
@@ -342,7 +387,7 @@ export const TeamUsers = () => {
 
         const copyInviteLink = (link: string) => {
           navigator.clipboard.writeText(link);
-          // You might want to add a toast notification here
+          // Toast notification
         };
 
         return (
@@ -353,7 +398,7 @@ export const TeamUsers = () => {
                 <span className='sr-only'>Open menu</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align='end' className='w-[160px]'>
+            <DropdownMenuContent align='end' className={cn('w-[160px]', isMobile ? 'w-[120px]' : '')}>
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => copyInviteLink(row.original.invitation_link)}>
@@ -387,6 +432,16 @@ export const TeamUsers = () => {
       },
     },
   ];
+  
+  // If mobile, hide some columns for invitations table
+  const filteredInvitationsColumns = isMobile 
+    ? invitations_columns.filter(col => 
+        col.id !== 'select' && 
+        col.accessorKey !== 'role_id' &&
+        col.accessorKey !== 'created_at'
+      )
+    : invitations_columns;
+  
   const handleConfirm = async () => {
     if (renaming) {
       try {
@@ -464,10 +519,14 @@ export const TeamUsers = () => {
       setResponseMessage(error.response?.data?.detail || 'Failed to send invitation');
     }
   };
+  
   return (
     <div className='space-y-6'>
       <h4 className='text-md font-medium'>{activeCompany?.name} Current Users</h4>
-      <DataTable data={activeCompany?.users || []} columns={users_columns} />
+      <div className={isMobile ? 'overflow-x-auto -mx-4 px-4' : ''}>
+        <DataTable data={activeCompany?.users || []} columns={filteredUsersColumns} />
+      </div>
+      
       <form onSubmit={handleSubmit} className='space-y-4'>
         <h4 className='text-md font-medium'>Invite Users to {activeCompany?.name}</h4>
         <div className='space-y-2'>
@@ -502,10 +561,13 @@ export const TeamUsers = () => {
           Send Invitation
         </Button>
       </form>
+      
       {invitationsData.length > 0 && (
         <>
           <h4 className='text-md font-medium'>Pending Invitations</h4>
-          <DataTable data={invitationsData || []} columns={invitations_columns} />
+          <div className={isMobile ? 'overflow-x-auto -mx-4 px-4' : ''}>
+            <DataTable data={invitationsData || []} columns={filteredInvitationsColumns} />
+          </div>
         </>
       )}
     </div>
@@ -522,6 +584,8 @@ export default function TeamPage() {
   const { data: companyData } = useCompanies();
   const { data: activeCompany, mutate } = useCompany();
   const [responseMessage, setResponseMessage] = useState('');
+  const isMobile = useMediaQuery({ maxWidth: 768 });
+  
   const handleConfirm = async () => {
     if (renaming) {
       try {
@@ -601,7 +665,7 @@ export default function TeamPage() {
 
   return (
     <SidebarPage title='Team Management'>
-      <div className='overflow-x-auto px-4'>
+      <div className={cn('overflow-x-auto', isMobile ? 'px-2' : 'px-4')}>
         <div className='space-y-6'>
           <div className='flex items-center justify-start'>
             {renaming || creating ? (
@@ -609,10 +673,10 @@ export default function TeamPage() {
                 <Input
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className='w-64'
+                  className={isMobile ? 'w-full' : 'w-64'}
                   placeholder='Enter new name'
                 />
-                {creating && (
+                {creating && !isMobile && (
                   <Select value={newParent} onValueChange={(value) => setNewParent(value)}>
                     <SelectTrigger className='w-64'>
                       <SelectValue placeholder='(Optional) Select a Parent Company' />
