@@ -7,6 +7,7 @@ export const ChainStepSchema = z.object({
   prompt: z.record(z.unknown()),
   promptType: z.string().min(1),
   step: z.number().int().nonnegative(),
+  targetName: z.string().min(0),
 });
 
 export const ChainSchema = z.object({
