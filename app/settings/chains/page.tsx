@@ -48,11 +48,13 @@ import PromptSelector from '@/components/layout/PromptSelector'; // Assuming thi
 import { SidebarPage } from '@/components/layout/SidebarPage';
 import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
 import { useAgent } from '@/components/interactive/useAgent';
+// Assuming your useChain hook correctly fetches the updated ChainStepType
+// with `target_name` and `prompt` (args only) from GraphQL
 import { useChain, useChains, ChainStep as ChainStepType } from '@/components/interactive/useChain';
 import { toast } from '@/components/layout/toast';
 import { cn } from '@/lib/utils';
 
-// --- Selectors (Moved In & Modified for Interaction) ---
+// --- Selectors (No changes needed here, assuming internal interaction fixes are done) ---
 
 function CommandSelector({
   agentName,
@@ -71,25 +73,18 @@ function CommandSelector({
   const commandsObject = agentData?.commands ?? {};
   const commandKeys = commandsObject && typeof commandsObject === 'object' ? Object.keys(commandsObject) : [];
 
-  // Helper to stop event propagation
   const stopPropagation = (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
   };
 
   return (
     <div className='w-full'>
-      {' '}
-      {/* Removed nopan from container */}
       <Select
         disabled={!commandKeys.length}
         value={value || undefined}
         onValueChange={(value) => onChange?.(value === '/' ? null : value)}
       >
-        <SelectTrigger
-          className='w-full h-8 text-xs nopan' // ADD nopan directly to trigger
-          onMouseDown={stopPropagation} // ADD stopPropagation directly
-          onTouchStart={stopPropagation} // ADD stopPropagation directly
-        >
+        <SelectTrigger className='w-full h-8 text-xs nopan' onMouseDown={stopPropagation} onTouchStart={stopPropagation}>
           <SelectValue placeholder='Select Command' />
         </SelectTrigger>
         <SelectContent>
@@ -120,25 +115,18 @@ function ChainSelector({
   if (isLoading) return <div className='text-xs text-muted-foreground h-8 flex items-center'>Loading...</div>;
   if (error) return <div className='text-xs text-destructive h-8 flex items-center'>Load Error</div>;
 
-  // Helper to stop event propagation
   const stopPropagation = (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
   };
 
   return (
     <div className='w-full'>
-      {' '}
-      {/* Removed nopan from container */}
       <Select
         disabled={!chainData || chainData.length === 0}
         value={value || undefined}
         onValueChange={(value) => onChange?.(value === '/' ? null : value)}
       >
-        <SelectTrigger
-          className='w-full h-8 text-xs nopan' // ADD nopan directly to trigger
-          onMouseDown={stopPropagation} // ADD stopPropagation directly
-          onTouchStart={stopPropagation} // ADD stopPropagation directly
-        >
+        <SelectTrigger className='w-full h-8 text-xs nopan' onMouseDown={stopPropagation} onTouchStart={stopPropagation}>
           <SelectValue placeholder='Select Chain' />
         </SelectTrigger>
         <SelectContent>
@@ -157,29 +145,38 @@ function ChainSelector({
 // --- ReactFlow Custom Node ---
 
 const ignoreArgs = [
-  'prompt_name',
-  'prompt_category',
-  'command_name',
-  'chain',
-  'user_input',
-  'agent_name',
-  'COMMANDS',
+  // Keep agent_name and conversation_name as they might be useful for context within commands/prompts sometimes
   'command_list',
+  'context', // Usually injected by the backend based on other args
+  'COMMANDS',
   'date',
   'working_directory',
   'helper_agent_name',
-  'conversation_history',
+  // 'conversation_history', // Might be needed in some prompts
   'persona',
-  'import_files',
+  'import_files', // Usually handled at a higher level
   'output_url',
 ];
 
+// --- Updated ChainStepType based on GraphQL changes ---
+// Note: This should ideally match the type returned by your useChain hook
+// If useChain already returns this structure, you don't need to redefine it here.
+interface UpdatedChainStepType {
+  step: number;
+  agentName: string;
+  prompt_type: string;
+  target_name: string; // Holds the prompt/command/chain name
+  prompt: Record<string, any>; // Holds ONLY the arguments
+}
+
+// Assuming NodeProps data is now of type UpdatedChainStepType
 const ChainStepNode = memo(
   ({
     data,
     isConnectable,
   }: NodeProps<{
-    stepData: ChainStepType;
+    // Update the expected type here
+    stepData: UpdatedChainStepType;
     chainName: string;
     mutateChain: () => void;
     mutateChains: () => void;
@@ -189,34 +186,47 @@ const ChainStepNode = memo(
     const { stepData, chainName, mutateChain, mutateChains, isLastStep, moveStep } = data;
     const context = useInteractiveConfig();
     const [agentName, setAgentName] = useState(stepData.agentName);
-    const initialStepType = stepData.prompt.chain_name ? 'Chain' : stepData.prompt.command_name ? 'Command' : 'Prompt';
-    const initialTargetName =
-      stepData.prompt.chain_name || stepData.prompt.command_name || stepData.prompt.prompt_name || '';
+
+    // --- FIXED: State Initialization based on new GraphQL structure ---
+    const initialStepType = stepData.prompt_type || 'Prompt'; // Use prompt_type directly
+    const initialTargetName = stepData.target_name || ''; // Use target_name directly
     const [stepType, setStepType] = useState(initialStepType);
     const [targetName, setTargetName] = useState(initialTargetName);
+
+    // --- Args state initialization should now work correctly ---
+    // stepData.prompt (from GraphQL) *should* only contain arguments now
     const [args, setArgs] = useState<Record<string, string | number | boolean>>(() => {
       const initialArgs: Record<string, string | number | boolean> = {};
-      if (stepData.prompt) {
+      // Defensive check: Ensure stepData.prompt is a valid object
+      if (stepData.prompt && typeof stepData.prompt === 'object' && !Array.isArray(stepData.prompt)) {
         for (const key in stepData.prompt) {
+          // Ensure the key isn't accidentally one of the name keys or ignored args
           if (
             !ignoreArgs.includes(key) &&
-            key !== 'chain_name' &&
-            key !== 'command_name' &&
             key !== 'prompt_name' &&
-            key !== 'prompt_category'
+            key !== 'prompt_category' &&
+            key !== 'command_name' &&
+            key !== 'chain_name' &&
+            key !== 'chain' // Just in case 'chain' was used before
           ) {
-            const value = stepData.prompt[key];
+            const value = (stepData.prompt as any)[key]; // Type assertion might be needed
             if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
               initialArgs[key] = value;
+            } else if (value === null || value === undefined) {
+              initialArgs[key] = ''; // Handle null/undefined as empty string
             } else {
-              // Handle cases where the value might be null or undefined initially
-              initialArgs[key] = ''; // Default to empty string
+              console.warn(`Unexpected type for argument '${key}': ${typeof value}. Setting to empty string.`);
+              initialArgs[key] = ''; // Default for other types
             }
           }
         }
+      } else if (stepData.prompt !== null && stepData.prompt !== undefined) {
+        console.warn(`stepData.prompt is not a valid object for step ${stepData.step}:`, stepData.prompt);
       }
       return initialArgs;
     });
+    // --- End Args State Initialization ---
+
     const [availableArgs, setAvailableArgs] = useState<string[]>([]);
     const [modified, setModified] = useState(false);
     const [isLoadingArgs, setIsLoadingArgs] = useState(false);
@@ -250,20 +260,17 @@ const ChainStepNode = memo(
         // Fetch arguments based on the selected step type
         if (stepType === 'Prompt') {
           result = await context.agixt.getPromptArgs(targetName, 'Default');
-          fetchedArgNames = Array.isArray(result) ? result.map(String) : [];
+          fetchedArgNames = Array.isArray(result?.prompt_args) ? result.prompt_args.map(String) : [];
         } else if (stepType === 'Chain') {
           result = await context.agixt.getChainArgs(targetName);
-          // Ensure result is treated as an array even if API returns a single string or null/undefined
-          fetchedArgNames = Array.isArray(result) ? result.map(String) : result ? [String(result)] : [];
+          fetchedArgNames = Array.isArray(result?.chain_args) ? result.chain_args.map(String) : [];
         } else if (stepType === 'Command') {
           result = await context.agixt.getCommandArgs(targetName);
-          // Handle potential errors or non-object results from getCommandArgs
-          if (typeof result === 'object' && result !== null && !result?.error && !Array.isArray(result)) {
-            fetchedArgNames = Object.keys(result);
-          } else if (result?.error) {
-            console.warn(`Error fetching command args for ${targetName}: ${result.error}`);
+          // Check if result is the expected args object
+          if (typeof result?.command_args === 'object' && result.command_args !== null) {
+            fetchedArgNames = Object.keys(result.command_args);
           } else {
-            console.warn(`Unexpected result fetching command args for ${targetName}:`, result);
+            console.warn(`Unexpected command args result for ${targetName}:`, result);
           }
         }
       } catch (error: any) {
@@ -301,8 +308,6 @@ const ChainStepNode = memo(
 
     // Handler to save the step changes
     const handleSave = async (): Promise<void> => {
-      // *** ADDED GUARD ***
-      // Ensure chainName is a valid string before proceeding.
       if (!chainName || typeof chainName !== 'string' || chainName.trim() === '') {
         toast({
           title: 'Error Saving Step',
@@ -310,72 +315,60 @@ const ChainStepNode = memo(
           variant: 'destructive',
         });
         console.error('handleSave called without a valid chainName. Current value:', chainName);
-        return; // Stop execution if chainName is not valid
+        return;
       }
-      // *** END ADDED GUARD ***
 
-      // Construct the base object for the prompt/command/chain name
-      const nameObj: Partial<any> = {};
+      // --- FIXED: Reconstruct the 'prompt' object expected by the backend's updateStep ---
+      const promptPayload: Record<string, any> = {};
       let validationError = false;
+      let nameKey = ''; // Key for the name (e.g., 'prompt_name')
 
-      // Set the correct name field based on step type and nullify others
       if (stepType === 'Prompt') {
         if (!targetName) {
           toast({ title: 'Error', description: 'Prompt Name is required.', variant: 'destructive' });
           validationError = true;
         }
-        nameObj.prompt_name = targetName;
-        nameObj.prompt_category = 'Default'; // Assuming 'Default' category
-        nameObj.command_name = null;
-        nameObj.chain_name = null;
+        nameKey = 'prompt_name';
+        promptPayload[nameKey] = targetName;
+        promptPayload.prompt_category = 'Default'; // Assuming Default
       } else if (stepType === 'Command') {
         if (!targetName) {
           toast({ title: 'Error', description: 'Command Name is required.', variant: 'destructive' });
           validationError = true;
         }
-        nameObj.command_name = targetName;
-        nameObj.prompt_name = null;
-        nameObj.prompt_category = null;
-        nameObj.chain_name = null;
+        nameKey = 'command_name';
+        promptPayload[nameKey] = targetName;
       } else if (stepType === 'Chain') {
         if (!targetName) {
           toast({ title: 'Error', description: 'Chain Name is required.', variant: 'destructive' });
           validationError = true;
         }
-        nameObj.chain_name = targetName;
-        nameObj.prompt_name = null;
-        nameObj.prompt_category = null;
-        nameObj.command_name = null;
+        nameKey = 'chain_name'; // Use 'chain_name' as expected by backend
+        promptPayload[nameKey] = targetName;
       } else {
         toast({ title: 'Error', description: 'Invalid step type selected.', variant: 'destructive' });
         validationError = true;
       }
 
-      if (validationError) return; // Stop if validation failed
+      if (validationError) return;
 
-      // Construct the final arguments payload, including only available args
-      const validArgs = { ...nameObj };
+      // Add the current arguments from the state to the payload
       availableArgs.forEach((key) => {
-        // Include the argument if it's available and has a value in the state
         if (args.hasOwnProperty(key)) {
-          validArgs[key] = args[key];
+          promptPayload[key] = args[key];
         }
-        // Optional: If you want to ensure *all* available args are sent, even if empty:
-        // else {
-        //   validArgs[key] = ''; // Or appropriate default based on type
-        // }
       });
+      // --- End Reconstruct Prompt Payload ---
 
       try {
-        // Call the SDK function to update the step - Now guarded by the chainName check
-        await context.agixt.updateStep(chainName, stepData.step, agentName, stepType, validArgs);
+        // Call the SDK function to update the step with the reconstructed payload
+        await context.agixt.updateStep(chainName, stepData.step, agentName, stepType, promptPayload);
         await mutateChain(); // Re-fetch the chain data to update the UI
         setModified(false); // Reset modification state
         toast({ title: 'Step Saved', description: `Step ${stepData.step} updated.` });
       } catch (err: any) {
         console.error('Failed to save step:', err);
         toast({ title: 'Error Saving Step', description: err.message || 'API error.', variant: 'destructive' });
-        // Consider *not* setting modified to false on error, so user can retry
       }
     };
 
@@ -394,7 +387,7 @@ const ChainStepNode = memo(
       }
     };
 
-    // Memoize components for selecting Prompt/Command/Chain to avoid unnecessary re-renders
+    // Memoize components for selecting Prompt/Command/Chain
     const stepTypeComponents = useMemo(
       () => ({
         Prompt: (
@@ -402,14 +395,13 @@ const ChainStepNode = memo(
             <Label htmlFor={`prompt-name-${stepData.step}`} className='text-xs'>
               Prompt Name
             </Label>
-            {/* Assumes PromptSelector handles nopan and stopPropagation internally */}
+            {/* Use targetName state */}
             <PromptSelector
               value={targetName}
               onChange={(val) => {
                 if (val !== targetName) {
-                  setTargetName(val || ''); // Update target name
-                  setModified(true); // Mark as modified
-                  // Reset args when target changes, fetchArgs effect will handle reloading
+                  setTargetName(val || '');
+                  setModified(true);
                   setArgs({});
                   setAvailableArgs([]);
                 }
@@ -422,9 +414,9 @@ const ChainStepNode = memo(
             <Label htmlFor={`command-name-${stepData.step}`} className='text-xs'>
               Command Name
             </Label>
-            {/* Uses internally modified SelectTrigger */}
+            {/* Use targetName state */}
             <CommandSelector
-              agentName={agentName} // Pass current agent name
+              agentName={agentName}
               value={targetName}
               onChange={(val) => {
                 if (val !== targetName) {
@@ -442,7 +434,7 @@ const ChainStepNode = memo(
             <Label htmlFor={`chain-name-${stepData.step}`} className='text-xs'>
               Chain Name
             </Label>
-            {/* Uses internally modified SelectTrigger */}
+            {/* Use targetName state */}
             <ChainSelector
               value={targetName}
               onChange={(val) => {
@@ -457,29 +449,24 @@ const ChainStepNode = memo(
           </div>
         ),
       }),
-      [agentName, targetName, stepData.step], // Dependencies for these components
+      [agentName, targetName, stepData.step],
     );
 
-    // Helper to stop event propagation (used on specific interactive elements)
+    // Helper to stop event propagation
     const stopPropagation = (e: React.MouseEvent | React.TouchEvent) => {
       e.stopPropagation();
     };
 
-    // --- JSX Rendering ---
+    // --- JSX Rendering (Mostly unchanged, relies on updated state) ---
     return (
-      // Add nopan class to prevent React Flow panning when interacting with the card
       <Card className='w-80 shadow-md nowheel nopan'>
-        {/* Input handle (left side) */}
         <Handle type='target' position={Position.Left} style={{ background: '#555' }} isConnectable={isConnectable} />
-
-        {/* Card Header with Step Number and Action Buttons */}
         <CardHeader className='p-3 bg-muted/50 cursor-default'>
           <CardTitle className='text-sm font-semibold flex justify-between items-center'>
             <span>Step {stepData.step}</span>
-            {/* Container for buttons, stops propagation */}
             <div className='flex items-center space-x-1' onMouseDown={stopPropagation} onTouchStart={stopPropagation}>
               <TooltipProvider delayDuration={100}>
-                {/* Move Up Button */}
+                {/* Move Buttons */}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -487,14 +474,13 @@ const ChainStepNode = memo(
                       size='icon'
                       className='h-6 w-6'
                       onClick={() => moveStep(stepData.step, 'up')}
-                      disabled={stepData.step === 1} // Disable if it's the first step
+                      disabled={stepData.step === 1}
                     >
                       <ArrowUp className='h-3 w-3' />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Move Up</TooltipContent>
                 </Tooltip>
-                {/* Move Down Button */}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -502,7 +488,7 @@ const ChainStepNode = memo(
                       size='icon'
                       className='h-6 w-6'
                       onClick={() => moveStep(stepData.step, 'down')}
-                      disabled={isLastStep} // Disable if it's the last step
+                      disabled={isLastStep}
                     >
                       <ArrowDown className='h-3 w-3' />
                     </Button>
@@ -518,7 +504,7 @@ const ChainStepNode = memo(
                   </TooltipTrigger>
                   <TooltipContent>{modified ? 'Save Changes' : 'No Changes'}</TooltipContent>
                 </Tooltip>
-                {/* Delete Button with Confirmation Dialog */}
+                {/* Delete Button */}
                 <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -549,11 +535,8 @@ const ChainStepNode = memo(
             </div>
           </CardTitle>
         </CardHeader>
-
-        {/* Card Content - Main editable fields */}
         <CardContent className='p-3 space-y-2 text-xs max-h-96 overflow-y-auto relative z-10'>
           {/* Agent Selector */}
-          {/* Stop propagation for the Select container */}
           <div onMouseDown={stopPropagation} onTouchStart={stopPropagation}>
             <Label htmlFor={`agent-name-${stepData.step}`} className='text-xs'>
               Agent
@@ -566,7 +549,6 @@ const ChainStepNode = memo(
               }}
               disabled={isAgentsLoading || !sortedAgents.length}
             >
-              {/* Add nopan and stopPropagation directly to the trigger */}
               <SelectTrigger id={`agent-name-${stepData.step}`} className='h-8 text-xs nopan'>
                 <SelectValue placeholder={isAgentsLoading ? 'Loading...' : 'Select Agent'} />
               </SelectTrigger>
@@ -580,8 +562,7 @@ const ChainStepNode = memo(
             </Select>
           </div>
 
-          {/* Step Type Selector (Prompt/Command/Chain) */}
-          {/* Stop propagation for the Select container */}
+          {/* Step Type Selector */}
           <div onMouseDown={stopPropagation} onTouchStart={stopPropagation}>
             <Label htmlFor={`step-type-${stepData.step}`} className='text-xs'>
               Type
@@ -590,7 +571,6 @@ const ChainStepNode = memo(
               value={stepType}
               onValueChange={(value) => {
                 if (value !== stepType) {
-                  // Reset related state when type changes
                   setTargetName('');
                   setArgs({});
                   setAvailableArgs([]);
@@ -599,7 +579,6 @@ const ChainStepNode = memo(
                 }
               }}
             >
-              {/* Add nopan and stopPropagation directly to the trigger */}
               <SelectTrigger id={`step-type-${stepData.step}`} className='h-8 text-xs nopan'>
                 <SelectValue placeholder='Select Type' />
               </SelectTrigger>
@@ -613,7 +592,7 @@ const ChainStepNode = memo(
             </Select>
           </div>
 
-          {/* Dynamically render the correct selector based on stepType */}
+          {/* Dynamically render Prompt/Command/Chain selector */}
           {stepType && stepTypeComponents[stepType as keyof typeof stepTypeComponents]}
 
           {/* Arguments Section */}
@@ -622,15 +601,13 @@ const ChainStepNode = memo(
               <Loader2 className='h-4 w-4 animate-spin text-muted-foreground' />
             </div>
           )}
-          {/* Render argument fields if not loading and args are available */}
           {!isLoadingArgs && availableArgs.length > 0 && (
             <div className='mt-2 space-y-2 border-t pt-2'>
               <Label className='text-xs font-medium'>Arguments</Label>
               {availableArgs.map((name) => {
                 const label = name.replace(/_/g, ' ').replace(/(?:^|\s)\S/g, (char) => char.toUpperCase());
                 const argId = `arg-${stepData.step}-${name}`;
-                const currentValue = args.hasOwnProperty(name) ? args[name] : ''; // Default to empty string if not set
-                // Heuristics to determine input type (can be refined)
+                const currentValue = args.hasOwnProperty(name) ? args[name] : '';
                 const isBoolean =
                   name.toLowerCase().includes('enable') ||
                   name.toLowerCase().startsWith('is_') ||
@@ -642,19 +619,16 @@ const ChainStepNode = memo(
                   name.toLowerCase().includes('limit') ||
                   typeof currentValue === 'number';
 
-                // Render Switch for boolean arguments
                 if (isBoolean) {
                   const checkedValue =
                     typeof currentValue === 'boolean' ? currentValue : String(currentValue).toLowerCase() === 'true';
                   return (
-                    // Stop propagation for the switch container
                     <div
                       key={name}
                       className='flex items-center space-x-2'
                       onMouseDown={stopPropagation}
                       onTouchStart={stopPropagation}
                     >
-                      {/* Add nopan and stopPropagation directly to Switch */}
                       <Switch
                         id={argId}
                         checked={checkedValue}
@@ -662,7 +636,7 @@ const ChainStepNode = memo(
                           setArgs((prev) => ({ ...prev, [name]: checked }));
                           setModified(true);
                         }}
-                        className='nopan' // Add nopan class
+                        className='nopan'
                       />
                       <Label htmlFor={argId} className='text-xs cursor-pointer'>
                         {label}
@@ -670,27 +644,21 @@ const ChainStepNode = memo(
                     </div>
                   );
                 }
-
-                // Render Input for other arguments (text or number)
                 return (
-                  // Stop propagation for the input container
                   <div key={name} onMouseDown={stopPropagation} onTouchStart={stopPropagation}>
                     <Label htmlFor={argId} className='text-xs'>
                       {label}
                     </Label>
-                    {/* Add nopan and stopPropagation directly to Input */}
                     <Input
                       id={argId}
-                      // Ensure value is always a string for the input, handle number conversion on change
                       value={String(currentValue ?? '')}
                       type={isNumber ? 'number' : 'text'}
                       onChange={(e) => {
-                        // Convert back to number if needed, otherwise use string value
                         const newValue = isNumber ? Number(e.target.value) || 0 : e.target.value;
                         setArgs((prev) => ({ ...prev, [name]: newValue }));
                         setModified(true);
                       }}
-                      className='w-full h-8 text-xs nopan' // Add nopan class
+                      className='w-full h-8 text-xs nopan'
                       placeholder={`Enter ${label}`}
                     />
                   </div>
@@ -698,13 +666,10 @@ const ChainStepNode = memo(
               })}
             </div>
           )}
-          {/* Message when no arguments are required */}
           {!isLoadingArgs && stepType && targetName && availableArgs.length === 0 && (
             <p className='text-xs text-muted-foreground mt-2 italic'>No arguments required.</p>
           )}
         </CardContent>
-
-        {/* Output handle (right side) */}
         <Handle type='source' position={Position.Right} style={{ background: '#555' }} isConnectable={isConnectable} />
       </Card>
     );
@@ -712,8 +677,7 @@ const ChainStepNode = memo(
 );
 ChainStepNode.displayName = 'ChainStepNode'; // Set display name for debugging
 
-// --- Main Flow Component ---
-
+// --- Main Flow Component (No changes needed here unless useChain hook needs updating) ---
 const NODE_WIDTH = 320; // Width of each node card
 const HORIZONTAL_SPACING = 60; // Horizontal space between nodes
 const VERTICAL_POSITION = 50; // Vertical position of the nodes
@@ -725,28 +689,26 @@ function ChainFlow() {
   const [newChainName, setNewChainName] = useState('');
   const [renaming, setRenaming] = useState(false);
   const [currentChainName, setCurrentChainName] = useState<string | null>(null);
-  const [newName, setNewName] = useState(''); // State for the new name during rename
+  const [newName, setNewName] = useState('');
 
-  const reactFlowInstance = useReactFlow<any, any>(); // Hook to interact with React Flow instance
-  const context = useInteractiveConfig(); // Get AGiXT SDK context
+  const reactFlowInstance = useReactFlow<any, any>();
+  const context = useInteractiveConfig();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Get the selected chain name from URL query params
   const selectedChainName = searchParams.get('chain');
 
-  // SWR hooks for fetching chains list and the currently selected chain
   const { data: chainsData, mutate: mutateChains } = useChains();
+  // Assume useChain hook now fetches the correct UpdatedChainStepType[]
   const {
-    data: chainData, // Data for the currently selected chain
-    mutate: mutateChain, // Function to re-fetch the current chain
+    data: chainData,
+    mutate: mutateChain,
     error: chainError,
     isLoading: isChainLoading,
-  } = useChain(selectedChainName ?? undefined); // Fetch only if selectedChainName exists
-  const { data: agentData } = useAgent(false); // Fetch basic agent data (used for default agent in new steps)
+  } = useChain(selectedChainName ?? undefined);
+  const { data: agentData } = useAgent(false);
 
-  // Callbacks for React Flow node/edge changes
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
     [setNodes],
@@ -755,130 +717,108 @@ function ChainFlow() {
     (changes: EdgeChange[]) => setEdges((eds) => applyEdgeChanges(changes, eds)),
     [setEdges],
   );
-  // Callback for connecting edges (currently not used as nodes are not connectable)
-  // const onConnect = useCallback((connection: Connection) => setEdges((eds) => addEdge(connection, eds)), [setEdges]);
 
-  // Callback to move a step up or down
   const moveStep = useCallback(
     async (stepNumber: number, direction: 'up' | 'down') => {
-      if (!currentChainName || !chainData) return; // Need chain name and data
-
-      // Calculate the target step number
+      if (!currentChainName || !chainData) return;
       const newStepNumber = direction === 'up' ? stepNumber - 1 : stepNumber + 1;
-      // Validate the new step number
       if (newStepNumber < 1 || newStepNumber > chainData.steps.length) return;
-
       try {
-        // Call the SDK function to move the step
         await context.agixt.moveStep(currentChainName, stepNumber, newStepNumber);
-        await mutateChain(); // Re-fetch the chain data to update the UI
+        await mutateChain();
         toast({ title: 'Step Moved', description: `Step ${stepNumber} moved ${direction}.` });
       } catch (err: any) {
         console.error('Error moving step:', err);
         toast({ title: 'Error Moving Step', description: err.message || 'API error.', variant: 'destructive' });
       }
     },
-    [currentChainName, chainData, context.agixt, mutateChain], // Dependencies
+    [currentChainName, chainData, context.agixt, mutateChain],
   );
 
-  // Effect to update nodes and edges when chainData changes
   useEffect(() => {
     if (chainData?.steps) {
       const numSteps = chainData.steps.length;
-      // Create nodes for each step
+      // Expect chainData.steps to have the updated structure (target_name, prompt: args)
       const newNodes: Node[] = chainData.steps.map((step, index) => ({
-        id: `step-${step.step}`, // Unique ID for the node
-        type: 'chainStep', // Custom node type defined earlier
-        position: { x: index * (NODE_WIDTH + HORIZONTAL_SPACING), y: VERTICAL_POSITION }, // Calculate position
+        id: `step-${step.step}`,
+        type: 'chainStep',
+        position: { x: index * (NODE_WIDTH + HORIZONTAL_SPACING), y: VERTICAL_POSITION },
         data: {
-          // Data passed to the ChainStepNode component
-          stepData: step,
-          chainName: chainData.chainName, // Pass the correct chain name
+          stepData: step, // Pass the potentially updated step structure
+          chainName: chainData.chainName,
           mutateChain,
           mutateChains,
-          isLastStep: index === numSteps - 1, // Flag if it's the last step
-          moveStep, // Pass the moveStep function
+          isLastStep: index === numSteps - 1,
+          moveStep,
         },
-        draggable: false, // Disable dragging nodes
-        connectable: false, // Disable connecting nodes
-        selectable: false, // Disable selecting nodes
-        style: { width: NODE_WIDTH }, // Set node width
+        draggable: false,
+        connectable: false,
+        selectable: false,
+        style: { width: NODE_WIDTH },
       }));
 
-      // Create edges between consecutive steps
       const newEdges: Edge[] = chainData.steps.slice(0, -1).map((step) => ({
-        id: `e${step.step}-${step.step + 1}`, // Unique edge ID
-        source: `step-${step.step}`, // Source node ID
-        target: `step-${step.step + 1}`, // Target node ID
-        markerEnd: { type: MarkerType.ArrowClosed, width: 20, height: 20 }, // Arrow marker
-        type: 'smoothstep', // Edge type
-        style: { strokeWidth: 2 }, // Edge style
+        id: `e${step.step}-${step.step + 1}`,
+        source: `step-${step.step}`,
+        target: `step-${step.step + 1}`,
+        markerEnd: { type: MarkerType.ArrowClosed, width: 20, height: 20 },
+        type: 'smoothstep',
+        style: { strokeWidth: 2 },
       }));
 
       setNodes(newNodes);
       setEdges(newEdges);
-      // Fit the view after nodes/edges are set (with a slight delay for rendering)
       setTimeout(() => reactFlowInstance?.fitView({ padding: 0.2, duration: 300 }), 50);
     } else {
-      // Clear nodes and edges if no chain data
       setNodes([]);
       setEdges([]);
     }
-  }, [chainData, mutateChain, mutateChains, reactFlowInstance, moveStep]); // Dependencies
+  }, [chainData, mutateChain, mutateChains, reactFlowInstance, moveStep]);
 
-  // Effect to update currentChainName and renaming state based on URL param
   useEffect(() => {
     setCurrentChainName(selectedChainName);
     if (renaming && selectedChainName) {
-      setNewName(selectedChainName); // Pre-fill rename input
+      setNewName(selectedChainName);
     } else if (!selectedChainName) {
-      // Reset renaming state if no chain is selected
       setRenaming(false);
       setNewName('');
     }
   }, [selectedChainName, renaming]);
 
-  // Handler for selecting a chain from the dropdown
   const handleSelectChain = (value: string | null) => {
     const current = new URLSearchParams(Array.from(searchParams.entries()));
     if (value && value !== '/') {
-      current.set('chain', value); // Set chain param if a valid chain is selected
+      current.set('chain', value);
     } else {
-      current.delete('chain'); // Remove chain param if '- Select -' is chosen
+      current.delete('chain');
     }
-    // Update URL without full page reload
     router.replace(`${pathname}?${current.toString()}`, { scroll: false });
-    // Clear nodes/edges immediately for responsiveness
     setNodes([]);
     setEdges([]);
   };
 
-  // Handler for creating a new chain (from dialog)
   const handleNewChain = async () => {
     if (!newChainName) {
       toast({ title: 'Error', description: 'Chain name is required.', variant: 'destructive' });
       return;
     }
     try {
-      await context.agixt.addChain(newChainName); // Call SDK
-      await mutateChains(); // Update the list of chains
-      // Navigate to the newly created chain
+      await context.agixt.addChain(newChainName);
+      await mutateChains();
       router.push(`/settings/chains?chain=${encodeURIComponent(newChainName)}`);
       toast({ title: 'Chain Created', description: `Successfully created "${newChainName}".` });
-      setShowCreateDialog(false); // Close dialog
-      setNewChainName(''); // Reset input
+      setShowCreateDialog(false);
+      setNewChainName('');
     } catch (err: any) {
       console.error('Error creating chain:', err);
       toast({ title: 'Error Creating Chain', description: err.message || 'API error.', variant: 'destructive' });
     }
   };
 
-  // Handler for importing a chain from a JSON file (from dialog)
   const handleChainImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Use provided name or derive from filename
     const finalChainName = newChainName || file.name.replace(/\.json$/i, '');
     if (!finalChainName) {
       toast({ title: 'Error', description: 'Chain name is required for import.', variant: 'destructive' });
@@ -886,41 +826,33 @@ function ChainFlow() {
     }
 
     try {
-      const fileContent = await file.text(); // Read file content
-      const steps = JSON.parse(fileContent); // Parse JSON
-      if (!Array.isArray(steps)) {
-        throw new Error('Invalid file format. Expected a JSON array of steps.');
-      }
-
-      await context.agixt.addChain(finalChainName); // Create the chain first
-      await context.agixt.importChain(finalChainName, steps); // Import steps into it
-      await mutateChains(); // Update chains list
-      // Navigate to the imported chain
+      const fileContent = await file.text();
+      const stepsData = JSON.parse(fileContent); // Parse as raw data
+      // Let the backend handle the import structure validation
+      await context.agixt.importChain(finalChainName, stepsData);
+      await mutateChains();
       router.push(`/settings/chains?chain=${encodeURIComponent(finalChainName)}`);
       toast({ title: 'Chain Imported', description: `Successfully imported "${finalChainName}".` });
-      setShowCreateDialog(false); // Close dialog
-      setNewChainName(''); // Reset input
+      setShowCreateDialog(false);
+      setNewChainName('');
     } catch (err: any) {
       console.error('Error importing chain:', err);
       toast({ title: 'Error Importing Chain', description: err.message || 'API error.', variant: 'destructive' });
     }
   };
 
-  // Handler for deleting the currently selected chain
   const handleDeleteChain = async () => {
     if (!currentChainName) return;
-    // Confirmation dialog
     const confirmed = window.confirm(
       `Are you sure you want to delete the chain "${currentChainName}"? This cannot be undone.`,
     );
     if (!confirmed) return;
 
     try {
-      await context.agixt.deleteChain(currentChainName); // Call SDK
-      await mutateChains(); // Update chains list
-      // Select the first chain in the list after deletion, or none if list is empty
+      await context.agixt.deleteChain(currentChainName);
+      await mutateChains();
       const firstChainName = chainsData?.filter((c) => c.chainName !== currentChainName)[0]?.chainName;
-      handleSelectChain(firstChainName || null); // Update URL/selection
+      handleSelectChain(firstChainName || null);
       toast({ title: 'Chain Deleted', description: `Successfully deleted "${currentChainName}".` });
     } catch (err: any) {
       console.error('Error deleting chain:', err);
@@ -928,22 +860,20 @@ function ChainFlow() {
     }
   };
 
-  // Handler for renaming the currently selected chain
   const handleRenameChain = async () => {
     if (!newName || !currentChainName) {
-      setRenaming(false); // Cancel if no new name or current name
+      setRenaming(false);
       return;
     }
     if (newName === currentChainName) {
-      setRenaming(false); // Cancel if name hasn't changed
+      setRenaming(false);
       toast({ title: 'Info', description: 'Name is the same, rename cancelled.' });
       return;
     }
     try {
-      await context.agixt.renameChain(currentChainName, newName); // Call SDK
-      setRenaming(false); // Exit renaming mode
-      await mutateChains(); // Update chains list
-      // Update URL query param to reflect the new name
+      await context.agixt.renameChain(currentChainName, newName);
+      setRenaming(false);
+      await mutateChains();
       const current = new URLSearchParams(Array.from(searchParams.entries()));
       current.set('chain', newName);
       router.replace(`${pathname}?${current.toString()}`, { scroll: false });
@@ -951,24 +881,27 @@ function ChainFlow() {
     } catch (err: any) {
       console.error('Error renaming chain:', err);
       toast({ title: 'Error Renaming Chain', description: err.message || 'API error.', variant: 'destructive' });
-      setRenaming(false); // Exit renaming mode on error
+      setRenaming(false);
     }
   };
 
-  // Handler for exporting the current chain's steps as JSON
   const handleExportChain = async () => {
     if (!currentChainName || !chainData?.steps) {
       toast({ title: 'Error', description: 'No chain selected or chain data is empty.', variant: 'destructive' });
       return;
     }
     try {
-      // Create a downloadable JSON file
+      // Fetch the raw chain data again for export to ensure it includes args correctly
+      const rawChainData = await context.agixt.getChain(currentChainName);
+      if (!rawChainData) throw new Error('Failed to fetch chain data for export');
+
       const element = document.createElement('a');
-      const file = new Blob([JSON.stringify(chainData.steps, null, 2)], { type: 'application/json' }); // Pretty print JSON
+      // Export the 'steps' part of the raw data
+      const file = new Blob([JSON.stringify(rawChainData.steps, null, 2)], { type: 'application/json' });
       element.href = URL.createObjectURL(file);
-      element.download = `${currentChainName}.json`; // Filename
+      element.download = `${currentChainName}.json`;
       document.body.appendChild(element);
-      element.click(); // Trigger download
+      element.click();
       document.body.removeChild(element);
       toast({ title: 'Chain Exported', description: `Successfully exported "${currentChainName}".` });
     } catch (err: any) {
@@ -977,36 +910,31 @@ function ChainFlow() {
     }
   };
 
-  // Handler for adding a new step to the end of the current chain
   const handleAddStep = async () => {
     if (!chainData || !currentChainName) {
       toast({ title: 'Error', description: 'No chain selected.', variant: 'destructive' });
       return;
     }
-    // Determine the agent for the new step (last step's agent or default)
     const lastStep = chainData.steps.length > 0 ? chainData.steps[chainData.steps.length - 1] : null;
     const newStepNumber = chainData.steps.length + 1;
-    const defaultAgent = agentData?.agent?.name ?? 'AGiXT'; // Use fetched agent name or fallback
+    const defaultAgent = agentData?.agent?.name ?? 'AGiXT';
 
-    // Default new step settings (Prompt type, empty prompt)
-    const defaultPromptArgs: Partial<any> = {
-      prompt_name: '', // Empty prompt name initially
+    // Construct the default prompt object correctly for the backend
+    const defaultPromptPayload: Record<string, any> = {
+      prompt_name: '', // Start with empty prompt name
       prompt_category: 'Default',
-      command_name: null,
-      chain_name: null,
     };
 
     try {
       await context.agixt.addStep(
         currentChainName,
         newStepNumber,
-        lastStep ? lastStep.agentName : defaultAgent, // Agent name
+        lastStep ? lastStep.agentName : defaultAgent,
         'Prompt', // Default type
-        defaultPromptArgs, // Default args
+        defaultPromptPayload, // Send the structured payload
       );
-      await mutateChain(); // Re-fetch current chain data
+      await mutateChain();
       toast({ title: 'Step Added', description: `Step ${newStepNumber} added to chain.` });
-      // Refit the view to include the new node
       setTimeout(() => reactFlowInstance?.fitView({ padding: 0.2, duration: 300 }), 100);
     } catch (err: any) {
       console.error('Error adding step:', err);
@@ -1014,19 +942,16 @@ function ChainFlow() {
     }
   };
 
-  // Memoize the custom node type for React Flow
   const nodeTypes = useMemo(() => ({ chainStep: ChainStepNode }), []);
 
-  // --- JSX Rendering ---
+  // --- JSX Rendering (Mostly unchanged) ---
   return (
     <>
-      {/* Card for selecting/managing the chain */}
       <Card>
         <CardContent className='p-4 space-y-4'>
           <Label>Select or Manage Chain</Label>
           <TooltipProvider delayDuration={100}>
             <div className='flex items-center space-x-2'>
-              {/* Chain Selector or Rename Input */}
               <div className='flex-1'>
                 {renaming ? (
                   <Input
@@ -1036,14 +961,12 @@ function ChainFlow() {
                     className='h-9'
                   />
                 ) : (
-                  // Chain Selection Dropdown
                   <Select value={currentChainName || ''} onValueChange={handleSelectChain} disabled={!chainsData}>
                     <SelectTrigger className='w-full h-9'>
                       <SelectValue placeholder={!chainsData ? 'Loading Chains...' : 'Select a Chain'} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value='/'>- Select -</SelectItem>
-                      {/* Populate dropdown with fetched chains */}
                       {chainsData?.map((chain) => (
                         <SelectItem key={chain.id} value={chain.chainName}>
                           {chain.chainName}
@@ -1053,15 +976,13 @@ function ChainFlow() {
                   </Select>
                 )}
               </div>
-              {/* Action Buttons */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  {/* Create/Import Button */}
                   <Button
                     variant='ghost'
                     size='icon'
                     onClick={() => setShowCreateDialog(true)}
-                    disabled={renaming} // Disable while renaming
+                    disabled={renaming}
                     className='h-9 w-9'
                   >
                     <Plus className='h-4 w-4' />
@@ -1069,17 +990,15 @@ function ChainFlow() {
                 </TooltipTrigger>
                 <TooltipContent>Create or Import Chain</TooltipContent>
               </Tooltip>
-              {/* Buttons visible only when a chain is selected */}
               {currentChainName && (
                 <>
-                  {/* Export Button */}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
                         variant='ghost'
                         size='icon'
                         onClick={handleExportChain}
-                        disabled={renaming || !chainData} // Disable while renaming or if no data
+                        disabled={renaming || !chainData}
                         className='h-9 w-9'
                       >
                         <Download className='h-4 w-4' />
@@ -1087,14 +1006,13 @@ function ChainFlow() {
                     </TooltipTrigger>
                     <TooltipContent>Export Chain Steps (JSON)</TooltipContent>
                   </Tooltip>
-                  {/* Rename/Confirm Button */}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
                         variant='ghost'
                         size='icon'
                         onClick={renaming ? handleRenameChain : () => setRenaming(true)}
-                        disabled={!currentChainName} // Disable if no chain selected
+                        disabled={!currentChainName}
                         className='h-9 w-9'
                       >
                         {renaming ? <Check className='h-4 w-4' /> : <Pencil className='h-4 w-4' />}
@@ -1102,7 +1020,6 @@ function ChainFlow() {
                     </TooltipTrigger>
                     <TooltipContent>{renaming ? 'Save New Name' : 'Rename Chain'}</TooltipContent>
                   </Tooltip>
-                  {/* Cancel Rename Button (visible only during rename) */}
                   {renaming && (
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -1111,7 +1028,7 @@ function ChainFlow() {
                           size='icon'
                           onClick={() => {
                             setRenaming(false);
-                            setNewName(currentChainName || ''); // Reset input
+                            setNewName(currentChainName || '');
                           }}
                           className='h-9 w-9 text-muted-foreground'
                         >
@@ -1121,14 +1038,13 @@ function ChainFlow() {
                       <TooltipContent>Cancel Rename</TooltipContent>
                     </Tooltip>
                   )}
-                  {/* Delete Button */}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
                         variant='ghost'
                         size='icon'
                         onClick={handleDeleteChain}
-                        disabled={renaming || !currentChainName} // Disable while renaming or if no chain selected
+                        disabled={renaming || !currentChainName}
                         className='h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10'
                       >
                         <Trash2 className='h-4 w-4' />
@@ -1143,23 +1059,18 @@ function ChainFlow() {
         </CardContent>
       </Card>
 
-      {/* React Flow Area */}
       <div className='flex-grow w-full h-[600px] border rounded-md relative overflow-hidden'>
-        {/* Add Step Button */}
         <Button
           onClick={handleAddStep}
           variant='outline'
           size='sm'
           className='absolute bottom-4 right-4 z-10 flex items-center shadow-md bg-background hover:bg-muted'
-          // Disable if loading, no chain selected, or renaming
           disabled={isChainLoading || !chainData || !currentChainName || renaming}
         >
           <Plus className='mr-1 h-4 w-4' /> Add Step
         </Button>
 
-        {/* Conditional Rendering for Flow Area */}
         {!currentChainName ? (
-          // Placeholder when no chain is selected
           <div className='flex items-center justify-center h-full text-muted-foreground'>
             {!chainsData
               ? 'Loading chains...'
@@ -1168,56 +1079,46 @@ function ChainFlow() {
                 : 'Select a chain to view its steps.'}
           </div>
         ) : isChainLoading ? (
-          // Loading indicator
           <div className='absolute inset-0 flex items-center justify-center bg-background/50 z-20'>Loading chain...</div>
         ) : chainError ? (
-          // Error message
           <div className='p-4 text-red-500'>Error loading chain data. Please try selecting it again.</div>
         ) : (
-          // Render React Flow component
           <ReactFlow
             nodes={nodes}
             edges={edges}
-            onNodesChange={onNodesChange} // Handle node position changes (though dragging is disabled)
-            onEdgesChange={onEdgesChange} // Handle edge changes (if any)
-            // onConnect={onConnect} // Handle connections (disabled)
-            nodeTypes={nodeTypes} // Register custom node type
-            fitView // Fit content to view on load/change
-            fitViewOptions={{ padding: 0.2, duration: 300 }} // Options for fitView
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            nodeTypes={nodeTypes}
+            fitView
+            fitViewOptions={{ padding: 0.2, duration: 300 }}
             className='bg-background'
-            proOptions={{ hideAttribution: true }} // Hide React Flow attribution
+            proOptions={{ hideAttribution: true }}
             minZoom={0.1}
             maxZoom={2}
-            // Interaction options
-            nodesDraggable={false} // Disable node dragging
-            nodesConnectable={false} // Disable connecting nodes by dragging handles
-            elementsSelectable={false} // Disable selecting nodes/edges by clicking
-            panOnDrag={true} // Enable panning by dragging the background
-            panOnScroll={true} // Enable panning with scroll wheel
-            zoomOnScroll={true} // Enable zooming with scroll wheel
-            zoomOnPinch={true} // Enable pinch zoom on touch devices
-            zoomOnDoubleClick={true} // Enable zoom on double click
-            preventScrolling={false} // Allow page scrolling when mouse is over the flow area
-            // Ensure panning is default by explicitly disabling selection interactions
-            nodesFocusable={false} // Prevents focus outline on node click
-            selectionOnDrag={false} // Disable box selection by dragging
-            // selectionKeyCode={null} // Disable selection with key (e.g., Shift)
-            // multiSelectionKeyCode={null} // Disable multi-selection with key (e.g., Ctrl/Cmd)
+            nodesDraggable={false}
+            nodesConnectable={false}
+            elementsSelectable={false}
+            panOnDrag={true}
+            panOnScroll={true}
+            zoomOnScroll={true}
+            zoomOnPinch={true}
+            zoomOnDoubleClick={true}
+            preventScrolling={false}
+            nodesFocusable={false}
+            selectionOnDrag={false}
           >
-            <Controls className='react-flow__controls !bottom-auto !top-4 !left-4' /> {/* Position controls */}
-            <Background /> {/* Render background pattern */}
+            <Controls className='react-flow__controls !bottom-auto !top-4 !left-4' />
+            <Background />
           </ReactFlow>
         )}
       </div>
 
-      {/* Dialog for Creating or Importing a Chain */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create or Import Chain</DialogTitle>
           </DialogHeader>
           <div className='grid gap-4 py-4'>
-            {/* Chain Name Input */}
             <div className='grid grid-cols-4 items-center gap-4'>
               <Label htmlFor='chain-name-dialog' className='text-right'>
                 Name*
@@ -1230,7 +1131,6 @@ function ChainFlow() {
                 placeholder='Required for create/import'
               />
             </div>
-            {/* Import File Input */}
             <div className='grid grid-cols-4 items-center gap-4'>
               <Label htmlFor='import-chain-dialog' className='text-right'>
                 Import File
@@ -1238,8 +1138,8 @@ function ChainFlow() {
               <Input
                 id='import-chain-dialog'
                 type='file'
-                accept='.json' // Accept only JSON files
-                onChange={handleChainImport} // Use import handler on change
+                accept='.json'
+                onChange={handleChainImport}
                 className='col-span-3 file:mr-2 file:rounded file:border file:border-solid file:border-input file:bg-background file:px-2 file:py-1 file:text-xs file:font-medium hover:file:bg-accent'
               />
             </div>
@@ -1250,21 +1150,18 @@ function ChainFlow() {
             </p>
           </div>
           <DialogFooter>
-            {/* Cancel Button */}
             <Button
               variant='outline'
               onClick={() => {
                 setShowCreateDialog(false);
-                setNewChainName(''); // Reset name on cancel
+                setNewChainName('');
               }}
             >
               Cancel
             </Button>
-            {/* Create Button */}
             <Button onClick={handleNewChain} disabled={!newChainName}>
               Create Chain
             </Button>
-            {/* Import button is implicitly handled by the file input's onChange */}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1272,13 +1169,11 @@ function ChainFlow() {
   );
 }
 
-// Wrapper component to provide ReactFlow context
+// Wrapper component
 export default function ChainPageWrapper() {
   return (
     <SidebarPage title='Chains'>
       <ReactFlowProvider>
-        {' '}
-        {/* Provides context for useReactFlow hook */}
         <ChainFlow />
       </ReactFlowProvider>
     </SidebarPage>
