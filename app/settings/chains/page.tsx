@@ -1,7 +1,7 @@
 // ./app/settings/chains/page.tsx
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback, useContext, memo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useContext, memo, useRef, createContext } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import ReactFlow, {
   Controls,
@@ -49,6 +49,71 @@ import { useAgent } from '@/components/interactive/useAgent';
 import { useChain, useChains, ChainStep as ChainStepType } from '@/components/interactive/useChain';
 import { toast } from '@/components/layout/toast';
 import { cn } from '@/lib/utils';
+
+// --- Chain Editor Context for Cross-Component Communication (e.g., Auto-Save) ---
+
+interface StepApi {
+  handleSave: () => Promise<void>;
+  isModified: boolean;
+}
+
+interface ChainEditorContextType {
+  registerStep: (stepNumber: number, api: StepApi) => void;
+  unregisterStep: (stepNumber: number) => void;
+  getStepsToSave: () => Array<{ stepNumber: number; saveData: () => Promise<void> }>;
+}
+
+const ChainEditorContext = createContext<ChainEditorContextType | null>(null);
+
+const ChainEditorProvider = ({ children }: { children: React.ReactNode }) => {
+  const [stepsApi, setStepsApi] = useState<Record<number, StepApi>>({});
+
+  const registerStep = useCallback((stepNumber: number, api: StepApi) => {
+    // console.log(`Registering step ${stepNumber}, modified: ${api.isModified}`);
+    setStepsApi((prev) => ({ ...prev, [stepNumber]: api }));
+  }, []);
+
+  const unregisterStep = useCallback((stepNumber: number) => {
+    // console.log(`Unregistering step ${stepNumber}`);
+    setStepsApi((prev) => {
+      const newState = { ...prev };
+      delete newState[stepNumber];
+      return newState;
+    });
+  }, []);
+
+  // Function to get only modified steps that need saving
+  const getStepsToSave = useCallback(() => {
+    return Object.entries(stepsApi)
+      .filter(([_, api]) => api.isModified)
+      .map(([stepNumberStr, api]) => ({
+        stepNumber: parseInt(stepNumberStr, 10),
+        saveData: api.handleSave, // Pass the save function itself
+      }));
+  }, [stepsApi]);
+
+  const value = useMemo(
+    () => ({
+      registerStep,
+      unregisterStep,
+      getStepsToSave,
+    }),
+    [registerStep, unregisterStep, getStepsToSave],
+  );
+
+  return <ChainEditorContext.Provider value={value}>{children}</ChainEditorContext.Provider>;
+};
+
+// Hook for easy access
+const useChainEditor = () => {
+  const context = useContext(ChainEditorContext);
+  if (!context) {
+    throw new Error('useChainEditor must be used within a ChainEditorProvider');
+  }
+  return context;
+};
+
+// --- End Chain Editor Context ---
 
 // Define ChainStepPrompt structure if not implicitly defined elsewhere
 type ChainStepPrompt = {
@@ -223,6 +288,7 @@ const ChainStepNode = memo(
   }>) => {
     const { stepData, chain_name, mutateChain, mutateChains, isLastStep, moveStep } = data;
     const context = useInteractiveConfig(); // Access SDK and global state
+    const { registerStep, unregisterStep } = useChainEditor(); // Context for auto-save coordination
 
     // --- State Initialization ---
     // These states hold the *current* UI representation of the step's configuration
@@ -348,7 +414,7 @@ const ChainStepNode = memo(
         // IMPORTANT: DO NOT modify the `args` (values) state here.
         // The `args` state holds the actual values, initialized from stepData.
         // We only update the list of *which* args are expected/configurable.
-      } catch (error) {
+      } catch (error: any) {
         console.error(`Error fetching available args for ${stepType} ${targetName}:`, error);
         toast({ title: 'Fetch Args Error', description: error.message || 'API error.', variant: 'destructive' });
         setAvailableArgs([]); // Clear available args on error
@@ -365,7 +431,8 @@ const ChainStepNode = memo(
     }, [stepType, targetName, agentName]); // Trigger fetch only when these change
 
     // Saves the current step configuration via API call
-    const handleSave = async (): Promise<void> => {
+    // Wrapped in useCallback for context registration stability
+    const handleSave = useCallback(async (): Promise<void> => {
       if (!chain_name || !agentName) {
         toast({ title: 'Error', description: 'Chain name and Agent are required.', variant: 'destructive' });
         return;
@@ -445,8 +512,34 @@ const ChainStepNode = memo(
       } catch (err: any) {
         console.error('Save step error:', err);
         toast({ title: 'Save Error', description: err.message || 'API error occurred.', variant: 'destructive' });
+        throw err; // Re-throw error so Promise.all in auto-save can catch it
       }
-    };
+    }, [
+      chain_name,
+      stepData.step,
+      agentName,
+      stepType,
+      targetName,
+      args,
+      availableArgs, // Include availableArgs as it affects which args are saved
+      context.agixt,
+      mutateChain,
+      setModified, // setModified is stable, but include for completeness
+    ]);
+
+    // Effect to register/update this step's API with the context
+    useEffect(() => {
+      // console.log(`Step ${stepData.step} registering/updating. Modified: ${modified}`);
+      registerStep(stepData.step, { handleSave, isModified: modified });
+    }, [registerStep, stepData.step, handleSave, modified]);
+
+    // Effect to unregister on unmount
+    useEffect(() => {
+      return () => {
+        // console.log(`Step ${stepData.step} unregistering.`);
+        unregisterStep(stepData.step);
+      };
+    }, [unregisterStep, stepData.step]);
 
     // Handles the confirmation of step deletion
     const handleDeleteConfirm = async (): Promise<void> => {
@@ -536,7 +629,7 @@ const ChainStepNode = memo(
       [agentName, targetName, stepData.step],
     );
 
-    console.log(`RENDER Step ${stepData.step}:`, { stepType, targetName, args, availableArgs, isLoadingArgs }); // Debug Render
+    // console.log(`RENDER Step ${stepData.step}:`, { stepType, targetName, args, availableArgs, isLoadingArgs, modified }); // Debug Render
 
     // --- JSX Rendering ---
     return (
@@ -851,6 +944,7 @@ function ChainFlow() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const selectedChainName = searchParams.get('chain');
+  const { getStepsToSave } = useChainEditor(); // Get context method for auto-save
 
   // SWR Hooks for data fetching and caching
   const { data: chainsData, mutate: mutateChains, isLoading: isChainsLoading } = useChains();
@@ -1142,8 +1236,34 @@ function ChainFlow() {
       toast({ title: 'Error', description: 'No chain selected to add a step to.', variant: 'destructive' });
       return;
     }
-    // Check chainData existence and steps array
-    const currentSteps = chainData?.steps || [];
+
+    // --- Auto-save modified steps ---
+    const stepsToSave = getStepsToSave();
+    if (stepsToSave.length > 0) {
+      const stepNumbers = stepsToSave.map((s) => s.stepNumber).join(', ');
+      toast({ title: 'Auto-saving', description: `Saving changes in step(s): ${stepNumbers}...` });
+      const savePromises = stepsToSave.map((step) => step.saveData());
+      try {
+        await Promise.all(savePromises);
+        // Optional: Show success toast for auto-save, but might be too noisy.
+        // toast({ title: 'Auto-save Complete', description: `Changes saved for step(s): ${stepNumbers}.` });
+        console.log(`Auto-save successful for steps: ${stepNumbers}`);
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+        toast({
+          title: 'Auto-save Failed',
+          description: 'Could not save all modified steps. Please save manually and try again.',
+          variant: 'destructive',
+        });
+        return; // Abort adding step if auto-save fails
+      }
+    }
+    // --- End Auto-save ---
+
+    // Check chainData existence and steps array (needed AFTER potential mutateChain from auto-save)
+    // Use the latest chainData by re-fetching or relying on the mutation to update it
+    const currentChainState = chainData; // Use the SWR data state which should be updated by mutateChain
+    const currentSteps = currentChainState?.steps || [];
     const lastStep = currentSteps.length > 0 ? currentSteps[currentSteps.length - 1] : null;
     const newStepNumber = (lastStep ? lastStep.step : 0) + 1;
 
@@ -1342,7 +1462,10 @@ function ChainFlow() {
             variant='outline'
             size='sm'
             className='absolute bottom-4 right-4 z-10 flex items-center shadow-md bg-background hover:bg-muted'
-            disabled={!currentChainName} // Enable even if chain is loading, but guard inside handler
+            // Disable button slightly differently: only truly disable if no chain name is set.
+            // Loading state or empty state is handled visually elsewhere.
+            // Auto-save logic runs regardless when clicked.
+            disabled={!currentChainName}
           >
             <Plus className='mr-1 h-4 w-4' /> Add Step
           </Button>
@@ -1479,14 +1602,18 @@ function ChainFlow() {
   );
 }
 
-// Wrapper Component that includes the ReactFlowProvider
+// Wrapper Component that includes the ReactFlowProvider and the ChainEditorProvider
 export default function ChainPageWrapper() {
   return (
     <SidebarPage title='Chain Management'>
       <ReactFlowProvider>
         {' '}
         {/* Provides context for ReactFlow hooks like useReactFlow */}
-        <ChainFlow />
+        <ChainEditorProvider>
+          {' '}
+          {/* Provides context for auto-saving steps */}
+          <ChainFlow />
+        </ChainEditorProvider>
       </ReactFlowProvider>
     </SidebarPage>
   );
