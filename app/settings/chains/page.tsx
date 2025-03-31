@@ -1138,13 +1138,15 @@ function ChainFlow() {
 
   // Handle adding a new step to the current chain
   const handleAddStep = async () => {
-    if (!currentChainName || !chainData) {
-      toast({ title: 'Error', description: 'Cannot add step, chain data not loaded.', variant: 'destructive' });
+    if (!currentChainName) {
+      toast({ title: 'Error', description: 'No chain selected to add a step to.', variant: 'destructive' });
       return;
     }
-    // Determine the number for the new step
-    const lastStep = chainData.steps.length > 0 ? chainData.steps[chainData.steps.length - 1] : null;
+    // Check chainData existence and steps array
+    const currentSteps = chainData?.steps || [];
+    const lastStep = currentSteps.length > 0 ? currentSteps[currentSteps.length - 1] : null;
     const newStepNumber = (lastStep ? lastStep.step : 0) + 1;
+
     // Default agent for the new step (use last step's agent or global default)
     const defaultAgent = lastStep ? lastStep.agentName : (agentData?.agent?.name ?? 'AGiXT');
     // Default prompt arguments for a new 'Prompt' type step
@@ -1340,7 +1342,7 @@ function ChainFlow() {
             variant='outline'
             size='sm'
             className='absolute bottom-4 right-4 z-10 flex items-center shadow-md bg-background hover:bg-muted'
-            disabled={isChainLoading || !currentChainName} // Disable if loading or no chain selected
+            disabled={!currentChainName} // Enable even if chain is loading, but guard inside handler
           >
             <Plus className='mr-1 h-4 w-4' /> Add Step
           </Button>
