@@ -249,14 +249,15 @@ const ChainStepNode = memo(
       // Determine Target Name: Prioritize explicit `targetName`
       let newTargetName = stepData.targetName || '';
       // Fallback only if targetName is missing (should ideally be present from API)
-      console.log(`SYNC EFFECT: Step ${stepData.step} targetName set to: ${newTargetName}`);
+      console.log(`SYNC EFFECT: Step ${stepData.step} targetName received: ${newTargetName}`);
       if (!newTargetName) {
         if (newStepType === 'Chain') newTargetName = stepData.prompt?.chain_name || '';
         else if (newStepType === 'Command') newTargetName = stepData.prompt?.command_name || '';
         else newTargetName = stepData.prompt?.prompt_name || '';
+        console.log(`SYNC EFFECT: Step ${stepData.step} targetName fallback: ${newTargetName}`);
       }
       setTargetName(newTargetName);
-      console.log(`SYNC EFFECT: Step ${stepData.step} targetName set to: ${newTargetName}`);
+      console.log(`SYNC EFFECT: Step ${stepData.step} targetName final set to: ${newTargetName}`);
 
       // Set Arguments: Directly extract non-structural/system args from the `prompt` object
       const initialArgs = extractArgsFromPrompt(stepData.prompt);
@@ -296,6 +297,8 @@ const ChainStepNode = memo(
       try {
         // Fetch potential arg names based on step type
         let fetchedArgNames: string[] = [];
+        let argsResult: any;
+
         if (stepType === 'Prompt') {
           // Try getting from prompt content first
           try {
@@ -303,29 +306,37 @@ const ChainStepNode = memo(
             if (promptResult && typeof promptResult.prompt === 'string') {
               const matches = promptResult.prompt.match(/\{([^}]+)\}/g) || [];
               fetchedArgNames = matches.map((match) => match.replace(/[{}]/g, ''));
-              console.log(`fetchAvailableArgs: Extracted from prompt content:`, fetchedArgNames);
+              console.log(`fetchAvailableArgs: Extracted from prompt content for ${targetName}:`, fetchedArgNames);
+            }
+            if (fetchedArgNames.length === 0) {
+              // Fallback if extraction fails or no args found in content
+              throw new Error('No args found in content, trying getPromptArgs');
             }
           } catch (err) {
             console.warn(
-              `fetchAvailableArgs: Failed to get prompt content for ${targetName}, falling back to getPromptArgs.`,
+              `fetchAvailableArgs: Failed to get prompt content or no args in content for ${targetName}, falling back to getPromptArgs.`,
+              err,
             );
-            // Fallback to getPromptArgs
-            const argsResult = await context.agixt.getPromptArgs(targetName, 'Default');
-            console.log(`fetchAvailableArgs: Result from getPromptArgs:`, argsResult);
-            if (Array.isArray(argsResult)) fetchedArgNames = argsResult;
-            else if (argsResult && Array.isArray(argsResult.prompt_args)) fetchedArgNames = argsResult.prompt_args;
-            else if (typeof argsResult === 'object' && argsResult !== null) fetchedArgNames = Object.keys(argsResult);
+            argsResult = await context.agixt.getPromptArgs(targetName, 'Default');
+            console.log(`fetchAvailableArgs: Result from getPromptArgs for ${targetName}:`, argsResult);
           }
         } else if (stepType === 'Command') {
-          const argsResult = await context.agixt.getCommandArgs(targetName);
-          console.log(`fetchAvailableArgs: Result from getCommandArgs:`, argsResult);
-          if (typeof argsResult === 'object' && argsResult !== null) fetchedArgNames = Object.keys(argsResult);
-          else if (Array.isArray(argsResult)) fetchedArgNames = argsResult;
+          argsResult = await context.agixt.getCommandArgs(targetName);
+          console.log(`fetchAvailableArgs: Result from getCommandArgs for ${targetName}:`, argsResult);
         } else if (stepType === 'Chain') {
-          const argsResult = await context.agixt.getChainArgs(targetName);
-          console.log(`fetchAvailableArgs: Result from getChainArgs:`, argsResult);
-          if (typeof argsResult === 'object' && argsResult !== null) fetchedArgNames = Object.keys(argsResult);
-          else if (Array.isArray(argsResult)) fetchedArgNames = argsResult;
+          argsResult = await context.agixt.getChainArgs(targetName);
+          console.log(`fetchAvailableArgs: Result from getChainArgs for ${targetName}:`, argsResult);
+        }
+
+        // Handle different response structures for argsResult (if not already extracted from content)
+        if (argsResult) {
+          if (Array.isArray(argsResult)) {
+            fetchedArgNames = argsResult; // Direct array of names
+          } else if (argsResult && Array.isArray(argsResult.prompt_args)) {
+            fetchedArgNames = argsResult.prompt_args; // Nested under prompt_args (specifically for prompt fallback)
+          } else if (typeof argsResult === 'object' && argsResult !== null && !Array.isArray(argsResult)) {
+            fetchedArgNames = Object.keys(argsResult); // Keys of an object
+          }
         }
 
         // Filter out ignored args from the fetched list
@@ -495,6 +506,8 @@ const ChainStepNode = memo(
                   setAvailableArgs([]); // Clear available args
                 }
               }}
+              onMouseDown={stopPropagation}
+              onTouchStart={stopPropagation}
             />
           </div>
         ),
@@ -513,6 +526,8 @@ const ChainStepNode = memo(
                   setAvailableArgs([]); // Clear available args
                 }
               }}
+              onMouseDown={stopPropagation}
+              onTouchStart={stopPropagation}
             />
           </div>
         ),
@@ -1134,7 +1149,7 @@ function ChainFlow() {
     const defaultAgent = lastStep ? lastStep.agentName : (agentData?.agent?.name ?? 'AGiXT');
     // Default prompt arguments for a new 'Prompt' type step
     const defaultPromptArgs: Partial<ChainStepPrompt> = {
-      prompt_name: 'Think About It', // Initially empty, user needs to select
+      prompt_name: 'Think About It', // Default to a known prompt
       prompt_category: 'Default',
       command_name: null,
       chain_name: null,
