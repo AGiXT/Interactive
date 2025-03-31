@@ -48,7 +48,7 @@ import PromptSelector from '@/components/layout/PromptSelector'; // Assuming thi
 import { SidebarPage } from '@/components/layout/SidebarPage';
 import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
 import { useAgent } from '@/components/interactive/useAgent';
-import { useChain, useChains, ChainStep as ChainStepType, ChainStepPrompt } from '@/components/interactive/useChain';
+import { useChain, useChains, ChainStep as ChainStepType } from '@/components/interactive/useChain';
 import { toast } from '@/components/layout/toast';
 import { cn } from '@/lib/utils';
 
@@ -189,8 +189,9 @@ const ChainStepNode = memo(
     const { stepData, chainName, mutateChain, mutateChains, isLastStep, moveStep } = data;
     const context = useInteractiveConfig();
     const [agentName, setAgentName] = useState(stepData.agentName);
-    const initialStepType = stepData.prompt.chainName ? 'Chain' : stepData.prompt.commandName ? 'Command' : 'Prompt';
-    const initialTargetName = stepData.prompt.chainName || stepData.prompt.commandName || stepData.prompt.promptName || '';
+    const initialStepType = stepData.prompt.chain_name ? 'Chain' : stepData.prompt.command_name ? 'Command' : 'Prompt';
+    const initialTargetName =
+      stepData.prompt.chain_name || stepData.prompt.command_name || stepData.prompt.prompt_name || '';
     const [stepType, setStepType] = useState(initialStepType);
     const [targetName, setTargetName] = useState(initialTargetName);
     const [args, setArgs] = useState<Record<string, string | number | boolean>>(() => {
@@ -199,12 +200,12 @@ const ChainStepNode = memo(
         for (const key in stepData.prompt) {
           if (
             !ignoreArgs.includes(key) &&
-            key !== 'chainName' &&
-            key !== 'commandName' &&
-            key !== 'promptName' &&
-            key !== 'promptCategory'
+            key !== 'chain_name' &&
+            key !== 'command_name' &&
+            key !== 'prompt_name' &&
+            key !== 'prompt_category'
           ) {
-            const value = stepData.prompt[key as keyof ChainStepPrompt];
+            const value = stepData.prompt[key];
             if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
               initialArgs[key] = value;
             } else {
@@ -314,7 +315,7 @@ const ChainStepNode = memo(
       // *** END ADDED GUARD ***
 
       // Construct the base object for the prompt/command/chain name
-      const nameObj: Partial<ChainStepPrompt> = {};
+      const nameObj: Partial<any> = {};
       let validationError = false;
 
       // Set the correct name field based on step type and nullify others
@@ -323,28 +324,28 @@ const ChainStepNode = memo(
           toast({ title: 'Error', description: 'Prompt Name is required.', variant: 'destructive' });
           validationError = true;
         }
-        nameObj.promptName = targetName;
-        nameObj.promptCategory = 'Default'; // Assuming 'Default' category
-        nameObj.commandName = null;
-        nameObj.chainName = null;
+        nameObj.prompt_name = targetName;
+        nameObj.prompt_category = 'Default'; // Assuming 'Default' category
+        nameObj.command_name = null;
+        nameObj.chain_name = null;
       } else if (stepType === 'Command') {
         if (!targetName) {
           toast({ title: 'Error', description: 'Command Name is required.', variant: 'destructive' });
           validationError = true;
         }
-        nameObj.commandName = targetName;
-        nameObj.promptName = null;
-        nameObj.promptCategory = null;
-        nameObj.chainName = null;
+        nameObj.command_name = targetName;
+        nameObj.prompt_name = null;
+        nameObj.prompt_category = null;
+        nameObj.chain_name = null;
       } else if (stepType === 'Chain') {
         if (!targetName) {
           toast({ title: 'Error', description: 'Chain Name is required.', variant: 'destructive' });
           validationError = true;
         }
-        nameObj.chainName = targetName;
-        nameObj.promptName = null;
-        nameObj.promptCategory = null;
-        nameObj.commandName = null;
+        nameObj.chain_name = targetName;
+        nameObj.prompt_name = null;
+        nameObj.prompt_category = null;
+        nameObj.command_name = null;
       } else {
         toast({ title: 'Error', description: 'Invalid step type selected.', variant: 'destructive' });
         validationError = true;
@@ -988,11 +989,11 @@ function ChainFlow() {
     const defaultAgent = agentData?.agent?.name ?? 'AGiXT'; // Use fetched agent name or fallback
 
     // Default new step settings (Prompt type, empty prompt)
-    const defaultPromptArgs: Partial<ChainStepPrompt> = {
-      promptName: '', // Empty prompt name initially
-      promptCategory: 'Default',
-      commandName: null,
-      chainName: null,
+    const defaultPromptArgs: Partial<any> = {
+      prompt_name: '', // Empty prompt name initially
+      prompt_category: 'Default',
+      command_name: null,
+      chain_name: null,
     };
 
     try {
