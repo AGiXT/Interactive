@@ -20,7 +20,7 @@ import ReactFlow, {
   ReactFlowProvider,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Check, Download, Pencil, Plus, Save, Trash2, Upload, X, ArrowDown, ArrowUp, Loader2 } from 'lucide-react';
+import { Check, Download, Pencil, Plus, Save, Trash2, Upload, X, ArrowDown, ArrowUp, Loader2, SaveAll } from 'lucide-react';
 import useSWR from 'swr';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -136,12 +136,14 @@ function CommandSelector({
   onChange,
   onMouseDown,
   onTouchStart,
+  onBlur, // Added onBlur prop
 }: {
   agentName: string;
   value?: string | null;
   onChange?: (value: string | null) => void;
   onMouseDown?: (e: React.MouseEvent) => void;
   onTouchStart?: (e: React.TouchEvent) => void;
+  onBlur?: () => void; // Added onBlur prop
 }): React.JSX.Element {
   const { data: agentData, error, isLoading } = useAgent(false, agentName);
 
@@ -165,6 +167,7 @@ function CommandSelector({
           className='w-full h-8 text-xs nopan'
           onMouseDown={onMouseDown || stopPropagation}
           onTouchStart={onTouchStart || stopPropagation}
+          onBlur={onBlur} // Attach onBlur here
         >
           <SelectValue placeholder='Select Command' />
         </SelectTrigger>
@@ -190,11 +193,13 @@ function ChainSelector({
   onChange,
   onMouseDown,
   onTouchStart,
+  onBlur, // Added onBlur prop
 }: {
   value?: string | null;
   onChange?: (value: string | null) => void;
   onMouseDown?: (e: React.MouseEvent) => void;
   onTouchStart?: (e: React.TouchEvent) => void;
+  onBlur?: () => void; // Added onBlur prop
 }): React.JSX.Element {
   const { data: chainData, error, isLoading } = useChains();
 
@@ -215,6 +220,7 @@ function ChainSelector({
           className='w-full h-8 text-xs nopan'
           onMouseDown={onMouseDown || stopPropagation}
           onTouchStart={onTouchStart || stopPropagation}
+          onBlur={onBlur} // Attach onBlur here
         >
           <SelectValue placeholder='Select Chain' />
         </SelectTrigger>
@@ -285,8 +291,9 @@ const ChainStepNode = memo(
     mutateChains: () => void; // Function to revalidate list of all chains
     isLastStep: boolean; // Flag indicating if this is the last step
     moveStep: (stepNumber: number, direction: 'up' | 'down') => Promise<void>; // Callback to move step
+    isAutosaveEnabled: boolean; // Autosave state from parent
   }>) => {
-    const { stepData, chain_name, mutateChain, mutateChains, isLastStep, moveStep } = data;
+    const { stepData, chain_name, mutateChain, mutateChains, isLastStep, moveStep, isAutosaveEnabled } = data;
     const context = useInteractiveConfig(); // Access SDK and global state
     const { registerStep, unregisterStep } = useChainEditor(); // Context for auto-save coordination
 
@@ -304,30 +311,30 @@ const ChainStepNode = memo(
 
     // Effect to synchronize internal state when the stepData prop changes (e.g., chain load, step move)
     useEffect(() => {
-      console.log(`SYNC EFFECT: Step ${stepData.step} received new stepData:`, stepData);
+      // console.log(`SYNC EFFECT: Step ${stepData.step} received new stepData:`, stepData);
       setAgentName(stepData.agentName);
 
       // Determine Step Type: Prioritize explicit `promptType`
       const newStepType = stepData.promptType || 'Prompt'; // Default if missing
       setStepType(newStepType);
-      console.log(`SYNC EFFECT: Step ${stepData.step} type set to: ${newStepType}`);
+      // console.log(`SYNC EFFECT: Step ${stepData.step} type set to: ${newStepType}`);
 
       // Determine Target Name: Prioritize explicit `targetName`
       let newTargetName = stepData.targetName || '';
       // Fallback only if targetName is missing (should ideally be present from API)
-      console.log(`SYNC EFFECT: Step ${stepData.step} targetName received: ${newTargetName}`);
+      // console.log(`SYNC EFFECT: Step ${stepData.step} targetName received: ${newTargetName}`);
       if (!newTargetName) {
         if (newStepType === 'Chain') newTargetName = stepData.prompt?.chain_name || '';
         else if (newStepType === 'Command') newTargetName = stepData.prompt?.command_name || '';
         else newTargetName = stepData.prompt?.prompt_name || '';
-        console.log(`SYNC EFFECT: Step ${stepData.step} targetName fallback: ${newTargetName}`);
+        // console.log(`SYNC EFFECT: Step ${stepData.step} targetName fallback: ${newTargetName}`);
       }
       setTargetName(newTargetName);
-      console.log(`SYNC EFFECT: Step ${stepData.step} targetName final set to: ${newTargetName}`);
+      // console.log(`SYNC EFFECT: Step ${stepData.step} targetName final set to: ${newTargetName}`);
 
       // Set Arguments: Directly extract non-structural/system args from the `prompt` object
       const initialArgs = extractArgsFromPrompt(stepData.prompt);
-      console.log(`SYNC EFFECT: Step ${stepData.step} setting args state from stepData.prompt:`, initialArgs);
+      // console.log(`SYNC EFFECT: Step ${stepData.step} setting args state from stepData.prompt:`, initialArgs);
       setArgs(initialArgs);
 
       setModified(false); // Reset modified flag as we just loaded data
@@ -351,13 +358,13 @@ const ChainStepNode = memo(
     const fetchAvailableArgs = useCallback(async () => {
       // Skip fetch if essential info is missing
       if (!targetName || !stepType || (stepType === 'Command' && !agentName)) {
-        console.log('fetchAvailableArgs: Skipping fetch, missing info', { targetName, stepType, agentName });
+        // console.log('fetchAvailableArgs: Skipping fetch, missing info', { targetName, stepType, agentName });
         setAvailableArgs([]); // Clear available args list
         setIsLoadingArgs(false);
         return;
       }
 
-      console.log(`fetchAvailableArgs: Fetching for ${stepType} ${targetName} (Agent: ${agentName})`);
+      // console.log(`fetchAvailableArgs: Fetching for ${stepType} ${targetName} (Agent: ${agentName})`);
       setIsLoadingArgs(true);
 
       try {
@@ -372,26 +379,23 @@ const ChainStepNode = memo(
             if (promptResult && typeof promptResult.prompt === 'string') {
               const matches = promptResult.prompt.match(/\{([^}]+)\}/g) || [];
               fetchedArgNames = matches.map((match) => match.replace(/[{}]/g, ''));
-              console.log(`fetchAvailableArgs: Extracted from prompt content for ${targetName}:`, fetchedArgNames);
+              // console.log(`fetchAvailableArgs: Extracted from prompt content for ${targetName}:`, fetchedArgNames);
             }
             if (fetchedArgNames.length === 0) {
               // Fallback if extraction fails or no args found in content
               throw new Error('No args found in content, trying getPromptArgs');
             }
           } catch (err) {
-            console.warn(
-              `fetchAvailableArgs: Failed to get prompt content or no args in content for ${targetName}, falling back to getPromptArgs.`,
-              err,
-            );
+            // console.warn(`fetchAvailableArgs: Failed to get prompt content or no args in content for ${targetName}, falling back to getPromptArgs.`, err);
             argsResult = await context.agixt.getPromptArgs(targetName, 'Default');
-            console.log(`fetchAvailableArgs: Result from getPromptArgs for ${targetName}:`, argsResult);
+            // console.log(`fetchAvailableArgs: Result from getPromptArgs for ${targetName}:`, argsResult);
           }
         } else if (stepType === 'Command') {
           argsResult = await context.agixt.getCommandArgs(targetName);
-          console.log(`fetchAvailableArgs: Result from getCommandArgs for ${targetName}:`, argsResult);
+          // console.log(`fetchAvailableArgs: Result from getCommandArgs for ${targetName}:`, argsResult);
         } else if (stepType === 'Chain') {
           argsResult = await context.agixt.getChainArgs(targetName);
-          console.log(`fetchAvailableArgs: Result from getChainArgs for ${targetName}:`, argsResult);
+          // console.log(`fetchAvailableArgs: Result from getChainArgs for ${targetName}:`, argsResult);
         }
 
         // Handle different response structures for argsResult (if not already extracted from content)
@@ -408,7 +412,7 @@ const ChainStepNode = memo(
         // Filter out ignored args from the fetched list
         const filteredFetchedArgs = fetchedArgNames.filter((arg) => !ignoreArgsForGenericRender.includes(arg));
 
-        console.log(`fetchAvailableArgs: Setting availableArgs state to:`, filteredFetchedArgs);
+        // console.log(`fetchAvailableArgs: Setting availableArgs state to:`, filteredFetchedArgs);
         setAvailableArgs(filteredFetchedArgs); // Update the list of *expected* args
 
         // IMPORTANT: DO NOT modify the `args` (values) state here.
@@ -425,7 +429,7 @@ const ChainStepNode = memo(
 
     // Effect to trigger fetching available arguments
     useEffect(() => {
-      console.log('FETCH AVAILABLE ARGS EFFECT: Triggering fetchAvailableArgs', { stepType, targetName, agentName });
+      // console.log('FETCH AVAILABLE ARGS EFFECT: Triggering fetchAvailableArgs', { stepType, targetName, agentName });
       fetchAvailableArgs();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [stepType, targetName, agentName]); // Trigger fetch only when these change
@@ -500,7 +504,7 @@ const ChainStepNode = memo(
         delete finalArgs['user_input'];
       }
 
-      console.log(`Saving Step ${stepData.step} - Type: ${stepType}, Target: ${targetName}, Final Args Payload:`, finalArgs);
+      // console.log(`Saving Step ${stepData.step} - Type: ${stepType}, Target: ${targetName}, Final Args Payload:`, finalArgs);
 
       // Make the API call to update the step
       try {
@@ -526,6 +530,15 @@ const ChainStepNode = memo(
       mutateChain,
       setModified, // setModified is stable, but include for completeness
     ]);
+
+    // Autosave logic: trigger save on blur if enabled and modified
+    const handleBlurSave = useCallback(() => {
+      // console.log(`Blur event on step ${stepData.step}. Autosave: ${isAutosaveEnabled}, Modified: ${modified}`);
+      if (isAutosaveEnabled && modified) {
+        // console.log(`Autosaving step ${stepData.step}...`);
+        handleSave(); // No need for await here, let it run in the background
+      }
+    }, [isAutosaveEnabled, modified, handleSave, stepData.step]);
 
     // Effect to register/update this step's API with the context
     useEffect(() => {
@@ -580,6 +593,7 @@ const ChainStepNode = memo(
               }}
               onMouseDown={stopPropagation}
               onTouchStart={stopPropagation}
+              onBlur={handleBlurSave} // Add blur handler for autosave
             />
           </div>
         ),
@@ -601,6 +615,7 @@ const ChainStepNode = memo(
               }}
               onMouseDown={stopPropagation}
               onTouchStart={stopPropagation}
+              onBlur={handleBlurSave} // Add blur handler for autosave
             />
           </div>
         ),
@@ -621,12 +636,14 @@ const ChainStepNode = memo(
               }}
               onMouseDown={stopPropagation}
               onTouchStart={stopPropagation}
+              onBlur={handleBlurSave} // Add blur handler for autosave
             />
           </div>
         ),
       }),
       // Recreate selectors only if these specific states/props change
-      [agentName, targetName, stepData.step],
+      // Add handleBlurSave as dependency
+      [agentName, targetName, stepData.step, handleBlurSave],
     );
 
     // console.log(`RENDER Step ${stepData.step}:`, { stepType, targetName, args, availableArgs, isLoadingArgs, modified }); // Debug Render
@@ -734,7 +751,11 @@ const ChainStepNode = memo(
               }}
               disabled={isAgentsLoading || !sortedAgents.length}
             >
-              <SelectTrigger id={`agent-name-${stepData.step}`} className='h-8 text-xs nopan'>
+              <SelectTrigger
+                id={`agent-name-${stepData.step}`}
+                className='h-8 text-xs nopan'
+                onBlur={handleBlurSave} // Add blur handler for autosave
+              >
                 <SelectValue placeholder={isAgentsLoading ? 'Loading Agents...' : 'Select Agent'} />
               </SelectTrigger>
               <SelectContent>
@@ -765,7 +786,11 @@ const ChainStepNode = memo(
                 }
               }}
             >
-              <SelectTrigger id={`step-type-${stepData.step}`} className='h-8 text-xs nopan'>
+              <SelectTrigger
+                id={`step-type-${stepData.step}`}
+                className='h-8 text-xs nopan'
+                onBlur={handleBlurSave} // Add blur handler for autosave
+              >
                 <SelectValue placeholder='Select Type' />
               </SelectTrigger>
               <SelectContent>
@@ -817,6 +842,7 @@ const ChainStepNode = memo(
                       setArgs((prev) => ({ ...prev, context: e.target.value })); // Update args state
                       setModified(true);
                     }}
+                    onBlur={handleBlurSave} // Add blur handler for autosave
                     rows={3}
                     className='w-full text-xs nopan mt-1'
                     placeholder={`Context for prompt (e.g., {STEP1})`}
@@ -836,6 +862,7 @@ const ChainStepNode = memo(
                       setArgs((prev) => ({ ...prev, user_input: e.target.value })); // Update args state
                       setModified(true);
                     }}
+                    onBlur={handleBlurSave} // Add blur handler for autosave
                     rows={3}
                     className='w-full text-xs nopan mt-1'
                     placeholder={`Input for sub-chain (e.g., {STEP1})`}
@@ -874,6 +901,10 @@ const ChainStepNode = memo(
                         onCheckedChange={(checked) => {
                           setArgs((prev) => ({ ...prev, [name]: checked })); // Update args state
                           setModified(true);
+                          // Trigger blur save immediately for switch changes
+                          if (isAutosaveEnabled) {
+                            handleSave();
+                          }
                         }}
                         className='nopan'
                       />
@@ -898,6 +929,7 @@ const ChainStepNode = memo(
                         setArgs((prev) => ({ ...prev, [name]: e.target.value })); // Update args state
                         setModified(true);
                       }}
+                      onBlur={handleBlurSave} // Add blur handler for autosave
                       className='w-full h-8 text-xs nopan mt-1'
                       placeholder={`Enter ${label}`}
                     />
@@ -937,6 +969,8 @@ function ChainFlow() {
   const [renaming, setRenaming] = useState(false);
   const [currentChainName, setCurrentChainName] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
+  const [isAutosaveEnabled, setIsAutosaveEnabled] = useState(false); // State for autosave toggle
+  const [isSavingAll, setIsSavingAll] = useState(false); // State for Save All button loading indicator
 
   const reactFlowInstance = useReactFlow<any, any>();
   const context = useInteractiveConfig();
@@ -955,6 +989,17 @@ function ChainFlow() {
     isLoading: isChainLoading,
   } = useChain(selectedChainName ?? undefined); // Fetch chain details only if selected
   const { data: agentData } = useAgent(false); // Fetch basic agent data (like name)
+
+  // Load autosave preference from local storage on mount
+  useEffect(() => {
+    const savedPreference = localStorage.getItem('chainEditorAutosave');
+    setIsAutosaveEnabled(savedPreference === 'true');
+  }, []);
+
+  // Save autosave preference to local storage when it changes
+  useEffect(() => {
+    localStorage.setItem('chainEditorAutosave', String(isAutosaveEnabled));
+  }, [isAutosaveEnabled]);
 
   // Callback for handling node changes (e.g., position - though dragging is disabled)
   const onNodesChange = useCallback(
@@ -990,7 +1035,7 @@ function ChainFlow() {
   useEffect(() => {
     const shouldRenderNodes = currentChainName && chainData?.steps;
     if (shouldRenderNodes) {
-      console.log('FLOW: Rendering nodes for chain:', currentChainName, chainData.steps);
+      // console.log('FLOW: Rendering nodes for chain:', currentChainName, chainData.steps);
       // Create nodes for each step
       const newNodes: Node[] = chainData.steps.map((step, index) => ({
         id: `step-${step.step}`,
@@ -1004,6 +1049,7 @@ function ChainFlow() {
           mutateChains,
           isLastStep: index === chainData.steps.length - 1,
           moveStep, // Pass the moveStep callback
+          isAutosaveEnabled, // Pass autosave state down
         },
         draggable: false, // Disable dragging nodes
         connectable: false, // Disable connecting nodes
@@ -1032,8 +1078,18 @@ function ChainFlow() {
       setNodes([]);
       setEdges([]);
     }
-    // Depend on chainData to trigger re-render when steps change
-  }, [currentChainName, chainData, isChainLoading, chainError, mutateChain, mutateChains, reactFlowInstance, moveStep]);
+    // Depend on chainData and autosave state to trigger re-render when steps change or autosave toggles
+  }, [
+    currentChainName,
+    chainData,
+    isChainLoading,
+    chainError,
+    mutateChain,
+    mutateChains,
+    reactFlowInstance,
+    moveStep,
+    isAutosaveEnabled,
+  ]);
 
   // Effect to Sync Component State with URL Parameters
   useEffect(() => {
@@ -1048,6 +1104,37 @@ function ChainFlow() {
   }, [selectedChainName, renaming]);
 
   // --- Event Handlers ---
+
+  // Handle saving all modified steps
+  const handleSaveAll = async () => {
+    const stepsToSave = getStepsToSave();
+    if (stepsToSave.length === 0) {
+      toast({ title: 'No Changes', description: 'There are no unsaved changes.' });
+      return;
+    }
+
+    setIsSavingAll(true);
+    const stepNumbers = stepsToSave.map((s) => s.stepNumber).join(', ');
+    toast({ title: 'Saving All', description: `Saving changes in step(s): ${stepNumbers}...` });
+
+    const savePromises = stepsToSave.map((step) => step.saveData());
+    const results = await Promise.allSettled(savePromises);
+
+    const failedSteps = results
+      .map((result, index) => (result.status === 'rejected' ? stepsToSave[index].stepNumber : null))
+      .filter((stepNumber) => stepNumber !== null);
+
+    if (failedSteps.length > 0) {
+      toast({
+        title: 'Save All Failed',
+        description: `Could not save changes for step(s): ${failedSteps.join(', ')}. Please check errors and try again.`,
+        variant: 'destructive',
+      });
+    } else {
+      toast({ title: 'Save All Complete', description: `Changes saved successfully for all modified steps.` });
+    }
+    setIsSavingAll(false);
+  };
 
   // Handle selecting a chain from the dropdown
   const handleSelectChain = (value: string | null) => {
@@ -1237,28 +1324,28 @@ function ChainFlow() {
       return;
     }
 
-    // --- Auto-save modified steps ---
-    const stepsToSave = getStepsToSave();
-    if (stepsToSave.length > 0) {
-      const stepNumbers = stepsToSave.map((s) => s.stepNumber).join(', ');
-      toast({ title: 'Auto-saving', description: `Saving changes in step(s): ${stepNumbers}...` });
-      const savePromises = stepsToSave.map((step) => step.saveData());
-      try {
-        await Promise.all(savePromises);
-        // Optional: Show success toast for auto-save, but might be too noisy.
-        // toast({ title: 'Auto-save Complete', description: `Changes saved for step(s): ${stepNumbers}.` });
-        console.log(`Auto-save successful for steps: ${stepNumbers}`);
-      } catch (error) {
-        console.error('Auto-save failed:', error);
-        toast({
-          title: 'Auto-save Failed',
-          description: 'Could not save all modified steps. Please save manually and try again.',
-          variant: 'destructive',
-        });
-        return; // Abort adding step if auto-save fails
+    // --- Auto-save modified steps if NOT autosave enabled (as they should already be saved) ---
+    if (!isAutosaveEnabled) {
+      const stepsToSave = getStepsToSave();
+      if (stepsToSave.length > 0) {
+        const stepNumbers = stepsToSave.map((s) => s.stepNumber).join(', ');
+        toast({ title: 'Saving pending changes', description: `Saving step(s): ${stepNumbers}...` });
+        const savePromises = stepsToSave.map((step) => step.saveData());
+        try {
+          await Promise.all(savePromises);
+          console.log(`Pre-add save successful for steps: ${stepNumbers}`);
+        } catch (error) {
+          console.error('Pre-add save failed:', error);
+          toast({
+            title: 'Save Failed Before Add',
+            description: 'Could not save pending changes. Please save manually and try again.',
+            variant: 'destructive',
+          });
+          return; // Abort adding step if save fails
+        }
       }
     }
-    // --- End Auto-save ---
+    // --- End Auto-save Check ---
 
     // Check chainData existence and steps array (needed AFTER potential mutateChain from auto-save)
     // Use the latest chainData by re-fetching or relying on the mutation to update it
@@ -1455,20 +1542,62 @@ function ChainFlow() {
 
       {/* React Flow Area */}
       <div className='flex-grow w-full min-h-[500px] h-[calc(100vh-280px)] border rounded-md relative overflow-hidden bg-background'>
-        {/* Add Step Button (visible only when a chain is selected and not renaming) */}
+        {/* Controls Section (Save All, Autosave Toggle, Add Step) - visible only when a chain is selected and not renaming */}
         {currentChainName && !renaming && (
-          <Button
-            onClick={handleAddStep}
-            variant='outline'
-            size='sm'
-            className='absolute bottom-4 right-4 z-10 flex items-center shadow-md bg-background hover:bg-muted'
-            // Disable button slightly differently: only truly disable if no chain name is set.
-            // Loading state or empty state is handled visually elsewhere.
-            // Auto-save logic runs regardless when clicked.
-            disabled={!currentChainName}
-          >
-            <Plus className='mr-1 h-4 w-4' /> Add Step
-          </Button>
+          <div className='absolute bottom-4 right-4 z-10 flex items-center space-x-2'>
+            {/* Save All Button */}
+            <TooltipProvider delayDuration={100}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={handleSaveAll}
+                    variant='outline'
+                    size='sm'
+                    className='flex items-center shadow-md bg-background hover:bg-muted'
+                    disabled={isSavingAll || getStepsToSave().length === 0} // Disable if no changes or already saving
+                  >
+                    {isSavingAll ? <Loader2 className='mr-1 h-4 w-4 animate-spin' /> : <SaveAll className='mr-1 h-4 w-4' />}
+                    Save All
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Save all modified steps</TooltipContent>
+              </Tooltip>
+
+              {/* Autosave Toggle */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className='flex items-center space-x-2 p-2 rounded-md shadow-md border bg-background hover:bg-muted'>
+                    <Label htmlFor='autosave-toggle' className='text-sm'>
+                      Autosave
+                    </Label>
+                    <Switch
+                      id='autosave-toggle'
+                      checked={isAutosaveEnabled}
+                      onCheckedChange={setIsAutosaveEnabled}
+                      className='h-4 w-7 [&>span]:h-3 [&>span]:w-3' // Smaller switch
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>Automatically save step changes on blur</TooltipContent>
+              </Tooltip>
+
+              {/* Add Step Button */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={handleAddStep}
+                    variant='outline'
+                    size='sm'
+                    className='flex items-center shadow-md bg-background hover:bg-muted'
+                    disabled={!currentChainName} // Basic check, pre-save happens inside handler
+                  >
+                    <Plus className='mr-1 h-4 w-4' /> Add Step
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Add a new step to the end of the chain</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         )}
         {/* Conditional Rendering based on state */}
         {!currentChainName ? (

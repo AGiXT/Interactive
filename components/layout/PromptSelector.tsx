@@ -1,3 +1,4 @@
+// ./components/layout/PromptSelector.tsx
 'use client';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -24,12 +25,14 @@ export default function PromptSelector({
   onChange,
   onMouseDown,
   onTouchStart,
+  onBlur, // Added onBlur prop
 }: {
   category?: string;
   value?: string | null;
   onChange?: (value: string | null) => void;
   onMouseDown?: (e: React.MouseEvent) => void;
   onTouchStart?: (e: React.TouchEvent) => void;
+  onBlur?: () => void; // Added onBlur prop
 }): React.JSX.Element {
   const { data: promptData, error } = usePrompts();
   const searchParams = useSearchParams();
@@ -38,7 +41,7 @@ export default function PromptSelector({
 
   // Debug the incoming value
   useEffect(() => {
-    console.log('PromptSelector received value:', value);
+    // console.log('PromptSelector received value:', value);
   }, [value]);
 
   // Convert null to undefined for the Select component
@@ -61,7 +64,12 @@ export default function PromptSelector({
                   : (selectedValue) => router.push(`/settings/prompts?category=${category}&prompt=${selectedValue}`)
               }
             >
-              <SelectTrigger className='w-full text-xs' onMouseDown={onMouseDown} onTouchStart={onTouchStart}>
+              <SelectTrigger
+                className='w-full text-xs'
+                onMouseDown={onMouseDown}
+                onTouchStart={onTouchStart}
+                onBlur={onBlur} // Attach onBlur here
+              >
                 <SelectValue placeholder='Select a Prompt' />
               </SelectTrigger>
               <SelectContent>
