@@ -54,7 +54,6 @@
     "./Config/Hooks": "./dist/config/Hooks.js"
   },
   "dependencies": {
-    "react-responsive": "^9.0.0",
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-avatar": "^1.1.2",
     "@radix-ui/react-checkbox": "^1.1.2",
@@ -104,8 +103,10 @@
     "react-latex-next": "^3.0.0",
     "react-markdown": "^9.0.1",
     "react-qr-code": "^2.0.15",
+    "react-responsive": "^9.0.0",
     "react-simple-oauth2-login": "^0.5.4",
     "react-syntax-highlighter": "^15.6.1",
+    "reactflow": "^11.11.4",
     "remark-gfm": "^4.0.0",
     "sharp": "^0.33.5",
     "swr": "^2.2.5",
