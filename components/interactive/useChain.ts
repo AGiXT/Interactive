@@ -2,18 +2,12 @@ import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
 import { createGraphQLClient } from '@/components/interactive/lib';
 
-export const ChainStepPromptSchema = z.object({
-  chainName: z.string().nullable(),
-  commandName: z.string().nullable(),
-  promptCategory: z.string().nullable(),
-  promptName: z.string().nullable(),
-});
-
 export const ChainStepSchema = z.object({
   agentName: z.string().min(1),
-  prompt: ChainStepPromptSchema,
+  prompt: z.record(z.unknown()),
   promptType: z.string().min(1),
   step: z.number().int().nonnegative(),
+  targetName: z.string().min(0),
 });
 
 export const ChainSchema = z.object({
@@ -24,7 +18,6 @@ export const ChainSchema = z.object({
 export const ChainsSchema = ChainSchema.pick({ id: true, chainName: true });
 
 export type Chain = z.infer<typeof ChainSchema>;
-export type ChainStepPrompt = z.infer<typeof ChainStepPromptSchema>;
 export type ChainStep = z.infer<typeof ChainStepSchema>;
 
 export function useChain(chainName?: string): SWRResponse<Chain | null> {

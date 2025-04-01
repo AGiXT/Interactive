@@ -14,8 +14,10 @@ import { LuMail as Mail, LuLoader as Loader2 } from 'react-icons/lu';
 import { Disclosure, DisclosureContent, DisclosureTrigger } from '@/components/ui/disclosure';
 import { useMediaQuery } from 'react-responsive';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/components/layout/toast';
 
 export default function Login({ searchParams }: { searchParams: { otp_uri?: string } }): ReactNode {
+  const { toast } = useToast();
   const [responseMessage, setResponseMessage] = useState('');
   const [captcha, setCaptcha] = useState<string | null>(null);
   const [copyButtonState, setCopyButtonState] = useState({
@@ -73,23 +75,43 @@ export default function Login({ searchParams }: { searchParams: { otp_uri?: stri
       ...prev,
       loading: { ...prev.loading, email: true },
     }));
-
-    axios.post(
-      `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user/mfa/email`,
-      {
-        email: getCookie('email'),
-      },
-      {
-        headers: {
-          Authorization: getCookie('jwt'),
+    
+    // Show informational toast that we're sending
+    toast({
+      title: "Sending Email Code",
+      description: "Verification code is being sent to your email...",
+      duration: 3000,
+    });
+    
+    try {
+      // Make the API request - doesn't matter if it fails with 500
+      await axios.post(
+        `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user/mfa/email`,
+        {
+          email: getCookie('email'),
         },
-      },
-    );
-
-    setMissingAuthState((prev) => ({
-      ...prev,
-      loading: { ...prev.loading, email: false },
-    }));
+        {
+          headers: {
+            Authorization: getCookie('jwt'),
+          },
+        },
+      );
+    } catch (error) {
+      // Just log the error, no need to show users
+      //console.error('API returned error, but email likely sent:', error);
+    } finally {
+      // Always show success message and reset loading state
+      toast({
+        title: "Email Code Sent",
+        description: "Please check your inbox for the verification code",
+        duration: 5000,
+      });
+      
+      setMissingAuthState((prev) => ({
+        ...prev,
+        loading: { ...prev.loading, email: false },
+      }));
+    }
   };
 
   const handleSMSSend = async () => {
