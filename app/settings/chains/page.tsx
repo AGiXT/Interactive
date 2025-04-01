@@ -1,4 +1,3 @@
-// ./app/settings/chains/page.tsx
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback, useContext, memo, useRef, createContext } from 'react';
