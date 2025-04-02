@@ -585,7 +585,7 @@ const SidebarMenuButton = React.forwardRef<
     side?: SidebarSide;
     asChild?: boolean;
     isActive?: boolean;
-    tooltip?: string | React.ReactNode;
+    tooltip?: string | React.ComponentProps<typeof TooltipContent>;
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(
   (
@@ -615,22 +615,20 @@ const SidebarMenuButton = React.forwardRef<
       />
     );
 
-    // Don't show tooltips on mobile or if no tooltip content is provided
-    if (isMobile || !tooltip) {
+    if (!tooltip) {
       return button;
+    }
+
+    if (typeof tooltip === 'string') {
+      tooltip = {
+        children: tooltip,
+      };
     }
 
     return (
       <Tooltip>
         <TooltipTrigger asChild>{button}</TooltipTrigger>
-        <TooltipContent 
-          side={side === 'left' ? 'right' : 'left'} 
-          align='center'
-          // Only show tooltip in collapsed state
-          hidden={state !== 'collapsed'}
-        >
-          {tooltip}
-        </TooltipContent>
+        <TooltipContent side='right' align='center' hidden={state !== 'collapsed' || isMobile} {...tooltip} />
       </Tooltip>
     );
   },
