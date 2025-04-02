@@ -1,25 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState, useContext } from 'react';
-import { getCookie, setCookie } from 'cookies-next';
+import { useEffect, useState } from 'react';
+import { getCookie } from 'cookies-next';
 import Link from 'next/link';
-import { Check, ChevronLeft, ChevronsUpDown, Plus } from 'lucide-react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { FaRobot } from 'react-icons/fa';
-import { ViewVerticalIcon, DotsHorizontalIcon, ChevronRightIcon } from '@radix-ui/react-icons';
-import dayjs from 'dayjs';
-import { useMediaQuery } from 'react-responsive';
-
+import { ChevronLeft } from 'lucide-react';
 import { items, Item, SubItem } from '@/app/NavMenuItems';
 import { NavUser } from '@/components/layout/NavUser';
-import { useUser, useCompany } from '@/components/interactive/useUser';
-import { Agent, useAgent, useAgents } from '@/components/interactive/useAgent';
-import { ConversationEdge, useConversations } from '@/components/interactive/useConversation';
-import { InteractiveConfigContext, InteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
-import { getTimeDifference } from '@/components/conversation/activity';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-
+import { useUser } from '@/components/interactive/useUser';
+import { ViewVerticalIcon } from '@radix-ui/react-icons';
 import {
   Sidebar,
   SidebarContent,
@@ -37,9 +25,17 @@ import {
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
 import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { getTimeDifference } from '@/components/conversation/activity';
+import { cn } from '@/lib/utils';
+import { DotsHorizontalIcon } from '@radix-ui/react-icons';
+import dayjs from 'dayjs';
+import { useContext } from 'react';
 import { Command, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Conversation, useConversations } from '@/components/interactive/useConversation';
+import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
+import { useCompany } from '@/components/interactive/useUser';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,21 +44,25 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { setCookie } from 'cookies-next';
+import { Check, ChevronsUpDown, Plus } from 'lucide-react';
+import { FaRobot } from 'react-icons/fa';
+import { Agent, useAgent, useAgents } from '@/components/interactive/useAgent';
+import { useMemo } from 'react';
+import { ChevronRightIcon } from '@radix-ui/react-icons';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 export function AgentSelector() {
-  const isMobile = useMediaQuery({ maxWidth: 768 });
+  const { isMobile } = useSidebar('left');
   const { data: activeAgent, mutate: mutateActiveAgent, error: agentError } = useAgent();
   const { data: activeCompany, mutate: mutateActiveCompany, error: companyError } = useCompany();
   const { data: agentsData } = useAgents();
   const router = useRouter();
-  
-  // Log errors for debugging purposes
-  if (process.env.NODE_ENV === 'development' && (agentError || companyError)) {
-    console.error({ agentError, companyError });
-  }
+  console.error({ agentError, companyError });
 
   const switchAgents = (agent: Agent) => {
+    // setActiveAgent(agent);
     setCookie('agixt-agent', agent.name, {
       domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
     });
@@ -78,7 +78,6 @@ export function AgentSelector() {
             <SidebarMenuButton
               side='left'
               size='lg'
-              tooltip='Switch Active Agent'
               className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
             >
               <div className='flex items-center justify-center rounded-lg aspect-square size-8 bg-sidebar-primary text-sidebar-primary-foreground'>
@@ -92,37 +91,37 @@ export function AgentSelector() {
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="w-[--radix-dropdown-menu-trigger-width] min-w-64 rounded-lg px-2"
-            align="start"
+            className='w-[--radix-dropdown-menu-trigger-width] min-w-64 rounded-lg px-2'
+            align='start'
             side={isMobile ? 'bottom' : 'right'}
             sideOffset={4}
           >
-            <DropdownMenuLabel className="text-xs text-muted-foreground">Agents</DropdownMenuLabel>
+            <DropdownMenuLabel className='text-xs text-muted-foreground'>Agents</DropdownMenuLabel>
             {agentsData &&
               agentsData.map((agent) => (
                 <DropdownMenuItem
                   key={agent.id}
                   onClick={() => switchAgents(agent)}
-                  className="flex items-center justify-between p-2 cursor-pointer"
+                  className='flex items-center justify-between p-2 cursor-pointer'
                 >
-                  <div className="flex flex-col">
+                  <div className='flex flex-col'>
                     <span>{agent.name}</span>
-                    <span className="text-xs text-muted-foreground">{agent.companyId}</span>
+                    <span className='text-xs text-muted-foreground'>{agent.companyName}</span>
                   </div>
-                  {activeAgent?.agent?.id === agent.id && <Check className="w-4 h-4 ml-2" />}
+                  {activeAgent?.agent?.id === agent.id && <Check className='w-4 h-4 ml-2' />}
                 </DropdownMenuItem>
               ))}
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              className="gap-2 p-2 cursor-pointer"
+              className='gap-2 p-2 cursor-pointer'
               onClick={() => {
                 router.push('/settings');
               }}
             >
-              <div className="flex items-center justify-center border rounded-md size-6 bg-background">
-                <Plus className="size-4" />
+              <div className='flex items-center justify-center border rounded-md size-6 bg-background'>
+                <Plus className='size-4' />
               </div>
-              <div className="font-medium text-muted-foreground">Add Agent</div>
+              <div className='font-medium text-muted-foreground'>Add Agent</div>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -133,17 +132,16 @@ export function AgentSelector() {
 
 export function ChatHistory() {
   const state = useContext(InteractiveConfigContext);
+  const { data: conversationData, isLoading } = useConversations();
   const pathname = usePathname();
   const router = useRouter();
-  const { data: conversationData, isLoading } = useConversations();
 
   const isActive = (conversationId: string) => pathname.includes('chat') && pathname.includes(conversationId);
 
   const handleOpenConversation = ({ conversationId }: { conversationId: string | number }) => {
     router.push(`/chat/${conversationId}`);
-    
-    // RESTORED: Update the conversation state in the context
-    state?.mutate?.((oldState: InteractiveConfig) => ({
+
+    state?.mutate?.((oldState) => ({
       ...oldState,
       overrides: { ...oldState.overrides, conversation: conversationId },
     }));
@@ -153,28 +151,27 @@ export function ChatHistory() {
   const groupedConversations = groupConversations(conversationData.filter((conversation) => conversation.name !== '-'));
 
   return (
-    <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+    <SidebarGroup className='group-data-[collapsible=icon]:hidden'>
       {Object.entries(groupedConversations).map(([label, conversations]) => (
         <div key={label}>
           <SidebarGroupLabel>{label}</SidebarGroupLabel>
-          <SidebarMenu className="ml-1">
+          <SidebarMenu className='ml-1'>
             {conversations.map((conversation) => (
               <SidebarMenuItem key={conversation.id}>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <SidebarMenuButton
-                      side="left"
-                      tooltip={conversation.name}
+                      side='left'
                       onClick={() => handleOpenConversation({ conversationId: conversation.id })}
                       className={cn(
                         'flex items-center justify-between w-full transition-colors',
                         isActive(conversation.id) && 'bg-sidebar-accent text-sidebar-accent-foreground font-medium',
                       )}
                     >
-                      <span className="truncate">{conversation.name}</span>
+                      <span className='truncate'>{conversation.name}</span>
                       {conversation.hasNotifications && (
                         <Badge
-                          variant="default"
+                          variant='default'
                           className={cn(
                             'ml-2',
                             isActive(conversation.id)
@@ -187,7 +184,7 @@ export function ChatHistory() {
                       )}
                     </SidebarMenuButton>
                   </TooltipTrigger>
-                  <TooltipContent side="right">
+                  <TooltipContent side='right'>
                     <div>{conversation.name}</div>
                     {label === 'Today' ? (
                       <div>
@@ -204,14 +201,12 @@ export function ChatHistory() {
           </SidebarMenu>
         </div>
       ))}
-      
-      {/* RESTORED: "View More Conversations" button */}
       <SidebarMenu>
         <SidebarMenuItem>
           {conversationData && conversationData?.length > 10 && (
             <ChatSearch {...{ conversationData, handleOpenConversation }}>
               <SidebarMenuItem>
-                <SidebarMenuButton className='text-sidebar-foreground/70' side='left' tooltip="View More Conversations">
+                <SidebarMenuButton className='text-sidebar-foreground/70' side='left'>
                   <DotsHorizontalIcon className='text-sidebar-foreground/70' />
                   <span>More</span>
                 </SidebarMenuButton>
@@ -229,22 +224,21 @@ function ChatSearch({
   handleOpenConversation,
   children,
 }: {
-  conversationData: ConversationEdge[];
+  conversationData: any[];
   handleOpenConversation: ({ conversationId }: { conversationId: string | number }) => void;
   children: React.ReactNode;
 }) {
   return (
     <Dialog>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="p-0 overflow-hidden shadow-lg">
-        <Command className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
-          <CommandInput placeholder="Search Conversations..." />
+      <DialogContent className='p-0 overflow-hidden shadow-lg'>
+        <Command className='[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5'>
+          <CommandInput placeholder='Search Conversations...' />
           <CommandList>
             {conversationData.map((conversation) => (
-              <CommandItem key={conversation.id} asChild>
-                {/* FIXED: Changed onSelect to onClick to maintain original behavior */}
-                <DialogClose className="w-full" onClick={() => handleOpenConversation({ conversationId: conversation.id })}>
-                  <span className="px-2">{conversation.name}</span>
+              <CommandItem asChild key={conversation.id}>
+                <DialogClose className='w-full' onClick={() => handleOpenConversation({ conversationId: conversation.id })}>
+                  <span className='px-2'>{conversation.name}</span>
                 </DialogClose>
               </CommandItem>
             ))}
@@ -255,7 +249,7 @@ function ChatSearch({
   );
 }
 
-function groupConversations(conversations: ConversationEdge[]) {
+function groupConversations(conversations: Conversation[]) {
   const today = new Date();
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
@@ -270,7 +264,7 @@ function groupConversations(conversations: ConversationEdge[]) {
   };
 
   const groups = conversations.slice(0, 7).reduce(
-    (groups: { [key: string]: ConversationEdge[] }, conversation: ConversationEdge) => {
+    (groups: { [key: string]: Conversation[] }, conversation: Conversation) => {
       if (isToday(conversation.updatedAt)) {
         groups['Today'].push(conversation);
       } else if (isYesterday(conversation.updatedAt)) {
@@ -285,10 +279,8 @@ function groupConversations(conversations: ConversationEdge[]) {
     { Today: [], Yesterday: [], 'Past Week': [], Older: [] },
   );
 
-  return Object.fromEntries(Object.entries(groups).filter(([, conversationArray]) => conversationArray.length > 0));
+  return Object.fromEntries(Object.entries(groups).filter(([_, conversations]) => conversations.length > 0));
 }
-
-// Fixed version of the NavMain component
 
 export function NavMain() {
   const router = useRouter();
@@ -297,7 +289,6 @@ export function NavMain() {
   const { data: company, error: companyError, isLoading: isCompanyLoading } = useCompany();
   const { toggleSidebar, open } = useSidebar('left');
   const [isJwtLoaded, setIsJwtLoaded] = useState(false);
-  const isMobile = useMediaQuery({ maxWidth: 768 });
 
   // Check JWT existence once component mounts
   useEffect(() => {
@@ -337,20 +328,13 @@ export function NavMain() {
       <SidebarGroup>
         <SidebarGroupLabel>Pages</SidebarGroupLabel>
         <SidebarMenu>
-          <div className="flex items-center justify-center p-4">
-            <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-t-2 border-primary"></div>
+          <div className='flex items-center justify-center p-4'>
+            <div className='h-5 w-5 animate-spin rounded-full border-b-2 border-t-2 border-primary'></div>
           </div>
         </SidebarMenu>
       </SidebarGroup>
     );
   }
-
-  // Handle navigation and only close sidebar on mobile if navigating to a final destination
-  const handleNavigation = (url, shouldCloseSidebar = false) => {
-    if (url) router.push(url);
-    // Only close the sidebar if explicitly requested (for leaf items)
-    if (isMobile && shouldCloseSidebar) toggleSidebar();
-  };
 
   return (
     <SidebarGroup>
@@ -361,19 +345,16 @@ export function NavMain() {
             key={item.title}
             asChild
             defaultOpen={item.isActive || (itemsWithActiveState.length === 1 && item.title === 'Documentation')}
-            className="group/collapsible"
+            className='group/collapsible'
           >
             <SidebarMenuItem>
               <CollapsibleTrigger asChild>
                 <SidebarMenuButton
-                  side="left"
+                  side='left'
                   tooltip={item.title}
                   onClick={() => {
                     if (!open) toggleSidebar();
-                    // Only navigate if there's a URL and no sub-items
-                    if (item.url && !item.items?.length) {
-                      handleNavigation(item.url, true);
-                    }
+                    if (item.url) router.push(item.url);
                   }}
                   className={cn(item.isActive && !item.items?.length && 'bg-muted')}
                 >
@@ -388,83 +369,48 @@ export function NavMain() {
                 </SidebarMenuButton>
               </CollapsibleTrigger>
               <CollapsibleContent hidden={!item.items?.length}>
-                <SidebarMenuSub className="pr-0 mr-0">
+                <SidebarMenuSub className='pr-0 mr-0'>
                   {item.items?.map((subItem) =>
                     subItem.max_role && (!company?.name || company?.roleId > subItem.max_role) ? null : (
                       <SidebarMenuSubItem key={subItem.title}>
                         {subItem.items ? (
                           <Collapsible asChild>
-                            <div className="w-full">
+                            <SidebarMenuItem>
                               <CollapsibleTrigger asChild>
                                 <SidebarMenuButton
-                                  side="left"
+                                  side='left'
                                   tooltip={subItem.title}
                                   className={cn('hover:bg-sidebar-accent hover:text-sidebar-accent-foreground')}
                                 >
-                                  {subItem.icon && <subItem.icon className="h-4 w-4" />}
+                                  {subItem.icon && <subItem.icon className='h-4 w-4' />}
                                   <span>{subItem.title}</span>
-                                  <ChevronRightIcon className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                                  <ChevronRightIcon className='ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90' />
                                 </SidebarMenuButton>
                               </CollapsibleTrigger>
                               <CollapsibleContent>
                                 <SidebarMenuSub>
                                   {subItem.items.map((nestedItem) => (
                                     <SidebarMenuSubItem key={nestedItem.url}>
-                                      <SidebarMenuSubButton 
-                                        asChild
-                                        onClick={() => {
-                                          // This is a leaf node, so close sidebar on mobile
-                                          handleNavigation(
-                                            nestedItem.queryParams
-                                              ? Object.entries(nestedItem.queryParams).reduce(
-                                                  (url, [key, value]) => url + `${key}=${value}&`,
-                                                  nestedItem.url + '?',
-                                                )
-                                              : nestedItem.url,
-                                            true
-                                          );
-                                        }}
-                                      >
+                                      <SidebarMenuSubButton asChild>
                                         <Link
-                                          href={
-                                            nestedItem.queryParams
-                                              ? Object.entries(nestedItem.queryParams).reduce(
-                                                  (url, [key, value]) => url + `${key}=${value}&`,
-                                                  nestedItem.url + '?',
-                                                )
-                                              : nestedItem.url
-                                          }
+                                          href={nestedItem.url}
                                           className={cn(
                                             'w-full',
                                             decodeURIComponent(pathname).replace(/\.md$/, '') === nestedItem.url &&
                                               'bg-muted',
                                           )}
                                         >
-                                          <span className="flex items-center gap-2">{nestedItem.title}</span>
+                                          <span className='flex items-center gap-2'>{nestedItem.title}</span>
                                         </Link>
                                       </SidebarMenuSubButton>
                                     </SidebarMenuSubItem>
                                   ))}
                                 </SidebarMenuSub>
                               </CollapsibleContent>
-                            </div>
+                            </SidebarMenuItem>
                           </Collapsible>
                         ) : (
-                          <SidebarMenuSubButton 
-                            asChild
-                            onClick={() => {
-                              // This is a leaf node, so close sidebar on mobile
-                              handleNavigation(
-                                subItem.queryParams
-                                  ? Object.entries(subItem.queryParams).reduce(
-                                      (url, [key, value]) => url + `${key}=${value}&`,
-                                      subItem.url + '?',
-                                    )
-                                  : subItem.url,
-                                true
-                              );
-                            }}
-                          >
+                          <SidebarMenuSubButton asChild>
                             <Link
                               href={
                                 subItem.queryParams
@@ -476,8 +422,8 @@ export function NavMain() {
                               }
                               className={cn('w-full', isSubItemActive(subItem, pathname, queryParams) && 'bg-muted')}
                             >
-                              <span className="flex items-center gap-2">
-                                {subItem.icon && <subItem.icon className="w-4 h-4" />}
+                              <span className='flex items-center gap-2'>
+                                {subItem.icon && <subItem.icon className='w-4 h-4' />}
                                 {subItem.max_role && company?.name + ' '}
                                 {subItem.title}
                               </span>
@@ -498,37 +444,37 @@ export function NavMain() {
 }
 
 function isActive(item: Item, pathname: string, queryParams: URLSearchParams) {
-  // Handle items with sub-items
   if (item.items) {
-    return item.items.some((subItem) => isSubItemActive(subItem, pathname, queryParams));
+    return item.items.some((subItem) => {
+      if (subItem.url === pathname) {
+        if (subItem.queryParams) {
+          return Object.entries(subItem.queryParams).every(([key, value]) => queryParams.get(key) === value);
+        }
+        // If no query params are defined on the item, require URL to have no query params
+        return [...queryParams.keys()].length === 0;
+      }
+      return false;
+    });
   }
 
   // Root level items
   if (item.url === pathname) {
-    // Check if queryParams match
     if (item.queryParams) {
-      return Object.entries(item.queryParams).every(
-        ([key, value]) => queryParams.get(key) === value
-      );
+      return Object.entries(item.queryParams).every(([key, value]) => queryParams.get(key) === value);
     }
-    // If no query params are defined, URL should have no query params
-    return queryParams.size === 0;
+    return [...queryParams.keys()].length === 0;
   }
-  
   return false;
 }
 
 function isSubItemActive(subItem: SubItem, pathname: string, queryParams: URLSearchParams) {
-  // Check if URL matches
   if (subItem.url !== pathname) {
     return false;
   }
 
   // If subitem has query params, they must all match
   if (subItem.queryParams) {
-    return Object.entries(subItem.queryParams).every(
-      ([key, value]) => queryParams.get(key) === value
-    );
+    return Object.entries(subItem.queryParams).every(([key, value]) => queryParams.get(key) === value);
   }
 
   // If no query params defined on subitem, URL must have no query params
@@ -537,94 +483,57 @@ function isSubItemActive(subItem: SubItem, pathname: string, queryParams: URLSea
 
 export function ToggleSidebar({ side }: { side: 'left' | 'right' }) {
   const { toggleSidebar } = useSidebar(side);
-  const isMobile = useMediaQuery({ maxWidth: 768 });
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          onClick={toggleSidebar}
-          variant="default"
-          size="icon"
-          className={cn(
-            // Base styling
-            "flex items-center justify-center",
-            // Mobile styling with fixed positioning
-            isMobile 
-              ? "fixed z-50 rounded-full shadow-lg size-12 bg-primary text-primary-foreground" 
-              : "relative h-8 w-8",
-            // Position the button differently based on which sidebar it's for
-            isMobile && side === 'left' ? "top-4 left-4" : "",
-            isMobile && side === 'right' ? "top-4 right-4" : ""
-          )}
-          data-testid={`toggle-${side}-sidebar`}
-        >
-          <ViewVerticalIcon className="size-5" />
-          <span className="sr-only">{side === 'left' ? 'Toggle Main Menu' : 'Toggle Details'}</span>
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent side={side === 'left' ? 'right' : 'left'}>
-        {side === 'left' ? 'Toggle Main Menu' : 'Toggle Details'}
-      </TooltipContent>
-    </Tooltip>
+    <SidebarMenuButton onClick={toggleSidebar}>
+      <ViewVerticalIcon className='w-7 h-7' />
+      <span>Toggle Sidebar</span>
+    </SidebarMenuButton>
   );
 }
 
-// Use this unified toggle for both sidebars instead of two separate components
 export function SidebarMain({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const [hasStarted, setHasStarted] = useState(false);
   const pathname = usePathname();
   const { data: user } = useUser();
   const isAuthenticated = !!user?.email;
-  const isMobile = useMediaQuery({ maxWidth: 768 });
-  const isOnChatPage = pathname.includes('/chat');
 
-  // Don't render the sidebar on home page or user pages (except manage)
+  useEffect(() => {
+    if (getCookie('agixt-has-started') === 'true') {
+      setHasStarted(true);
+    }
+  }, [getCookie('agixt-has-started')]);
+
   if (pathname === '/' || (pathname.startsWith('/user') && pathname !== '/user/manage')) return null;
 
   return (
-    <TooltipProvider delayDuration={300}>
-      <Sidebar 
-        collapsible={isMobile ? 'offcanvas' : 'icon'} 
-        {...props} 
-        className="hide-scrollbar"
-      >
-        <SidebarHeader>
-          {isAuthenticated ? (
-            <AgentSelector />
-          ) : (
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <Link href='/' passHref>
-                  <SidebarMenuButton side='left' size='lg' className='gap-2' tooltip='Return to Home'>
-                    <ChevronLeft className='h-4 w-4' />
-                    Back to Home
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          )}
-        </SidebarHeader>
-        <SidebarContent>
-          <NavMain />
-          {isAuthenticated && <ChatHistory />}
-        </SidebarContent>
-        <SidebarFooter className="flex flex-col gap-4 pb-6">
-          {/* Only show the toggle button in the sidebar on desktop */}
-          {!isMobile && (
-            <div>
-              <ToggleSidebar side='left' />
-            </div>
-          )}
-          {isAuthenticated && <NavUser />}
-        </SidebarFooter>
-        <SidebarRail side='left' />
-      </Sidebar>
-      
-      {/* Add fixed position buttons for mobile */}
-      {isMobile && <ToggleSidebar side='left' />}
-      
-      {/* Add right sidebar toggle for mobile ONLY on chat pages */}
-      {isMobile && isOnChatPage && <ToggleSidebar side='right' />}
-    </TooltipProvider>
+    <Sidebar collapsible='icon' {...props} className='hide-scrollbar'>
+      <SidebarHeader>
+        {isAuthenticated ? (
+          <AgentSelector />
+        ) : (
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <Link href='/' passHref>
+                <SidebarMenuButton side='left' size='lg' className='gap-2'>
+                  <ChevronLeft className='h-4 w-4' />
+                  Back to Home
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        )}
+      </SidebarHeader>
+      <SidebarContent>
+        <NavMain />
+        {isAuthenticated && <ChatHistory />}
+      </SidebarContent>
+      <SidebarFooter>
+        {/* <NotificationsNavItem /> */}
+        <ToggleSidebar side='left' />
+        {isAuthenticated && <NavUser />}
+      </SidebarFooter>
+      <SidebarRail side='left' />
+    </Sidebar>
   );
 }
