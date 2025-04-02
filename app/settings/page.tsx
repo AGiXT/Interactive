@@ -257,7 +257,7 @@ export default function AgentSettings() {
 
   // Reveal wallet handler
   const handleRevealWallet = async () => {
-    if (walletData && Object.keys(walletData).length > 0) {
+    if (walletData) {
       setIsWalletRevealed(!isWalletRevealed);
       return;
     }
@@ -278,7 +278,7 @@ export default function AgentSettings() {
     <SidebarPage title='Settings'>
       {searchParams.get('mode') != 'company' ? (
         <div className='flex items-center justify-center p-4'>
-          <Card className={cn('w-full shadow-lg', isMobile ? 'p-2' : '')}>
+          <Card className='w-full shadow-lg'>
             <CardHeader className='pb-2'>
               <div className='flex justify-between items-center'>
                 <CardTitle className='text-xl font-bold'>{agentData?.name}</CardTitle>
@@ -329,7 +329,7 @@ export default function AgentSettings() {
                         )}
                       </Button>
 
-                      {isWalletRevealed && walletData && Object.keys(walletData).length > 0 && (
+                      {isWalletRevealed && walletData && (
                         <div className='mt-2 p-4 border rounded-md bg-muted/20'>
                           <h4 className='font-medium mb-2 text-sm'>Wallet Details</h4>
                           <div className='space-y-2 text-sm'>
@@ -381,7 +381,7 @@ export default function AgentSettings() {
                     Edit
                   </Button>
                 </DialogTrigger>
-                <DialogContent className={isMobile ? 'w-[90%] max-w-sm p-4' : ''}>
+                <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Edit Agent</DialogTitle>
                   </DialogHeader>
@@ -389,7 +389,7 @@ export default function AgentSettings() {
                     <Label htmlFor='name'>Agent Name</Label>
                     <Input id='name' value={editName} onChange={(e) => setEditName(e.target.value)} className='mt-1' />
                   </div>
-                  <DialogFooter className={isMobile ? 'flex-col gap-2' : ''}>
+                  <DialogFooter>
                     <DialogClose asChild>
                       <Button variant='outline' className={isMobile ? 'w-full' : ''}>
                         Cancel
