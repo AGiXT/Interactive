@@ -22,12 +22,14 @@ interface ApiProvider {
   scopes: string;
   authorize: string;
   client_id: string;
+  pkce_required: boolean;
 }
 
 interface ProviderWithIcon {
   client_id: string;
   scope: string;
   uri: string;
+  pkce_required: boolean;
   params: Record<string, any>;
   icon: ReactNode;
 }
@@ -93,6 +95,7 @@ export const loadProviders = async (): Promise<void> => {
             client_id: provider.client_id,
             scope: provider.scopes,
             uri: provider.authorize,
+            pkce_required: provider.pkce_required,
             params: name.toLowerCase() === 'google' ? { access_type: 'offline' } : {},
             icon: getIconByName(provider.name),
           };
@@ -119,7 +122,7 @@ export default function OAuth(): ReactNode {
   const [loading, setLoading] = useState(!providersLoaded);
   const [error, setError] = useState<string | null>(null);
   const [apiProviders, setApiProviders] = useState<ApiProvider[]>([]);
-
+  const [pkceData, setPkceData] = useState<{ challenge: string, state: string } | null>(null);
   // Ensure providers are loaded before rendering
   useEffect(() => {
     if (!providersLoaded) {
@@ -132,6 +135,7 @@ export default function OAuth(): ReactNode {
               scopes: value.scope,
               authorize: value.uri,
               client_id: value.client_id,
+              pkce_required: value.pkce_required
             })),
           );
           setLoading(false);
@@ -149,11 +153,29 @@ export default function OAuth(): ReactNode {
           scopes: value.scope,
           authorize: value.uri,
           client_id: value.client_id,
+          pkce_required: value.pkce_required
         })),
       );
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    const fetchPkce = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/oauth2/pkce-simple`);
+        if (!res.ok) throw new Error('Failed to fetch PKCE data');
+        const data = await res.json();
+        setPkceData({ challenge: data.code_challenge, state: data.state });
+      } catch (err) {
+        setError('Failed to load PKCE data for authentication');
+        console.error(err);
+      }
+    };
+    if (apiProviders.some(p => p.pkce_required)) {
+      fetchPkce();
+    }
+  }, [apiProviders]);
 
   const onOAuth2 = useCallback(
     (response: any) => {
@@ -163,7 +185,7 @@ export default function OAuth(): ReactNode {
     [mutate],
   );
 
-  if (loading) {
+  if (loading || (apiProviders.some(p => p.pkce_required) && !pkceData)) {
     return <div>Loading authentication options...</div>;
   }
 
@@ -178,6 +200,16 @@ export default function OAuth(): ReactNode {
         .sort((a, b) => a.name.localeCompare(b.name)) // Sort alphabetically by name
         .map((provider) => {
           const name = provider.name.charAt(0).toUpperCase() + provider.name.slice(1);
+          let extraParams = {};
+          if (provider.pkce_required && pkceData) {
+            extraParams = {
+              state: pkceData.state,
+              code_challenge: pkceData.challenge,
+              code_challenge_method: 'S256',
+            };
+          } else if (provider.name.toLowerCase() === 'google') {
+            extraParams = { access_type: 'offline' };
+          }
           return (
             <OAuth2Login
               key={provider.name}
@@ -188,7 +220,7 @@ export default function OAuth(): ReactNode {
               redirectUri={`${process.env.NEXT_PUBLIC_APP_URI}/user/close/${provider.name.replaceAll('.', '-').replaceAll(' ', '-').replaceAll('_', '-').toLowerCase()}`}
               onSuccess={onOAuth2}
               onFailure={onOAuth2}
-              extraParams={provider.name.toLowerCase() === 'google' ? { access_type: 'offline' } : {}}
+              extraParams={extraParams}
               isCrossOrigin
               render={(renderProps) => (
                 <Button variant='outline' type='button' className='space-x-1 bg-transparent' onClick={renderProps.onClick}>

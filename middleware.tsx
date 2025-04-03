@@ -286,8 +286,7 @@ export const useOAuth2: MiddlewareHook = async (req) => {
   if (queryParams.code) {
     const oAuthEndpoint = `${process.env.AGIXT_SERVER || ''.replace('localhost', (process.env.SERVERSIDE_AGIXT_SERVER || '').split(',')[0])}/v1/oauth2/${provider}`;
 
-    // Use the state parameter as the JWT if present
-    const jwt = queryParams.state || getJWT(req);
+    const jwt = getJWT(req);
 
     try {
       const response = await fetch(oAuthEndpoint, {
@@ -295,7 +294,7 @@ export const useOAuth2: MiddlewareHook = async (req) => {
         body: JSON.stringify({
           code: queryParams.code,
           referrer: redirect.toString(),
-          state: jwt,
+          state: queryParams.state,
           invitation: req.cookies.get('invitation')?.value,
         }),
         headers: {
