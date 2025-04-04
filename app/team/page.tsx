@@ -235,7 +235,7 @@ export const TeamUsers = () => {
               >
                 <Button 
                   variant='ghost' 
-                  className='justify-start w-full text-white-600 hover:text-blue-600'
+                  className='justify-start w-full text-white-600 hover:text-blue-600 text-left whitespace-normal break-words px-2'
                 >
                   Change Role To User
                 </Button>
@@ -266,7 +266,7 @@ export const TeamUsers = () => {
               >
                 <Button 
                   variant='ghost' 
-                  className='justify-start w-full text-white-600 hover:text-blue-600'
+                  className='justify-start w-full text-white-600 hover:text-blue-600 text-left whitespace-normal break-words px-2'
                 >
                   Change Role To Company Admin
                 </Button>
@@ -297,7 +297,7 @@ export const TeamUsers = () => {
               >
                 <Button 
                   variant='ghost' 
-                  className='justify-start w-full text-white-600 hover:text-blue-600'
+                  className='justify-start w-full text-white-600 hover:text-blue-600 text-left whitespace-normal break-words px-2'
                 >
                   Change Role To Tenant Admin
                 </Button>
