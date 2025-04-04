@@ -182,8 +182,6 @@ export default function Training() {
   
   // New state for URL learning
   const [learnUrl, setLearnUrl] = useState<string>('');
-  const [urlChunks, setUrlChunks] = useState<number>(0);
-  const [urlCharacterLength, setUrlCharacterLength] = useState<number>(1000);
   const [isLearningUrl, setIsLearningUrl] = useState(false);
   const [urlProgress, setUrlProgress] = useState(0);
 
@@ -367,7 +365,7 @@ export default function Training() {
           },
           body: JSON.stringify({
             url: learnUrl,
-            collection_number: 0,
+            collection_number: "0",
           }),
         }
       );
