@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { getCookie } from 'cookies-next';
 import { useSearchParams } from 'next/navigation';
@@ -22,6 +23,7 @@ import {
   LuYoutube,
   LuTrash2 as Trash2,
   LuUpload as Upload,
+  LuCircleFadingPlus as PlusCircle,
 } from 'react-icons/lu';
 
 interface SourceDisplayProps {
@@ -177,6 +179,13 @@ export default function Training() {
   const [companyExternalSources, setCompanyExternalSources] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const { data: activeCompany } = useCompany();
+  
+  // New state for URL learning
+  const [learnUrl, setLearnUrl] = useState<string>('');
+  const [urlChunks, setUrlChunks] = useState<number>(0);
+  const [urlCharacterLength, setUrlCharacterLength] = useState<number>(1000);
+  const [isLearningUrl, setIsLearningUrl] = useState(false);
+  const [urlProgress, setUrlProgress] = useState(0);
 
   const apiKey = getCookie('jwt') || '';
   const apiServer = process.env.NEXT_PUBLIC_AGIXT_SERVER as string;
@@ -282,7 +291,6 @@ export default function Training() {
         searchParams.get('mode') === 'company'
           ? `${apiServer}/api/agent/${agentName}/learn/file/${activeCompany?.id}`
           : `${apiServer}/api/agent/${agentName}/learn/file`,
-
         {
           method: 'POST',
           headers: {
@@ -304,17 +312,97 @@ export default function Training() {
         throw new Error('Upload failed');
       }
 
+      // Ensure 100% progress and update page
       setUploadProgress(100);
       setSuccess(`Successfully uploaded ${file.name}`);
-      await fetchCompanyData();
+      
+      // Reset upload state and re-enable interactions
+      await new Promise(resolve => setTimeout(resolve, 500)); // Short delay for UX
+      await fetchCompanyData(); // Refresh sources
+      
+      // Reset upload-related states
+      setUploadingDocument(false);
+      setUploadProgress(0);
+      
+      // Clear file input
+      if (e.target) {
+        e.target.value = '';
+      }
     } catch (error) {
       setError('Error uploading file');
+      setUploadingDocument(false);
+      setUploadProgress(0);
     } finally {
       setUploadingDocument(false);
       setTimeout(() => setUploadProgress(0), 1000);
     }
   };
 
+  // Improvements for URL learning
+  const handleLearnUrl = async () => {
+    if (!learnUrl || !learnUrl.startsWith('http')) {
+      setError('Please enter a valid URL');
+      return;
+    }
+
+    setIsLearningUrl(true);
+    setUrlProgress(0);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const progressInterval = setInterval(() => {
+        setUrlProgress((prev) => Math.min(prev + 5, 90));
+      }, 500);
+
+      const response = await fetch(
+        searchParams.get('mode') === 'company'
+          ? `${apiServer}/api/agent/${agentName}/learn/url/${activeCompany?.id}`
+          : `${apiServer}/api/agent/${agentName}/learn/url`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: apiKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            url: learnUrl,
+            collection_number: COLLECTION_NUMBER,
+            chunks: urlChunks > 0 ? urlChunks : undefined,
+            character_length: urlCharacterLength,
+            company_id: searchParams.get('mode') === 'company' ? activeCompany?.id : null,
+          }),
+        }
+      );
+
+      clearInterval(progressInterval);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to learn from URL');
+      }
+
+      // Ensure 100% progress and update page
+      setUrlProgress(100);
+      setSuccess(`Successfully learned from ${learnUrl}`);
+      
+      // Short delay for UX
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await fetchCompanyData(); // Refresh sources
+      
+      // Reset URL learning states
+      setLearnUrl(''); // Clear the URL input after success
+      setIsLearningUrl(false);
+      setUrlProgress(0);
+      
+    } catch (error: any) {
+      setError(error.message || 'Error learning from URL');
+      setIsLearningUrl(false);
+      setUrlProgress(0);
+    }
+  };
+
+  // Improvements for document deletion
   const handleDeleteDocument = async (source: string) => {
     try {
       setError(null);
@@ -337,7 +425,13 @@ export default function Training() {
         throw new Error('Delete failed');
       }
 
+      // Set success message
       setSuccess(`Successfully deleted ${source}`);
+      
+      // Short delay for UX
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Refresh the sources list
       await fetchCompanyData();
     } catch (error) {
       setError('Failed to delete document');
@@ -445,23 +539,99 @@ export default function Training() {
                   <Progress value={uploadProgress} className='h-2' />
                 </div>
               )}
+            </div>
 
-              {/* Documents List */}
-              <div className='space-y-2'>
-                {loading ? (
-                  <div className='text-center text-muted-foreground'>Loading documents...</div>
-                ) : (searchParams.get('mode') === 'company' ? companyExternalSources : userExternalSources).length === 0 ? (
-                  <div className='text-center text-muted-foreground'>No documents uploaded yet</div>
-                ) : (
-                  <div className='grid gap-2'>
-                    {(searchParams.get('mode') === 'company' ? companyExternalSources : userExternalSources).map(
-                      (source) => (
-                        <SourceDisplay key={source} source={source} onDelete={handleDeleteDocument} />
-                      ),
-                    )}
+            {/* Learn from URL Section - Now standalone */}
+            <div className='space-y-4 border-t pt-6'>
+              <h3 className='text-lg font-medium'>Learn From URL</h3>
+              <p className='mt-2 text-sm text-muted-foreground'>
+                Extract and learn from content at a specific URL. The AI will process the webpage content and make it available for reference in conversations.
+              </p>
+              
+              <div className='space-y-4 p-4 border rounded-md bg-background/50'>
+                <div className='flex flex-col space-y-2'>
+                  <label htmlFor='learn-url' className='text-sm font-medium'>URL to Learn From</label>
+                  <Input 
+                    id='learn-url'
+                    placeholder='https://example.com/article'
+                    value={learnUrl}
+                    onChange={(e) => setLearnUrl(e.target.value)}
+                    disabled={isLearningUrl}
+                  />
+                </div>
+                
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                  <div className='space-y-2'>
+                    <label htmlFor='url-chunks' className='text-sm font-medium'>Number of Chunks (0 for auto)</label>
+                    <Input
+                      id='url-chunks'
+                      type='number'
+                      min={0}
+                      step={1}
+                      value={urlChunks}
+                      onChange={(e) => setUrlChunks(parseInt(e.target.value) || 0)}
+                      disabled={isLearningUrl}
+                    />
+                  </div>
+                  <div className='space-y-2'>
+                    <label htmlFor='url-character-length' className='text-sm font-medium'>Character Length per Chunk</label>
+                    <Input
+                      id='url-character-length'
+                      type='number'
+                      min={500}
+                      step={100}
+                      value={urlCharacterLength}
+                      onChange={(e) => setUrlCharacterLength(parseInt(e.target.value) || 1000)}
+                      disabled={isLearningUrl}
+                    />
+                  </div>
+                </div>
+                
+                <Button
+                  type='button'
+                  onClick={handleLearnUrl}
+                  disabled={isLearningUrl || !learnUrl}
+                  className='w-full'
+                >
+                  {isLearningUrl ? (
+                    <>Processing URL...</>
+                  ) : (
+                    <>
+                      <PlusCircle className='w-4 h-4 mr-2' />
+                      Learn from URL
+                    </>
+                  )}
+                </Button>
+                
+                {/* URL Processing Progress */}
+                {urlProgress > 0 && (
+                  <div className='space-y-2'>
+                    <div className='flex justify-between text-sm text-muted-foreground'>
+                      <span>Processing URL...</span>
+                      <span>{urlProgress}%</span>
+                    </div>
+                    <Progress value={urlProgress} className='h-2' />
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Documents List */}
+            <div className='space-y-4 border-t pt-6'>
+              <h3 className='text-lg font-medium'>Learned Sources</h3>
+              {loading ? (
+                <div className='text-center text-muted-foreground'>Loading documents...</div>
+              ) : (searchParams.get('mode') === 'company' ? companyExternalSources : userExternalSources).length === 0 ? (
+                <div className='text-center text-muted-foreground'>No documents uploaded yet</div>
+              ) : (
+                <div className='grid gap-2'>
+                  {(searchParams.get('mode') === 'company' ? companyExternalSources : userExternalSources).map(
+                    (source) => (
+                      <SourceDisplay key={source} source={source} onDelete={handleDeleteDocument} />
+                    ),
+                  )}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
