@@ -240,6 +240,7 @@ export const TeamUsers = () => {
                   Change Role To User
                 </Button>
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={(e) => {
                   const data = {
@@ -271,6 +272,7 @@ export const TeamUsers = () => {
                   Change Role To Company Admin
                 </Button>
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={(e) => {
                   const data = {
@@ -302,6 +304,7 @@ export const TeamUsers = () => {
                   Change Role To Tenant Admin
                 </Button>
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={(e) => {
                   axios.delete(
