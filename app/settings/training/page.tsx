@@ -56,7 +56,7 @@ const getSourceInfo = (
   if (source.startsWith('http://') || source.startsWith('https://')) {
     return {
       icon: LuLink,
-      label: new URL(source).hostname,
+      label: source.replace('http://', '').replace('https://', ''),
       description: 'Web resource',
     };
   }
@@ -179,7 +179,7 @@ export default function Training() {
   const [companyExternalSources, setCompanyExternalSources] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const { data: activeCompany } = useCompany();
-  
+
   // New state for URL learning
   const [learnUrl, setLearnUrl] = useState<string>('');
   const [isLearningUrl, setIsLearningUrl] = useState(false);
@@ -313,15 +313,15 @@ export default function Training() {
       // Ensure 100% progress and update page
       setUploadProgress(100);
       setSuccess(`Successfully uploaded ${file.name}`);
-      
+
       // Reset upload state and re-enable interactions
-      await new Promise(resolve => setTimeout(resolve, 500)); // Short delay for UX
+      await new Promise((resolve) => setTimeout(resolve, 500)); // Short delay for UX
       await fetchCompanyData(); // Refresh sources
-      
+
       // Reset upload-related states
       setUploadingDocument(false);
       setUploadProgress(0);
-      
+
       // Clear file input
       if (e.target) {
         e.target.value = '';
@@ -365,9 +365,9 @@ export default function Training() {
           },
           body: JSON.stringify({
             url: learnUrl,
-            collection_number: "0",
+            collection_number: '0',
           }),
-        }
+        },
       );
 
       clearInterval(progressInterval);
@@ -380,16 +380,15 @@ export default function Training() {
       // Ensure 100% progress and update page
       setUrlProgress(100);
       setSuccess(`Successfully learned from ${learnUrl}`);
-      
+
       // Short delay for UX
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
       await fetchCompanyData(); // Refresh sources
-      
+
       // Reset URL learning states
       setLearnUrl(''); // Clear the URL input after success
       setIsLearningUrl(false);
       setUrlProgress(0);
-      
     } catch (error: any) {
       setError(error.message || 'Error learning from URL');
       setIsLearningUrl(false);
@@ -422,10 +421,10 @@ export default function Training() {
 
       // Set success message
       setSuccess(`Successfully deleted ${source}`);
-      
+
       // Short delay for UX
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       // Refresh the sources list
       await fetchCompanyData();
     } catch (error) {
@@ -540,13 +539,16 @@ export default function Training() {
             <div className='space-y-4 border-t pt-6'>
               <h3 className='text-lg font-medium'>Learn From URL</h3>
               <p className='mt-2 text-sm text-muted-foreground'>
-                Extract and learn from content at a specific URL. The AI will process the webpage content and make it available for reference in conversations.
+                Extract and learn from content at a specific URL. The AI will process the webpage content and make it
+                available for reference in conversations.
               </p>
-              
+
               <div className='space-y-4 p-4 border rounded-md bg-background/50'>
                 <div className='flex flex-col space-y-2'>
-                  <label htmlFor='learn-url' className='text-sm font-medium'>URL to Learn From</label>
-                  <Input 
+                  <label htmlFor='learn-url' className='text-sm font-medium'>
+                    URL to Learn From
+                  </label>
+                  <Input
                     id='learn-url'
                     placeholder='https://example.com/article'
                     value={learnUrl}
@@ -554,12 +556,7 @@ export default function Training() {
                     disabled={isLearningUrl}
                   />
                 </div>
-                <Button
-                  type='button'
-                  onClick={handleLearnUrl}
-                  disabled={isLearningUrl || !learnUrl}
-                  className='w-full'
-                >
+                <Button type='button' onClick={handleLearnUrl} disabled={isLearningUrl || !learnUrl} className='w-full'>
                   {isLearningUrl ? (
                     <>Processing URL...</>
                   ) : (
@@ -569,7 +566,7 @@ export default function Training() {
                     </>
                   )}
                 </Button>
-                
+
                 {/* URL Processing Progress */}
                 {urlProgress > 0 && (
                   <div className='space-y-2'>
@@ -592,11 +589,9 @@ export default function Training() {
                 <div className='text-center text-muted-foreground'>No documents uploaded yet</div>
               ) : (
                 <div className='grid gap-2'>
-                  {(searchParams.get('mode') === 'company' ? companyExternalSources : userExternalSources).map(
-                    (source) => (
-                      <SourceDisplay key={source} source={source} onDelete={handleDeleteDocument} />
-                    ),
-                  )}
+                  {(searchParams.get('mode') === 'company' ? companyExternalSources : userExternalSources).map((source) => (
+                    <SourceDisplay key={source} source={source} onDelete={handleDeleteDocument} />
+                  ))}
                 </div>
               )}
             </div>
