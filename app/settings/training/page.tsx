@@ -182,8 +182,6 @@ export default function Training() {
   
   // New state for URL learning
   const [learnUrl, setLearnUrl] = useState<string>('');
-  const [urlChunks, setUrlChunks] = useState<number>(0);
-  const [urlCharacterLength, setUrlCharacterLength] = useState<number>(1000);
   const [isLearningUrl, setIsLearningUrl] = useState(false);
   const [urlProgress, setUrlProgress] = useState(0);
 
@@ -367,10 +365,7 @@ export default function Training() {
           },
           body: JSON.stringify({
             url: learnUrl,
-            collection_number: COLLECTION_NUMBER,
-            chunks: urlChunks > 0 ? urlChunks : undefined,
-            character_length: urlCharacterLength,
-            company_id: searchParams.get('mode') === 'company' ? activeCompany?.id : null,
+            collection_number: "0",
           }),
         }
       );
@@ -559,34 +554,6 @@ export default function Training() {
                     disabled={isLearningUrl}
                   />
                 </div>
-                
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                  <div className='space-y-2'>
-                    <label htmlFor='url-chunks' className='text-sm font-medium'>Number of Chunks (0 for auto)</label>
-                    <Input
-                      id='url-chunks'
-                      type='number'
-                      min={0}
-                      step={1}
-                      value={urlChunks}
-                      onChange={(e) => setUrlChunks(parseInt(e.target.value) || 0)}
-                      disabled={isLearningUrl}
-                    />
-                  </div>
-                  <div className='space-y-2'>
-                    <label htmlFor='url-character-length' className='text-sm font-medium'>Character Length per Chunk</label>
-                    <Input
-                      id='url-character-length'
-                      type='number'
-                      min={500}
-                      step={100}
-                      value={urlCharacterLength}
-                      onChange={(e) => setUrlCharacterLength(parseInt(e.target.value) || 1000)}
-                      disabled={isLearningUrl}
-                    />
-                  </div>
-                </div>
-                
                 <Button
                   type='button'
                   onClick={handleLearnUrl}
