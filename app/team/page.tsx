@@ -211,6 +211,99 @@ export const TeamUsers = () => {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={(e) => {
+                  const data = {
+                      role_id: 3,
+                      company_id: activeCompany?.id,
+                      user_id: row.original.id
+                    }
+                  axios.put(
+                    `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user/role`,
+                    data,
+                    {
+                      headers: {
+                        Authorization: getCookie('jwt'),
+                        'Content-Type': 'application/json',
+                        },
+                      },
+                    ).then((response)=>{
+                    mutate();
+                    setResponseMessage('User Role updated successfully!');
+                    })
+                  }
+                }
+                className='p-0'
+              >
+                <Button 
+                  variant='ghost' 
+                  className='justify-start w-full text-white-600 hover:text-blue-600'
+                >
+                  Change Role To User
+                </Button>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  const data = {
+                      role_id: 2,
+                      company_id: activeCompany?.id,
+                      user_id: row.original.id
+                    }
+                  axios.put(
+                    `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user/role`,
+                    data,
+                    {
+                      headers: {
+                        Authorization: getCookie('jwt'),
+                        'Content-Type': 'application/json',
+                        },
+                      },
+                    ).then((response)=>{
+                    mutate();
+                    setResponseMessage('User Role updated successfully!');
+                    })
+                  }
+                }
+                className='p-0'
+              >
+                <Button 
+                  variant='ghost' 
+                  className='justify-start w-full text-white-600 hover:text-blue-600'
+                >
+                  Change Role To Company Admin
+                </Button>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  const data = {
+                      role_id: 1,
+                      company_id: activeCompany?.id,
+                      user_id: row.original.id
+                    }
+                  axios.put(
+                    `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user/role`,
+                    data,
+                    {
+                      headers: {
+                        Authorization: getCookie('jwt'),
+                        'Content-Type': 'application/json',
+                        },
+                      },
+                    ).then((response)=>{
+                    mutate();
+                    setResponseMessage('User Role updated successfully!');
+                    })
+                  }
+                }
+                className='p-0'
+              >
+                <Button 
+                  variant='ghost' 
+                  className='justify-start w-full text-white-600 hover:text-blue-600'
+                >
+                  Change Role To Tenant Admin
+                </Button>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(e) => {
                   axios.delete(
                     `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/companies/${activeCompany?.id}/users/${row.original.id}`,
                     {
