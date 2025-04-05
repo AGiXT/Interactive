@@ -63,6 +63,7 @@ import { useAgent } from '@/components/interactive/useAgent';
 import { useChain, useChains, ChainStep as ChainStepType, Chain } from '@/components/interactive/useChain';
 import { toast } from '@/components/layout/toast';
 import { cn } from '@/lib/utils';
+import { Separator } from '@radix-ui/react-dropdown-menu';
 // Removed 'describe' import as it seemed unused and potentially problematic
 // import { describe } from 'node:test';
 
@@ -227,7 +228,7 @@ function ChainSelector({
           onTouchStart={onTouchStart || stopPropagation}
           onBlur={onBlur}
         >
-          <SelectValue placeholder='Select Chain' />
+          <SelectValue placeholder='Select Automation Chain' />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value='/'>- None -</SelectItem>
@@ -1337,7 +1338,7 @@ function ChainFlow() {
       {/* Chain Selection and Management Card */}
       <Card className='mb-4'>
         <CardContent className='p-4 space-y-4'>
-          <Label>Select or Manage Chain</Label>
+          <Label>Select Automation Chain</Label>
           <TooltipProvider delayDuration={100}>
             <div className='flex items-center space-x-2'>
               <div className='flex-1'>
@@ -1346,7 +1347,7 @@ function ChainFlow() {
                     <Input
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
-                      placeholder='Enter new chain name'
+                      placeholder='Enter new automation chain name'
                       className='h-9'
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') handleRenameChain();
@@ -1389,7 +1390,7 @@ function ChainFlow() {
                     disabled={isChainsLoading || renaming}
                   >
                     <SelectTrigger className='w-full h-9' disabled={isChainsLoading || renaming}>
-                      <SelectValue placeholder={isChainsLoading ? 'Loading Chains...' : '- Select Chain -'} />
+                      <SelectValue placeholder={isChainsLoading ? 'Loading Chains...' : '- Select Automation Chain -'} />
                     </SelectTrigger>
                     <SelectContent>
                       {isChainsLoading && (
@@ -1425,7 +1426,7 @@ function ChainFlow() {
                         <Plus className='h-4 w-4' />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Create or Import Chain</TooltipContent>
+                    <TooltipContent>Create or Import Automation Chain</TooltipContent>
                   </Tooltip>
                   {currentChainName && (
                     <>
@@ -1676,9 +1677,10 @@ function ChainFlow() {
           {' '}
           {/* Optional: Adjust max width if needed */}
           <DialogHeader>
-            <DialogTitle>Create or Import Chain</DialogTitle>
+            <DialogTitle>Create or Import Automation Chain</DialogTitle>
             <DialogDescription>
-              Create a new chain by entering a name and optional description, or import an existing chain from a JSON file.
+              Create a new automation chain by entering a name and optional description, or import an existing chain from a
+              JSON file.
             </DialogDescription>
           </DialogHeader>
           {/* Use space-y for vertical stacking of elements */}
@@ -1694,7 +1696,7 @@ function ChainFlow() {
                 id='chain-name-dialog'
                 value={newChainName}
                 onChange={(e) => setNewChainName(e.target.value)}
-                placeholder='Required for new, optional for import'
+                placeholder='Enter automation chain name...'
                 className='w-full' // Ensure input takes full width
               />
             </div>
@@ -1710,7 +1712,7 @@ function ChainFlow() {
                 id='chain-description-dialog'
                 value={newChainDescription}
                 onChange={(e) => setNewChainDescription(e.target.value)}
-                placeholder='Optional description for the chain'
+                placeholder='Enter a description for this chain...'
                 rows={3}
                 className='w-full' // Ensure textarea takes full width
               />
@@ -1721,7 +1723,7 @@ function ChainFlow() {
               <Label htmlFor='import-chain-dialog-hidden' className='block mb-1.5 text-sm font-medium'>
                 {' '}
                 {/* Use block and margin */}
-                Import File
+                Or Import an Automation Chain from a File
               </Label>
               {/* Hidden actual file input */}
               <Input
@@ -1738,14 +1740,14 @@ function ChainFlow() {
                 onClick={() => document.getElementById('import-chain-dialog-hidden')?.click()}
                 className='w-full justify-start text-left font-normal text-muted-foreground' // Full width, left aligned text
               >
-                <Upload className='mr-2 h-4 w-4' /> Select JSON File...
+                <Upload className='mr-2 h-4 w-4' /> Select Automation Chain File...
               </Button>
             </div>
 
             {/* Help Text */}
             <p className='text-xs text-muted-foreground text-center pt-1'>
-              *Name is required to create a new chain. If importing, name can be derived from filename if left blank.
-              Importing with an existing name appends a number (_1, _2).
+              *Name is required to create a new automation chain. If importing, name can be derived from filename if left
+              blank. Importing with an existing name appends a number (_1, _2).
             </p>
           </div>
           <DialogFooter>
@@ -1760,7 +1762,7 @@ function ChainFlow() {
               Cancel
             </Button>
             <Button onClick={handleNewChain} disabled={!newChainName.trim()}>
-              <Plus className='mr-2 h-4 w-4' /> Create New Chain
+              <Plus className='mr-2 h-4 w-4' /> Create New Automation Chain
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1772,7 +1774,7 @@ function ChainFlow() {
 // Wrapper Component
 export default function ChainPageWrapper() {
   return (
-    <SidebarPage title='Chain Management'>
+    <SidebarPage title='Automation Chain Management'>
       <ReactFlowProvider>
         <ChainEditorProvider>
           <ChainFlow />
