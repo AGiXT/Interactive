@@ -47,19 +47,19 @@ export const items: Item[] = [
     isActive: true,
   },
   {
+    title: 'Automation',
+    icon: LuLink,
+    url: '/settings/chains',
+  },
+  {
+    title: 'Prompt Library',
+    icon: SquareLibrary,
+    url: '/settings/prompts',
+  },
+  {
     title: 'Agent Management',
     icon: Bot,
     items: [
-      {
-        title: 'Prompt Library',
-        icon: SquareLibrary,
-        url: '/settings/prompts',
-      },
-      {
-        title: 'Chain Library',
-        icon: LuLink,
-        url: '/settings/chains',
-      },
       {
         title: 'Training',
         icon: GraduationCap,
@@ -92,16 +92,16 @@ export const items: Item[] = [
     ],
   },
   {
-    title: 'Team Management',
+    title: 'Team',
     icon: Users,
     items: [
       {
-        title: 'Team',
+        title: 'Team Management',
         icon: User,
         url: '/team',
       },
       {
-        title: 'Team Training',
+        title: 'Agent Training',
         icon: GraduationCap,
         url: '/settings/training',
         queryParams: {
@@ -109,7 +109,7 @@ export const items: Item[] = [
         },
       },
       {
-        title: 'Team Extensions',
+        title: 'Agent Extensions',
         icon: Puzzle,
         url: '/settings/extensions',
         queryParams: {
@@ -117,7 +117,7 @@ export const items: Item[] = [
         },
       },
       {
-        title: 'Team Abilities',
+        title: 'Agent Abilities',
         icon: Workflow,
         url: '/settings/abilities',
         queryParams: {
@@ -125,7 +125,7 @@ export const items: Item[] = [
         },
       },
       {
-        title: 'Team Settings',
+        title: 'Agent Settings',
         icon: Settings,
         url: '/settings',
         queryParams: {
