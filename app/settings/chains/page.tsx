@@ -33,7 +33,7 @@ import {
   Loader2,
   SaveAll,
   Info,
-} from 'lucide-react'; // Added Info icon
+} from 'lucide-react';
 import useSWR from 'swr';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -63,6 +63,8 @@ import { useAgent } from '@/components/interactive/useAgent';
 import { useChain, useChains, ChainStep as ChainStepType, Chain } from '@/components/interactive/useChain';
 import { toast } from '@/components/layout/toast';
 import { cn } from '@/lib/utils';
+// Removed 'describe' import as it seemed unused and potentially problematic
+// import { describe } from 'node:test';
 
 // --- Chain Editor Context ---
 
@@ -83,12 +85,10 @@ const ChainEditorProvider = ({ children }: { children: React.ReactNode }) => {
   const [stepsApi, setStepsApi] = useState<Record<number, StepApi>>({});
 
   const registerStep = useCallback((stepNumber: number, api: StepApi) => {
-    // console.log(`Registering step ${stepNumber}, modified: ${api.isModified}`);
     setStepsApi((prev) => ({ ...prev, [stepNumber]: api }));
   }, []);
 
   const unregisterStep = useCallback((stepNumber: number) => {
-    // console.log(`Unregistering step ${stepNumber}`);
     setStepsApi((prev) => {
       const newState = { ...prev };
       delete newState[stepNumber];
@@ -96,13 +96,12 @@ const ChainEditorProvider = ({ children }: { children: React.ReactNode }) => {
     });
   }, []);
 
-  // Function to get only modified steps that need saving
   const getStepsToSave = useCallback(() => {
     return Object.entries(stepsApi)
       .filter(([_, api]) => api.isModified)
       .map(([stepNumberStr, api]) => ({
         stepNumber: parseInt(stepNumberStr, 10),
-        saveData: api.handleSave, // Pass the save function itself
+        saveData: api.handleSave,
       }));
   }, [stepsApi]);
 
@@ -118,7 +117,6 @@ const ChainEditorProvider = ({ children }: { children: React.ReactNode }) => {
   return <ChainEditorContext.Provider value={value}>{children}</ChainEditorContext.Provider>;
 };
 
-// Hook for easy access
 const useChainEditor = () => {
   const context = useContext(ChainEditorContext);
   if (!context) {
@@ -129,13 +127,12 @@ const useChainEditor = () => {
 
 // --- End Chain Editor Context ---
 
-// Define ChainStepPrompt structure if not implicitly defined elsewhere
 type ChainStepPrompt = {
   prompt_name?: string | null;
   prompt_category?: string | null;
   command_name?: string | null;
   chain_name?: string | null;
-  [key: string]: any; // Allow other properties for arguments
+  [key: string]: any;
 };
 
 // --- Selectors ---
@@ -143,21 +140,20 @@ const stopPropagation = (e: React.MouseEvent | React.TouchEvent) => {
   e.stopPropagation();
 };
 
-// CommandSelector: Renders dropdown for selecting commands available to an agent
 function CommandSelector({
   agentName,
   value,
   onChange,
   onMouseDown,
   onTouchStart,
-  onBlur, // Added onBlur prop
+  onBlur,
 }: {
   agentName: string;
   value?: string | null;
   onChange?: (value: string | null) => void;
   onMouseDown?: (e: React.MouseEvent) => void;
   onTouchStart?: (e: React.TouchEvent) => void;
-  onBlur?: () => void; // Added onBlur prop
+  onBlur?: () => void;
 }): React.JSX.Element {
   const { data: agentData, error, isLoading } = useAgent(false, agentName);
 
@@ -166,8 +162,6 @@ function CommandSelector({
 
   const commandsObject = agentData?.commands ?? {};
   const commandKeys = commandsObject && typeof commandsObject === 'object' ? Object.keys(commandsObject) : [];
-
-  // Convert null to undefined for the Select component
   const selectValue = value === null ? undefined : value;
 
   return (
@@ -181,7 +175,7 @@ function CommandSelector({
           className='w-full h-8 text-xs nopan'
           onMouseDown={onMouseDown || stopPropagation}
           onTouchStart={onTouchStart || stopPropagation}
-          onBlur={onBlur} // Attach onBlur here
+          onBlur={onBlur}
         >
           <SelectValue placeholder='Select Command' />
         </SelectTrigger>
@@ -201,26 +195,23 @@ function CommandSelector({
   );
 }
 
-// ChainSelector: Renders dropdown for selecting other chains
 function ChainSelector({
   value,
   onChange,
   onMouseDown,
   onTouchStart,
-  onBlur, // Added onBlur prop
+  onBlur,
 }: {
   value?: string | null;
   onChange?: (value: string | null) => void;
   onMouseDown?: (e: React.MouseEvent) => void;
   onTouchStart?: (e: React.TouchEvent) => void;
-  onBlur?: () => void; // Added onBlur prop
+  onBlur?: () => void;
 }): React.JSX.Element {
   const { data: chainData, error, isLoading } = useChains();
 
   if (isLoading) return <div className='text-xs text-muted-foreground h-8 flex items-center'>Loading Chains...</div>;
   if (error) return <div className='text-xs text-destructive h-8 flex items-center'>Chain Load Error</div>;
-
-  // Convert null to undefined for the Select component
   const selectValue = value === null ? undefined : value;
 
   return (
@@ -234,7 +225,7 @@ function ChainSelector({
           className='w-full h-8 text-xs nopan'
           onMouseDown={onMouseDown || stopPropagation}
           onTouchStart={onTouchStart || stopPropagation}
-          onBlur={onBlur} // Attach onBlur here
+          onBlur={onBlur}
         >
           <SelectValue placeholder='Select Chain' />
         </SelectTrigger>
@@ -254,7 +245,6 @@ function ChainSelector({
 
 // --- ReactFlow Custom Node ---
 
-// Arguments that are handled structurally or injected by the system, not rendered as generic inputs
 const systemInjectedArgs = [
   'agent_name',
   'COMMANDS',
@@ -268,25 +258,22 @@ const systemInjectedArgs = [
   'output_url',
 ];
 const structuralArgs = ['prompt_name', 'prompt_category', 'command_name', 'chain', 'chain_name'];
-const conditionalArgs = ['context', 'user_input']; // Handled separately based on step type
+const conditionalArgs = ['context', 'user_input'];
 const ignoreArgsForGenericRender = [...systemInjectedArgs, ...structuralArgs, ...conditionalArgs];
 
-// Helper function to extract args from prompt
 const extractArgsFromPrompt = (prompt: ChainStepPrompt): Record<string, string | number | boolean> => {
   const extractedArgs: Record<string, string | number | boolean> = {};
   if (prompt) {
     for (const key in prompt) {
-      // Only include keys that are *not* structural or system args
       if (!structuralArgs.includes(key) && !systemInjectedArgs.includes(key)) {
         const value = prompt[key];
         if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
           extractedArgs[key] = value;
         } else {
-          // Handle potential non-primitive values (though the API should ideally send primitives)
           try {
-            extractedArgs[key] = JSON.stringify(value); // Attempt to stringify
+            extractedArgs[key] = JSON.stringify(value);
           } catch {
-            extractedArgs[key] = ''; // Fallback to empty string
+            extractedArgs[key] = '';
           }
         }
       }
@@ -295,36 +282,32 @@ const extractArgsFromPrompt = (prompt: ChainStepPrompt): Record<string, string |
   return extractedArgs;
 };
 
-// ChainStepNode: Component representing a single step in the chain within the ReactFlow diagram
 const ChainStepNode = memo(
   ({
     data,
     isConnectable,
   }: NodeProps<{
-    stepData: ChainStepType; // Data for this specific step
-    chain_name: string; // Name of the parent chain
-    mutateChain: () => void; // Function to revalidate chain data
-    mutateChains: () => void; // Function to revalidate list of all chains
-    isLastStep: boolean; // Flag indicating if this is the last step
-    moveStep: (stepNumber: number, direction: 'up' | 'down') => Promise<void>; // Callback to move step
-    isAutosaveEnabled: boolean; // Autosave state from parent
+    stepData: ChainStepType;
+    chain_name: string;
+    mutateChain: () => void;
+    mutateChains: () => void;
+    isLastStep: boolean;
+    moveStep: (stepNumber: number, direction: 'up' | 'down') => Promise<void>;
+    isAutosaveEnabled: boolean;
   }>) => {
     const { stepData, chain_name, mutateChain, mutateChains, isLastStep, moveStep, isAutosaveEnabled } = data;
-    const context = useInteractiveConfig(); // Access SDK and global state
-    const { registerStep, unregisterStep } = useChainEditor(); // Context for auto-save coordination
+    const context = useInteractiveConfig();
+    const { registerStep, unregisterStep } = useChainEditor();
 
-    // --- State Initialization ---
     const [agentName, setAgentName] = useState(stepData.agentName);
     const [stepType, setStepType] = useState(stepData.promptType || 'Prompt');
     const [targetName, setTargetName] = useState(stepData.targetName || '');
-    const [args, setArgs] = useState<Record<string, string | number | boolean>>({}); // Initialized in useEffect
-    const [availableArgs, setAvailableArgs] = useState<string[]>([]); // Argument keys expected by the target
-    const [modified, setModified] = useState(false); // Track if changes have been made since last save/load
-    const [isLoadingArgs, setIsLoadingArgs] = useState(false); // Loading indicator for fetching args
-    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false); // State for delete confirmation dialog
-    // --- End State Initialization ---
+    const [args, setArgs] = useState<Record<string, string | number | boolean>>({});
+    const [availableArgs, setAvailableArgs] = useState<string[]>([]);
+    const [modified, setModified] = useState(false);
+    const [isLoadingArgs, setIsLoadingArgs] = useState(false);
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
-    // Effect to synchronize internal state when the stepData prop changes
     useEffect(() => {
       setAgentName(stepData.agentName);
       const newStepType = stepData.promptType || 'Prompt';
@@ -341,7 +324,6 @@ const ChainStepNode = memo(
       setModified(false);
     }, [stepData]);
 
-    // Fetch list of available agents
     const { data: agentsData, isLoading: isAgentsLoading } = useSWR('/agents', () => context.agixt.getAgents(), {
       fallbackData: [],
     });
@@ -353,7 +335,6 @@ const ChainStepNode = memo(
       [agentsData],
     );
 
-    // Fetches the list of *expected* argument names
     const fetchAvailableArgs = useCallback(async () => {
       if (!targetName || !stepType || (stepType === 'Command' && !agentName)) {
         setAvailableArgs([]);
@@ -372,7 +353,7 @@ const ChainStepNode = memo(
               fetchedArgNames = matches.map((match) => match.replace(/[{}]/g, ''));
             }
             if (fetchedArgNames.length === 0) {
-              throw new Error('No args found in content, trying getPromptArgs');
+              argsResult = await context.agixt.getPromptArgs(targetName, 'Default');
             }
           } catch (err) {
             argsResult = await context.agixt.getPromptArgs(targetName, 'Default');
@@ -404,12 +385,10 @@ const ChainStepNode = memo(
       }
     }, [stepType, targetName, agentName, context.agixt]);
 
-    // Effect to trigger fetching available arguments
     useEffect(() => {
       fetchAvailableArgs();
-    }, [fetchAvailableArgs]); // Depends on the memoized fetchAvailableArgs now
+    }, [fetchAvailableArgs]);
 
-    // Saves the current step configuration via API call
     const handleSave = useCallback(async (): Promise<void> => {
       if (!chain_name || !agentName) {
         toast({ title: 'Error', description: 'Chain name and Agent are required.', variant: 'destructive' });
@@ -462,9 +441,11 @@ const ChainStepNode = memo(
         }
       });
 
+      // Explicitly remove context if not Prompt type
       if (stepType !== 'Prompt' && finalArgs.hasOwnProperty('context')) {
         delete finalArgs['context'];
       }
+      // Explicitly remove user_input if not Chain type
       if (stepType !== 'Chain' && finalArgs.hasOwnProperty('user_input')) {
         delete finalArgs['user_input'];
       }
@@ -492,26 +473,22 @@ const ChainStepNode = memo(
       setModified,
     ]);
 
-    // Autosave logic
     const handleBlurSave = useCallback(() => {
       if (isAutosaveEnabled && modified) {
         handleSave();
       }
     }, [isAutosaveEnabled, modified, handleSave]);
 
-    // Effect to register/update step API with context
     useEffect(() => {
       registerStep(stepData.step, { handleSave, isModified: modified });
     }, [registerStep, stepData.step, handleSave, modified]);
 
-    // Effect to unregister on unmount
     useEffect(() => {
       return () => {
         unregisterStep(stepData.step);
       };
     }, [unregisterStep, stepData.step]);
 
-    // Handles the confirmation of step deletion
     const handleDeleteConfirm = async (): Promise<void> => {
       if (!chain_name) {
         toast({ title: 'Error', description: 'Chain name is invalid.', variant: 'destructive' });
@@ -530,7 +507,6 @@ const ChainStepNode = memo(
       }
     };
 
-    // Memoize selector components
     const stepTypeComponents = useMemo(
       () => ({
         Prompt: (
@@ -576,7 +552,7 @@ const ChainStepNode = memo(
             />
           </div>
         ),
-        /*
+        /* // Chain step type temporarily disabled or under review
         Chain: (
           <div>
             <Label htmlFor={`chain-name-${stepData.step}`} className='text-xs'>
@@ -603,7 +579,6 @@ const ChainStepNode = memo(
       [agentName, targetName, stepData.step, handleBlurSave],
     );
 
-    // --- JSX Rendering ---
     return (
       <Card className='w-80 shadow-md nowheel nopan'>
         <Handle type='target' position={Position.Left} style={{ background: '#555' }} isConnectable={isConnectable} />
@@ -612,7 +587,6 @@ const ChainStepNode = memo(
             <span>Step {stepData.step}</span>
             <div className='flex items-center space-x-1' onMouseDown={stopPropagation} onTouchStart={stopPropagation}>
               <TooltipProvider delayDuration={100}>
-                {/* Move Up */}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -627,7 +601,6 @@ const ChainStepNode = memo(
                   </TooltipTrigger>
                   <TooltipContent>Move Up</TooltipContent>
                 </Tooltip>
-                {/* Move Down */}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -642,7 +615,6 @@ const ChainStepNode = memo(
                   </TooltipTrigger>
                   <TooltipContent>Move Down</TooltipContent>
                 </Tooltip>
-                {/* Save */}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button variant='ghost' size='icon' className='h-6 w-6' onClick={handleSave} disabled={!modified}>
@@ -651,7 +623,6 @@ const ChainStepNode = memo(
                   </TooltipTrigger>
                   <TooltipContent>{modified ? 'Save Changes' : 'No Changes'}</TooltipContent>
                 </Tooltip>
-                {/* Delete */}
                 <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -683,7 +654,6 @@ const ChainStepNode = memo(
           </CardTitle>
         </CardHeader>
         <CardContent className='p-3 space-y-2 text-xs max-h-96 overflow-y-auto relative z-10'>
-          {/* Agent Selector */}
           <div onMouseDown={stopPropagation} onTouchStart={stopPropagation}>
             <Label htmlFor={`agent-name-${stepData.step}`} className='text-xs'>
               Agent
@@ -698,6 +668,10 @@ const ChainStepNode = memo(
                     setTargetName('');
                     setArgs({});
                     setAvailableArgs([]);
+                  }
+                  // Apply change immediately if autosave is on
+                  if (isAutosaveEnabled) {
+                    handleSave();
                   }
                 }
               }}
@@ -716,7 +690,6 @@ const ChainStepNode = memo(
             </Select>
           </div>
 
-          {/* Step Type Selector */}
           <div onMouseDown={stopPropagation} onTouchStart={stopPropagation}>
             <Label htmlFor={`step-type-${stepData.step}`} className='text-xs'>
               Type
@@ -730,6 +703,10 @@ const ChainStepNode = memo(
                   setAvailableArgs([]);
                   setArgs({});
                   setModified(true);
+                  // Apply change immediately if autosave is on
+                  // Need to be careful here, as changing type invalidates targetName
+                  // Maybe only save if a valid target is selected *after* type change?
+                  // For now, let's not autosave on type change itself, wait for target selection or blur.
                 }
               }}
             >
@@ -746,10 +723,8 @@ const ChainStepNode = memo(
             </Select>
           </div>
 
-          {/* Dynamic Target Selector */}
           {stepType && stepTypeComponents[stepType as keyof typeof stepTypeComponents]}
 
-          {/* Divider before arguments */}
           {(isLoadingArgs ||
             stepType === 'Prompt' ||
             stepType === 'Chain' ||
@@ -759,7 +734,6 @@ const ChainStepNode = memo(
             </div>
           )}
 
-          {/* Argument Loading Indicator */}
           {isLoadingArgs && (
             <div className='flex items-center justify-center py-2'>
               <Loader2 className='h-4 w-4 animate-spin text-muted-foreground' />
@@ -767,10 +741,8 @@ const ChainStepNode = memo(
             </div>
           )}
 
-          {/* Argument Fields Container */}
           {!isLoadingArgs && (
             <div className='space-y-2'>
-              {/* Context (Only for Prompt type) */}
               {stepType === 'Prompt' && (
                 <div onMouseDown={stopPropagation} onTouchStart={stopPropagation}>
                   <Label htmlFor={`arg-${stepData.step}-context`} className='text-xs'>
@@ -790,7 +762,8 @@ const ChainStepNode = memo(
                   />
                 </div>
               )}
-              {/* User Input (Only for Chain type) */}
+              {/* Chain arguments section might need review/re-enabling if Chain step type is used */}
+              {/*
               {stepType === 'Chain' && (
                 <div onMouseDown={stopPropagation} onTouchStart={stopPropagation}>
                   <Label htmlFor={`arg-${stepData.step}-user_input`} className='text-xs'>
@@ -810,8 +783,8 @@ const ChainStepNode = memo(
                   />
                 </div>
               )}
+              */}
 
-              {/* Dynamically Rendered Arguments */}
               {availableArgs.map((name) => {
                 if (!name) return null;
                 const label = name.replace(/_/g, ' ').replace(/(?:^|\s)\S/g, (char) => char.toUpperCase());
@@ -836,8 +809,9 @@ const ChainStepNode = memo(
                         onCheckedChange={(checked) => {
                           setArgs((prev) => ({ ...prev, [name]: checked }));
                           setModified(true);
+                          // Autosave immediately for boolean toggles
                           if (isAutosaveEnabled) {
-                            handleSave();
+                            handleSave(); // Call handleSave directly for immediate effect
                           }
                         }}
                         className='nopan'
@@ -870,10 +844,15 @@ const ChainStepNode = memo(
                 );
               })}
 
-              {/* Message when no other arguments are available */}
               {!isLoadingArgs && availableArgs.length === 0 && stepType === 'Command' && targetName && (
                 <p className='text-xs text-muted-foreground mt-1 italic'>No configurable arguments for this Command.</p>
               )}
+              {!isLoadingArgs && availableArgs.length === 0 && stepType === 'Prompt' && targetName && !args['context'] && (
+                <p className='text-xs text-muted-foreground mt-1 italic'>
+                  No configurable arguments found for this Prompt (excluding context).
+                </p>
+              )}
+              {/* Add similar message for Chain if needed */}
             </div>
           )}
         </CardContent>
@@ -895,17 +874,17 @@ function ChainFlow() {
   const [edges, setEdges] = useState<Edge[]>([]);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newChainName, setNewChainName] = useState('');
+  const [newChainDescription, setNewChainDescription] = useState(''); // **NEW STATE for description in dialog**
   const [renaming, setRenaming] = useState(false);
   const [currentChainName, setCurrentChainName] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [isAutosaveEnabled, setIsAutosaveEnabled] = useState(false);
   const [isSavingAll, setIsSavingAll] = useState(false);
 
-  // **NEW STATE for Description**
-  const [chainDescription, setChainDescription] = useState<string | null | undefined>(null); // Holds the loaded description
-  const [isEditingDescription, setIsEditingDescription] = useState(false); // Tracks edit mode
-  const [editedDescription, setEditedDescription] = useState(''); // Holds the description during editing
-  const [isSavingDescription, setIsSavingDescription] = useState(false); // Tracks saving status
+  const [chainDescription, setChainDescription] = useState<string | null | undefined>(null);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [editedDescription, setEditedDescription] = useState('');
+  const [isSavingDescription, setIsSavingDescription] = useState(false);
 
   const reactFlowInstance = useReactFlow<any, any>();
   const context = useInteractiveConfig();
@@ -917,26 +896,22 @@ function ChainFlow() {
 
   const { data: chainsData, mutate: mutateChains, isLoading: isChainsLoading } = useChains();
   const {
-    // Make sure 'chainData' type includes 'description' from your hook definition
     data: chainData,
     mutate: mutateChain,
     error: chainError,
     isLoading: isChainLoading,
   } = useChain(selectedChainName ?? undefined);
-  const { data: agentData } = useAgent(false); // Fetch basic agent data
+  const { data: agentData } = useAgent(false);
 
-  // Load autosave preference
   useEffect(() => {
     const savedPreference = localStorage.getItem('chainEditorAutosave');
     setIsAutosaveEnabled(savedPreference === 'true');
   }, []);
 
-  // Save autosave preference
   useEffect(() => {
     localStorage.setItem('chainEditorAutosave', String(isAutosaveEnabled));
   }, [isAutosaveEnabled]);
 
-  // Node/Edge change handlers
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
     [setNodes],
@@ -946,7 +921,6 @@ function ChainFlow() {
     [setEdges],
   );
 
-  // Callback to move a step up or down
   const moveStep = useCallback(
     async (stepNumber: number, direction: 'up' | 'down') => {
       if (!currentChainName || !chainData?.steps) return;
@@ -964,7 +938,6 @@ function ChainFlow() {
     [currentChainName, chainData?.steps, context.agixt, mutateChain],
   );
 
-  // Effect to Update ReactFlow Nodes and Edges when chain data changes
   useEffect(() => {
     const shouldRenderNodes = currentChainName && chainData?.steps;
     if (shouldRenderNodes) {
@@ -1006,7 +979,7 @@ function ChainFlow() {
     }
   }, [
     currentChainName,
-    chainData,
+    chainData?.steps, // More specific dependency
     isChainLoading,
     chainError,
     mutateChain,
@@ -1014,36 +987,35 @@ function ChainFlow() {
     reactFlowInstance,
     moveStep,
     isAutosaveEnabled,
-  ]); // Added chainData?.steps dependency
+  ]);
 
-  // Effect to Sync Component State with URL and Chain Data
   useEffect(() => {
+    const previousChainName = currentChainName; // Capture previous name before update
     setCurrentChainName(selectedChainName);
     if (selectedChainName) {
       if (renaming) {
         setNewName(selectedChainName);
       }
-      // Update description state from loaded chain data
-      setChainDescription(chainData?.description);
+      // Update description state only if the chain *name* has actually changed or if description was null/undefined
+      if (selectedChainName !== previousChainName || chainDescription === null || chainDescription === undefined) {
+        setChainDescription(chainData?.description);
+      }
       // Exit description edit mode if the chain changes
-      if (selectedChainName !== currentChainName) {
+      if (selectedChainName !== previousChainName) {
         setIsEditingDescription(false);
         setEditedDescription('');
       }
     } else {
-      // Reset state when no chain is selected
       setRenaming(false);
       setNewName('');
       setChainDescription(null);
       setIsEditingDescription(false);
       setEditedDescription('');
     }
-    // Depend on selectedChainName, renaming status, and the loaded chainData itself
-  }, [selectedChainName, renaming, chainData, currentChainName]); // Added currentChainName to detect actual change
+  }, [selectedChainName, renaming, chainData]); // Removed currentChainName from deps here
 
   // --- Event Handlers ---
 
-  // Handle saving all modified steps
   const handleSaveAll = async () => {
     const stepsToSave = getStepsToSave();
     if (stepsToSave.length === 0) {
@@ -1070,7 +1042,6 @@ function ChainFlow() {
     setIsSavingAll(false);
   };
 
-  // Handle selecting a chain from the dropdown
   const handleSelectChain = (value: string | null) => {
     const current = new URLSearchParams(Array.from(searchParams.entries()));
     if (value && value !== '/') {
@@ -1078,14 +1049,15 @@ function ChainFlow() {
     } else {
       current.delete('chain');
     }
-    setRenaming(false); // Exit renaming mode
-    setIsEditingDescription(false); // Exit description editing mode
+    setRenaming(false);
+    setIsEditingDescription(false);
     router.replace(`${pathname}?${current.toString()}`, { scroll: false });
   };
 
   // Handle creating a new chain
   const handleNewChain = async () => {
     const trimmedName = newChainName.trim();
+    const trimmedDescription = newChainDescription.trim(); // **Get trimmed description**
     if (!trimmedName) {
       toast({ title: 'Error', description: 'Chain name cannot be empty.', variant: 'destructive' });
       return;
@@ -1095,10 +1067,12 @@ function ChainFlow() {
       return;
     }
     try {
-      await context.agixt.addChain(trimmedName);
+      // **Pass description to addChain**
+      await context.agixt.addChain(trimmedName, trimmedDescription);
       await mutateChains();
       setShowCreateDialog(false);
       setNewChainName('');
+      setNewChainDescription(''); // **Reset description state**
       router.push(`${pathname}?chain=${encodeURIComponent(trimmedName)}`, { scroll: false });
       toast({ title: 'Chain Created', description: `Created chain "${trimmedName}".` });
     } catch (err: any) {
@@ -1112,9 +1086,16 @@ function ChainFlow() {
     const file = event.target.files?.[0];
     const fileInput = event.target;
     if (!file) return;
+
     const baseName = newChainName.trim() || file.name.replace(/\.json$/i, '');
+    const providedDescription = newChainDescription.trim(); // **Get description from dialog**
+
     if (!baseName) {
-      toast({ title: 'Error', description: 'Chain name required for import.', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: 'Chain name required for import (can be derived from filename).',
+        variant: 'destructive',
+      });
       if (fileInput) fileInput.value = '';
       return;
     }
@@ -1144,28 +1125,36 @@ function ChainFlow() {
           throw new Error(`Invalid step structure at index ${i}.`);
       });
 
-      await context.agixt.addChain(finalChainName);
+      // **Add chain with name AND description before importing steps**
+      await context.agixt.addChain(finalChainName, providedDescription);
       await context.agixt.importChain(finalChainName, steps);
       await mutateChains();
       setShowCreateDialog(false);
       setNewChainName('');
+      setNewChainDescription(''); // **Reset description state**
       if (fileInput) fileInput.value = '';
       router.push(`${pathname}?chain=${encodeURIComponent(finalChainName)}`, { scroll: false });
       toast({ title: 'Chain Imported', description: `Imported chain as "${finalChainName}".` });
     } catch (err: any) {
       console.error('Import chain err:', err);
       toast({ title: 'Import Error', description: err.message || 'API/File error.', variant: 'destructive' });
-      if (err.message.includes('Invalid') || err instanceof SyntaxError) {
+      // Attempt cleanup if import failed after chain creation
+      if (err.message.includes('Invalid') || err instanceof SyntaxError || err.message.includes('API/File error')) {
         try {
-          await context.agixt.deleteChain(finalChainName);
-        } catch {}
-        await mutateChains();
+          // Check if chain actually exists before trying to delete
+          const chains = await context.agixt.getChains();
+          if (chains.some((c: Chain) => c.chainName === finalChainName)) {
+            await context.agixt.deleteChain(finalChainName);
+          }
+        } catch (cleanupError) {
+          console.error('Error during import cleanup:', cleanupError);
+        }
+        await mutateChains(); // Re-fetch chains list after potential deletion
       }
-      if (fileInput) fileInput.value = '';
+      if (fileInput) fileInput.value = ''; // Reset file input regardless
     }
   };
 
-  // Handle deleting the currently selected chain
   const handleDeleteChain = async () => {
     if (!currentChainName) return;
     const confirmed = window.confirm(
@@ -1175,7 +1164,7 @@ function ChainFlow() {
     try {
       await context.agixt.deleteChain(currentChainName);
       await mutateChains();
-      handleSelectChain(null); // Deselect
+      handleSelectChain(null);
       toast({ title: 'Chain Deleted', description: `Deleted chain "${currentChainName}".` });
     } catch (err: any) {
       console.error('Delete chain err:', err);
@@ -1183,7 +1172,6 @@ function ChainFlow() {
     }
   };
 
-  // Handle renaming the currently selected chain
   const handleRenameChain = async () => {
     const trimmedNewName = newName.trim();
     if (!trimmedNewName || !currentChainName) {
@@ -1201,12 +1189,19 @@ function ChainFlow() {
       return;
     }
     try {
+      // Rename function might not support description update, only name change
       await context.agixt.renameChain(currentChainName, trimmedNewName);
       await mutateChains();
       setRenaming(false);
       const current = new URLSearchParams(Array.from(searchParams.entries()));
       current.set('chain', trimmedNewName);
       router.replace(`${pathname}?${current.toString()}`, { scroll: false });
+      // Need to refetch the specific chain data to get its potentially existing description after rename
+      await mutateChain(undefined, {
+        // Trigger refetch for the *new* name
+        optimisticData: (currentData) => ({ ...currentData, chainName: trimmedNewName }), // Optimistic update
+        revalidate: true,
+      });
       toast({ title: 'Chain Renamed', description: `Renamed to "${trimmedNewName}".` });
     } catch (err: any) {
       console.error('Rename chain err:', err);
@@ -1214,7 +1209,6 @@ function ChainFlow() {
     }
   };
 
-  // Handle exporting the current chain steps as JSON
   const handleExportChain = async () => {
     if (!currentChainName || !chainData?.steps || chainData.steps.length === 0) {
       toast({ title: 'Error', description: 'No chain selected or chain is empty.', variant: 'destructive' });
@@ -1236,34 +1230,43 @@ function ChainFlow() {
     }
   };
 
-  // Handle adding a new step to the current chain
   const handleAddStep = async () => {
     if (!currentChainName) {
       toast({ title: 'Error', description: 'No chain selected to add a step to.', variant: 'destructive' });
       return;
     }
 
+    // Save pending changes before adding if autosave is off
     if (!isAutosaveEnabled) {
       const stepsToSave = getStepsToSave();
       if (stepsToSave.length > 0) {
         const stepNumbers = stepsToSave.map((s) => s.stepNumber).join(', ');
         toast({ title: 'Saving pending changes', description: `Saving step(s): ${stepNumbers}...` });
+        setIsSavingAll(true); // Use saving all indicator
         const savePromises = stepsToSave.map((step) => step.saveData());
         try {
           await Promise.all(savePromises);
+          toast({ title: 'Pending Saved', description: 'Pending changes saved.' });
         } catch (error) {
           toast({
             title: 'Save Failed Before Add',
             description: 'Could not save pending changes. Please save manually and try again.',
             variant: 'destructive',
           });
-          return;
+          setIsSavingAll(false);
+          return; // Stop adding step if save failed
+        } finally {
+          setIsSavingAll(false);
         }
       }
     }
 
-    const currentChainState = chainData; // Use SWR state which should be updated
+    // Refetch chain data *just before* adding the step to ensure we have the latest step count
+    await mutateChain(); // Revalidate the current chain's data
+    // Access the potentially updated chainData from SWR's cache after revalidation
+    const currentChainState = reactFlowInstance.getNodes().length > 0 ? chainData : null; // Use node count or SWR cache
     const currentSteps = currentChainState?.steps || [];
+
     const lastStep = currentSteps.length > 0 ? currentSteps[currentSteps.length - 1] : null;
     const newStepNumber = (lastStep ? lastStep.step : 0) + 1;
     const defaultAgent = lastStep ? lastStep.agentName : (agentData?.agent?.name ?? 'AGiXT');
@@ -1276,7 +1279,7 @@ function ChainFlow() {
 
     try {
       await context.agixt.addStep(currentChainName, newStepNumber, defaultAgent, 'Prompt', defaultPromptArgs);
-      await mutateChain();
+      await mutateChain(); // Revalidate again after adding
       toast({ title: 'Step Added', description: `Step ${newStepNumber} added.` });
       setTimeout(() => reactFlowInstance?.fitView({ padding: 0.2, duration: 300 }), 100);
     } catch (err: any) {
@@ -1284,33 +1287,48 @@ function ChainFlow() {
       toast({ title: 'Add Step Error', description: err.message || 'API error.', variant: 'destructive' });
     }
   };
+
   const handleSaveDescription = async () => {
+    // Use setChainDescription API if available, otherwise fallback or show error
     if (!currentChainName || !context.agixt.setChainDescription) {
       toast({
         title: 'Error',
-        description: 'Cannot save description. Invalid state or missing required API function (renameChain).',
+        description: 'Functionality to save description is not available in the current SDK context.',
         variant: 'destructive',
       });
+      setIsEditingDescription(false); // Exit edit mode anyway
       return;
     }
 
-    setIsSavingDescription(true); // Set loading state
+    setIsSavingDescription(true);
 
     try {
-      await context.agixt.setChainDescription(currentChainName, editedDescription);
-      await mutateChain();
+      // Use the specific API endpoint if it exists
+      await context.agixt.setChainDescription(currentChainName, editedDescription.trim());
+
+      // Manually update the local SWR cache for description for immediate feedback
+      mutateChain(
+        (currentData) => {
+          if (!currentData) return undefined;
+          return { ...currentData, description: editedDescription.trim() };
+        },
+        { revalidate: false }, // Don't refetch immediately, assume success
+      );
+      // Update local state as well
+      setChainDescription(editedDescription.trim());
 
       setIsEditingDescription(false);
       toast({ title: 'Description Saved', description: 'Chain description updated successfully.' });
     } catch (err: any) {
-      console.error('Save description error (using renameChain):', err);
+      console.error('Save description error:', err);
       toast({ title: 'Save Error', description: err.message || 'Failed to save description.', variant: 'destructive' });
+      // Optionally revalidate on error to get the server state back
+      mutateChain();
     } finally {
       setIsSavingDescription(false);
     }
   };
 
-  // Define custom node types
   const nodeTypes = useMemo(() => ({ chainStep: ChainStepNode }), []);
 
   // --- JSX ---
@@ -1322,10 +1340,8 @@ function ChainFlow() {
           <Label>Select or Manage Chain</Label>
           <TooltipProvider delayDuration={100}>
             <div className='flex items-center space-x-2'>
-              {/* Chain Selector / Rename Input */}
               <div className='flex-1'>
                 {renaming && currentChainName ? (
-                  // Renaming Mode
                   <div className='flex items-center space-x-2'>
                     <Input
                       value={newName}
@@ -1367,7 +1383,6 @@ function ChainFlow() {
                     </Tooltip>
                   </div>
                 ) : (
-                  // Default Mode: Chain Selector Dropdown
                   <Select
                     value={currentChainName || ''}
                     onValueChange={handleSelectChain}
@@ -1387,16 +1402,21 @@ function ChainFlow() {
                           No chains exist yet
                         </SelectItem>
                       )}
-                      {chainsData?.map((chain) => (
-                        <SelectItem key={chain.id} value={chain.chainName}>
-                          {chain.chainName}
-                        </SelectItem>
-                      ))}
+                      {chainsData
+                        ?.sort((a, b) => a.chainName.localeCompare(b.chainName))
+                        .map(
+                          (
+                            chain, // Sort alphabetically
+                          ) => (
+                            <SelectItem key={chain.id} value={chain.chainName}>
+                              {chain.chainName}
+                            </SelectItem>
+                          ),
+                        )}
                     </SelectContent>
                   </Select>
                 )}
               </div>
-              {/* Action Buttons */}
               {!renaming && (
                 <>
                   <Tooltip>
@@ -1428,7 +1448,10 @@ function ChainFlow() {
                           <Button
                             variant='ghost'
                             size='icon'
-                            onClick={() => setRenaming(true)}
+                            onClick={() => {
+                              setRenaming(true);
+                              setNewName(currentChainName); // Pre-fill rename input
+                            }}
                             disabled={isChainLoading}
                             className='h-9 w-9'
                           >
@@ -1458,11 +1481,10 @@ function ChainFlow() {
             </div>
           </TooltipProvider>
 
-          {/* --- NEW: Chain Description Section --- */}
+          {/* Chain Description Section */}
           {currentChainName && !isChainLoading && !renaming && (
             <div className='mt-3 pt-3 border-t'>
               {isEditingDescription ? (
-                // Edit Mode
                 <div className='space-y-2'>
                   <Label htmlFor='chain-description-edit'>Edit Description</Label>
                   <Textarea
@@ -1480,12 +1502,11 @@ function ChainFlow() {
                       size='sm'
                       onClick={() => {
                         setIsEditingDescription(false);
-                        setEditedDescription(chainDescription || ''); // Reset on cancel
+                        setEditedDescription(chainDescription || '');
                       }}
                       disabled={isSavingDescription}
                     >
-                      {' '}
-                      Cancel{' '}
+                      Cancel
                     </Button>
                     <Button
                       size='sm'
@@ -1496,13 +1517,12 @@ function ChainFlow() {
                         <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                       ) : (
                         <Check className='mr-2 h-4 w-4' />
-                      )}{' '}
+                      )}
                       Save
                     </Button>
                   </div>
                 </div>
               ) : (
-                // Display Mode
                 <div className='space-y-1'>
                   <div className='flex justify-between items-start'>
                     <Label>Description</Label>
@@ -1518,8 +1538,7 @@ function ChainFlow() {
                               setEditedDescription(chainDescription || '');
                             }}
                           >
-                            {' '}
-                            <Pencil className='h-3 w-3' />{' '}
+                            <Pencil className='h-3 w-3' />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>Edit Description</TooltipContent>
@@ -1527,8 +1546,6 @@ function ChainFlow() {
                     </TooltipProvider>
                   </div>
                   <p className='text-sm text-muted-foreground whitespace-pre-wrap break-words min-h-[20px]'>
-                    {' '}
-                    {/* Added min-height */}
                     {chainDescription ? (
                       chainDescription
                     ) : (
@@ -1541,22 +1558,18 @@ function ChainFlow() {
               )}
             </div>
           )}
-          {/* Show loading indicator for description while chain data loads */}
           {currentChainName && isChainLoading && !renaming && (
             <div className='mt-3 pt-3 border-t text-sm text-muted-foreground min-h-[44px] flex items-center'>
-              {' '}
-              {/* Added min-height */}
               <Loader2 className='h-4 w-4 animate-spin mr-2' /> Loading description...
             </div>
           )}
-          {/* --- END: Chain Description Section --- */}
         </CardContent>
       </Card>
 
       {/* React Flow Area */}
-      {/* Adjusted height calculation to potentially account for description */}
-      <div className='flex-grow w-full min-h-[500px] h-[calc(100vh-360px)] border rounded-md relative overflow-hidden bg-background'>
-        {/* Controls Section (Save All, Autosave Toggle, Add Step) */}
+      <div className='flex-grow w-full min-h-[500px] h-[calc(100vh-380px)] border rounded-md relative overflow-hidden bg-background'>
+        {' '}
+        {/* Adjusted height slightly */}
         {currentChainName && !renaming && (
           <div className='absolute bottom-4 right-4 z-10 flex items-center space-x-2'>
             <TooltipProvider delayDuration={100}>
@@ -1570,7 +1583,7 @@ function ChainFlow() {
                     disabled={isSavingAll || getStepsToSave().length === 0}
                   >
                     {isSavingAll ? <Loader2 className='mr-1 h-4 w-4 animate-spin' /> : <SaveAll className='mr-1 h-4 w-4' />}
-                    Save All
+                    Save All ({getStepsToSave().length}) {/* Show count */}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Save all modified steps</TooltipContent>
@@ -1578,7 +1591,7 @@ function ChainFlow() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className='flex items-center space-x-2 p-2 rounded-md shadow-md border bg-background hover:bg-muted'>
-                    <Label htmlFor='autosave-toggle' className='text-sm'>
+                    <Label htmlFor='autosave-toggle' className='text-sm cursor-pointer'>
                       Autosave
                     </Label>
                     <Switch
@@ -1589,7 +1602,7 @@ function ChainFlow() {
                     />
                   </div>
                 </TooltipTrigger>
-                <TooltipContent>Automatically save step changes on blur</TooltipContent>
+                <TooltipContent>Automatically save step changes on blur/toggle</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1598,7 +1611,7 @@ function ChainFlow() {
                     variant='outline'
                     size='sm'
                     className='flex items-center shadow-md bg-background hover:bg-muted'
-                    disabled={!currentChainName}
+                    disabled={!currentChainName || isChainLoading} // Disable if loading
                   >
                     <Plus className='mr-1 h-4 w-4' /> Add Step
                   </Button>
@@ -1608,7 +1621,6 @@ function ChainFlow() {
             </TooltipProvider>
           </div>
         )}
-        {/* Conditional Rendering based on state */}
         {!currentChainName ? (
           <div className='flex items-center justify-center h-full text-muted-foreground px-4 text-center'>
             {isChainsLoading
@@ -1660,51 +1672,80 @@ function ChainFlow() {
 
       {/* Create/Import Chain Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent>
+        <DialogContent className='sm:max-w-[480px]'>
+          {' '}
+          {/* Optional: Adjust max width if needed */}
           <DialogHeader>
             <DialogTitle>Create or Import Chain</DialogTitle>
             <DialogDescription>
-              Create a new chain by entering a name, or import an existing chain from a JSON file (name is optional for
-              import).
+              Create a new chain by entering a name and optional description, or import an existing chain from a JSON file.
             </DialogDescription>
           </DialogHeader>
-          <div className='grid gap-4 py-4'>
-            <div className='grid grid-cols-4 items-center gap-4'>
-              <Label htmlFor='chain-name-dialog' className='text-right'>
-                Name
+          {/* Use space-y for vertical stacking of elements */}
+          <div className='space-y-4 py-4'>
+            {/* Name Input Section */}
+            <div>
+              <Label htmlFor='chain-name-dialog' className='block mb-1.5 text-sm font-medium'>
+                {' '}
+                {/* Use block and margin */}
+                Name*
               </Label>
               <Input
                 id='chain-name-dialog'
                 value={newChainName}
                 onChange={(e) => setNewChainName(e.target.value)}
-                className='col-span-3'
-                placeholder='Required for new chain, optional for import'
+                placeholder='Required for new, optional for import'
+                className='w-full' // Ensure input takes full width
               />
             </div>
-            <div className='grid grid-cols-4 items-center gap-4'>
-              <Label htmlFor='import-chain-dialog-hidden' className='text-right'>
+
+            {/* Description Input Section */}
+            <div>
+              <Label htmlFor='chain-description-dialog' className='block mb-1.5 text-sm font-medium'>
+                {' '}
+                {/* Use block and margin */}
+                Description
+              </Label>
+              <Textarea
+                id='chain-description-dialog'
+                value={newChainDescription}
+                onChange={(e) => setNewChainDescription(e.target.value)}
+                placeholder='Optional description for the chain'
+                rows={3}
+                className='w-full' // Ensure textarea takes full width
+              />
+            </div>
+
+            {/* Import File Input Section */}
+            <div>
+              <Label htmlFor='import-chain-dialog-hidden' className='block mb-1.5 text-sm font-medium'>
+                {' '}
+                {/* Use block and margin */}
                 Import File
               </Label>
-              <div className='col-span-3'>
-                <Input
-                  id='import-chain-dialog-hidden'
-                  type='file'
-                  accept='.json'
-                  onChange={handleChainImport}
-                  className='hidden'
-                  ref={(input) => input && (input.value = '')}
-                />{' '}
-                <Button
-                  variant='outline'
-                  onClick={() => document.getElementById('import-chain-dialog-hidden')?.click()}
-                  className='w-full justify-start text-left font-normal text-muted-foreground'
-                >
-                  <Upload className='mr-2 h-4 w-4' /> Select JSON File...
-                </Button>
-              </div>
+              {/* Hidden actual file input */}
+              <Input
+                id='import-chain-dialog-hidden'
+                type='file'
+                accept='.json'
+                onChange={handleChainImport}
+                className='hidden'
+                ref={(input) => input && (input.value = '')} // Clear value on render
+              />
+              {/* Visible button to trigger the file input */}
+              <Button
+                variant='outline'
+                onClick={() => document.getElementById('import-chain-dialog-hidden')?.click()}
+                className='w-full justify-start text-left font-normal text-muted-foreground' // Full width, left aligned text
+              >
+                <Upload className='mr-2 h-4 w-4' /> Select JSON File...
+              </Button>
             </div>
-            <p className='text-xs text-muted-foreground col-span-4 text-center pt-1'>
-              If importing with a name that already exists, a number (e.g., _1, _2) will be appended.
+
+            {/* Help Text */}
+            <p className='text-xs text-muted-foreground text-center pt-1'>
+              *Name is required to create a new chain. If importing, name can be derived from filename if left blank.
+              Importing with an existing name appends a number (_1, _2).
             </p>
           </div>
           <DialogFooter>
@@ -1713,12 +1754,13 @@ function ChainFlow() {
               onClick={() => {
                 setShowCreateDialog(false);
                 setNewChainName('');
+                setNewChainDescription(''); // Reset description on cancel
               }}
             >
               Cancel
             </Button>
             <Button onClick={handleNewChain} disabled={!newChainName.trim()}>
-              Create New Chain
+              <Plus className='mr-2 h-4 w-4' /> Create New Chain
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1727,7 +1769,7 @@ function ChainFlow() {
   );
 }
 
-// Wrapper Component that includes the ReactFlowProvider and the ChainEditorProvider
+// Wrapper Component
 export default function ChainPageWrapper() {
   return (
     <SidebarPage title='Chain Management'>
