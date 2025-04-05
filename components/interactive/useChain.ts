@@ -12,6 +12,7 @@ export const ChainStepSchema = z.object({
 
 export const ChainSchema = z.object({
   id: z.string().uuid(),
+  description: z.string().optional(),
   chainName: z.string(), //.min(1),
   steps: z.array(ChainStepSchema),
 });
