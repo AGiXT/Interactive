@@ -421,7 +421,11 @@ export default class AGiXTSDK {
       new_name: newName,
     }).then((r) => r.message);
   }
-
+  async setChainDescription(chainName: string, description: string) {
+    return this.request<{ message: string }>('put', `/api/chain/${chainName}`, {
+      description: description,
+    }).then((r) => r.message);
+  }
   async deleteChain(chainName: string) {
     return this.request<{ message: string }>('delete', `/api/chain/${chainName}`).then((r) => r.message);
   }
