@@ -242,7 +242,6 @@ export const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({ value, o
     </div>
   );
 };
-
 export default function PromptPanel() {
   const searchParams = useSearchParams();
   const prompt = usePrompt(searchParams.get('prompt') ?? '');
@@ -267,13 +266,96 @@ export default function PromptPanel() {
     }
   }, [renaming, searchParams]);
 
+  const documentationContent = (
+    // Removed prose class to apply styles manually for more control
+    <div className='max-w-none space-y-4 text-sm text-muted-foreground'>
+      <p>
+        The Prompt Library is a feature that enables users to create, update, and delete customized prompts for their agents.
+        By providing a prompt name and content, users can design custom interactions and tasks for the agent to perform. This
+        feature allows users to tailor the behavior of the agent and create specialized prompts that cater to specific
+        requirements and use cases. Prompts from the prompt library can be used to create automation chains.
+      </p>
+
+      <h3 className='text-base font-semibold text-foreground pt-2'>Prompt Formats</h3>
+      <p>
+        Each prompt has a specific format for providing instructions to the AI agents. Any variables you add to a prompt like{' '}
+        {/* Style the variable */}
+        <code className='px-1 py-0.5 rounded bg-muted text-blue-600 dark:text-blue-400 font-medium'>
+          {'{user_input}'}
+        </code>{' '}
+        will be formatted with their input variables. For example, if you have a prompt that says{' '}
+        {/* Style the variables within the example */}
+        <code className='px-1 py-0.5 rounded bg-muted'>
+          Do <span className='text-blue-600 dark:text-blue-400 font-medium'>{'{user_input}'}</span>{' '}
+          <span className='text-blue-600 dark:text-blue-400 font-medium'>{'{when}'}</span>
+        </code>
+        , and you provide the input variables <code className='px-1 py-0.5 rounded bg-muted'>task=the dishes</code> and{' '}
+        <code className='px-1 py-0.5 rounded bg-muted'>when=now</code>, the prompt will be formatted to{' '}
+        <code className='px-1 py-0.5 rounded bg-muted'>Do the dishes now</code>.
+      </p>
+
+      <h3 className='text-base font-semibold text-foreground pt-2'>Predefined Injection Variables</h3>
+      {/* Use a styled list */}
+      <ul className='list-disc space-y-1.5 pl-5'>
+        <li>
+          {/* Style the variable */}
+          <code className='px-1 py-0.5 rounded bg-muted text-blue-600 dark:text-blue-400 font-medium'>
+            {'{agent_name}'}
+          </code>{' '}
+          will cause the agent name to be injected.
+        </li>
+        <li>
+          {/* Style the variable */}
+          <code className='px-1 py-0.5 rounded bg-muted text-blue-600 dark:text-blue-400 font-medium'>
+            {'{context}'}
+          </code>{' '}
+          will cause the current context from memory to be injected. This will only work if you have{' '}
+          {/* Style the variable */}
+          <code className='px-1 py-0.5 rounded bg-muted text-blue-600 dark:text-blue-400 font-medium'>
+            {'{user_input}'}
+          </code>{' '}
+          in your prompt arguments for the memory search.
+        </li>
+        <li>
+          {/* Style the variable */}
+          <code className='px-1 py-0.5 rounded bg-muted text-blue-600 dark:text-blue-400 font-medium'>{'{date}'}</code> will
+          cause the current date and timestamp to be injected.
+        </li>
+        <li>
+          {/* Style the variable */}
+          <code className='px-1 py-0.5 rounded bg-muted text-blue-600 dark:text-blue-400 font-medium'>
+            {'{conversation_history}'}
+          </code>{' '}
+          will cause the conversation history to be injected.
+        </li>
+        <li>
+          {/* Style the variable */}
+          <code className='px-1 py-0.5 rounded bg-muted text-blue-600 dark:text-blue-400 font-medium'>
+            {'{COMMANDS}'}
+          </code>{' '}
+          will cause the available commands list to be injected and for automatic commands execution from the agent based on
+          its suggestions.
+        </li>
+        <li>
+          {/* Style the variable */}
+          <code className='px-1 py-0.5 rounded bg-muted text-blue-600 dark:text-blue-400 font-medium'>{'{STEPx}'}</code> will
+          cause the step <code className='px-1 py-0.5 rounded bg-muted'>x</code> response from a chain to be injected. For
+          example, {/* Style the variable */}
+          <code className='px-1 py-0.5 rounded bg-muted text-blue-600 dark:text-blue-400 font-medium'>{'{STEP1}'}</code> will
+          inject the first step's response in a chain.
+        </li>
+      </ul>
+    </div>
+  );
+
   return (
-    <SidebarPage title='Prompt Management'>
+    <SidebarPage title='Prompt Library'>
       <div className='container mx-auto p-6 space-y-6'>
         <div className='space-y-6'>
           <Card className='p-6'>
-            <h2 className='text-2xl font-bold mb-6'>Prompt Management</h2>
-
+            <h2 className='text-2xl font-bold mb-6'>Prompt Library</h2>
+            {documentationContent}
+            <br />
             <div className='space-y-4'>
               <div className='space-y-2'>
                 <label className='text-sm font-medium'>Select Prompt</label>
@@ -309,7 +391,7 @@ export default function PromptPanel() {
                   size='sm'
                   onClick={() => {
                     setImportMode(false);
-                    setIsDialogOpen(true);
+                    setIsDialogOpen(true); // Use isDialogOpen state variable
                   }}
                   disabled={renaming}
                 >
@@ -321,18 +403,30 @@ export default function PromptPanel() {
                   size='sm'
                   onClick={() => {
                     setImportMode(true);
-                    setIsDialogOpen(true);
+                    setIsDialogOpen(true); // Use isDialogOpen state variable
                   }}
                   disabled={renaming}
                 >
                   <Upload className='h-4 w-4 mr-2' />
                   Import
                 </Button>
-                <Button variant='outline' size='sm' onClick={() => prompt.export()} disabled={renaming}>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => prompt.export()}
+                  disabled={renaming || !prompt.data?.name}
+                >
                   <Download className='h-4 w-4 mr-2' />
                   Export
                 </Button>
-                <Button variant='outline' size='sm' onClick={() => prompt.delete()} disabled={renaming}>
+                <Button
+                  variant='destructive'
+                  size='sm'
+                  onClick={() => prompt.delete()}
+                  disabled={renaming || !prompt.data?.name}
+                >
+                  {' '}
+                  {/* Consider destructive variant */}
                   <Trash2 className='h-4 w-4 mr-2' />
                   Delete
                 </Button>
@@ -340,40 +434,60 @@ export default function PromptPanel() {
             </div>
           </Card>
 
-          {promptBody ? (
+          {prompt.data?.name ? ( // Check if a prompt is selected using its name or data
             <>
               <Card className='p-6'>
+                <label htmlFor='prompt-editor' className='text-sm font-medium mb-2 block'>
+                  Edit Prompt Content
+                </label>
                 <AutoResizeTextarea
                   value={promptBody}
                   onChange={(e) => {
                     setPromptBody(e.target.value);
                     setHasChanges(e.target.value !== prompt.data?.content);
                   }}
-                  placeholder=''
+                  placeholder='Enter your prompt content here. Use {variable_name} for variables.'
+                  id='prompt-editor' // Add id for label association
                 />
-                <IconButton
-                  Icon={Save}
-                  label='Save'
-                  description={hasChanges ? 'Save changes to prompt.' : 'No changes to save.'}
-                  onClick={() => {
-                    prompt.update(promptBody);
-                    setHasChanges(false);
-                  }}
-                  disabled={!hasChanges || renaming}
-                  className='mt-4'
-                />
+                <div className='mt-4 flex justify-end'>
+                  {' '}
+                  {/* Align button */}
+                  <Button // Use standard Button instead of IconButton for better text label visibility
+                    onClick={() => {
+                      prompt.update(promptBody);
+                      setHasChanges(false);
+                    }}
+                    disabled={!hasChanges || renaming}
+                    size='sm'
+                  >
+                    <Save className='h-4 w-4 mr-2' />
+                    {hasChanges ? 'Save Changes' : 'Saved'}
+                  </Button>
+                </div>
               </Card>
               <Card className='p-6'>
                 <PromptTest promptName={prompt.data?.name} promptContent={promptBody} saved={!hasChanges} />
               </Card>
             </>
           ) : (
-            <div className='text-center py-8 text-muted-foreground'>Select or create a prompt to begin editing</div>
+            <Card className='p-6 text-center text-muted-foreground'>
+              {' '}
+              {/* Wrap message in Card */}
+              Select or create a prompt using the controls above to begin editing.
+            </Card>
           )}
+          {/* Ensure Dialog uses the correct state variable */}
           <PromptDialog open={isDialogOpen} setOpen={setIsDialogOpen} importMode={importMode} />
+          {/* Remove the second PromptDialog unless it's for a different purpose */}
+          {/* <PromptDialog open={showCreateDialog} setOpen={setShowCreateDialog} /> */}
         </div>
-        <PromptDialog open={showCreateDialog} setOpen={setShowCreateDialog} />
       </div>
     </SidebarPage>
   );
+}
+
+// Make sure AutoResizeTextarea has necessary props if used (like id for label)
+interface AutoResizeTextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
 }
