@@ -576,6 +576,7 @@ const ChainStepNode = memo(
             />
           </div>
         ),
+        /*
         Chain: (
           <div>
             <Label htmlFor={`chain-name-${stepData.step}`} className='text-xs'>
@@ -597,6 +598,7 @@ const ChainStepNode = memo(
             />
           </div>
         ),
+        */
       }),
       [agentName, targetName, stepData.step, handleBlurSave],
     );
