@@ -289,7 +289,7 @@ export default function PromptPanel() {
           Do <span className='text-blue-600 dark:text-blue-400 font-medium'>{'{user_input}'}</span>{' '}
           <span className='text-blue-600 dark:text-blue-400 font-medium'>{'{when}'}</span>
         </code>
-        , and you provide the input variables <code className='px-1 py-0.5 rounded bg-muted'>task=the dishes</code> and{' '}
+        , and you provide the input variables <code className='px-1 py-0.5 rounded bg-muted'>user_input=the dishes</code> and{' '}
         <code className='px-1 py-0.5 rounded bg-muted'>when=now</code>, the prompt will be formatted to{' '}
         <code className='px-1 py-0.5 rounded bg-muted'>Do the dishes now</code>.
       </p>
