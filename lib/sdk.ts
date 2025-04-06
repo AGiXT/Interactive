@@ -403,9 +403,10 @@ export default class AGiXTSDK {
     });
   }
 
-  async addChain(chainName: string) {
+  async addChain(chainName: string, description: string) {
     return this.request<{ message: string }>('post', '/api/chain', {
       chain_name: chainName,
+      description: description,
     }).then((r) => r.message);
   }
 
