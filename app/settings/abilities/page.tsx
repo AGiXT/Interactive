@@ -3,7 +3,7 @@
 import axios from 'axios';
 import { getCookie, setCookie } from 'cookies-next';
 import { useSearchParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAgent } from '@/components/interactive/useAgent';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import MarkdownBlock from '@/components/conversation/Message/MarkdownBlock';
 import { useCompany } from '@/components/interactive/useUser';
 import { Input } from '@/components/ui/input';
 import { SidebarPage } from '@/components/layout/SidebarPage';
+import { useToast } from '@/components/layout/toast';
 
 // Define override extensions (moved from Extension.jsx)
 const OVERRIDE_EXTENSIONS = {
@@ -44,6 +45,14 @@ type ErrorState = {
   message: string;
 } | null;
 
+type Command = {
+  command_name: string;
+  extension_name: string;
+  friendly_name: string;
+  description?: string;
+  enabled: boolean;
+};
+
 export default function Abilities() {
   const { data: agentData, mutate: mutateAgent } = useAgent();
   const [searchText, setSearchText] = useState('');
@@ -52,6 +61,14 @@ export default function Abilities() {
   const agent_name = getCookie('agixt-agent') || process.env.NEXT_PUBLIC_AGIXT_AGENT;
   const { data: activeCompany, mutate: mutateCompany } = useCompany();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
+  
+  // Track loading commands and their original states
+  const [commandStates, setCommandStates] = useState<Record<string, { 
+    loading: boolean; 
+    originalState: boolean; 
+    currentState: boolean; 
+  }>>({});
 
   // State for override extensions
   const [overrideStates, setOverrideStates] = useState<Record<string, boolean>>({});
@@ -73,8 +90,33 @@ export default function Abilities() {
   const extensions = searchParams.get('mode') === 'company' ? activeCompany?.extensions || [] : agentData?.extensions || [];
   const extensionsWithCommands = extensions.filter((ext) => ext.commands?.length > 0);
 
-  const handleToggleCommand = async (commandName: string, enabled: boolean) => {
+  // Add a function to ensure consistent behavior between single and batch operations
+  const delayedMutation = async () => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    if (searchParams.get('mode') === 'company') {
+      await mutateCompany();
+    } else {
+      await mutateAgent();
+    }
+  };
+
+  // Handle toggle function for individual commands
+  const handleToggleCommand = useCallback(async (commandName: string, enabled: boolean) => {
+    // Store the original state before attempting to change
+    const originalState = commandStates[commandName]?.currentState ?? false;
+
+    // Immediately update command state with loading and optimistic state
+    setCommandStates(prev => ({
+      ...prev,
+      [commandName]: {
+        loading: true,
+        originalState: originalState,
+        currentState: enabled
+      }
+    }));
+    
     try {
+      // Make the actual API call
       const result = await axios.patch(
         searchParams.get('mode') === 'company'
           ? `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/companies/${activeCompany?.id}/command`
@@ -90,21 +132,59 @@ export default function Abilities() {
         },
       );
 
+      // Handle success
       if (result.status === 200) {
-        if (searchParams.get('mode') === 'company') {
-          mutateCompany();
-        } else {
-          mutateAgent();
-        }
+        // Show success toast
+        toast({
+          title: "Command updated",
+          description: `${commandName} was ${enabled ? 'enabled' : 'disabled'} successfully.`,
+        });
+        
+        // Update final state on success
+        setCommandStates(prev => ({
+          ...prev,
+          [commandName]: {
+            loading: false,
+            originalState: enabled,
+            currentState: enabled
+          }
+        }));
+        
+        // Use the consistent delay function for mutation
+        delayedMutation().catch(console.error);
+      } else {
+        throw new Error('API request failed');
       }
     } catch (error) {
       console.error('Failed to toggle command:', error);
-      setError({
-        type: 'error',
-        message: 'Failed to toggle command. Please try again.',
+      
+      // Show error toast
+      toast({
+        title: "Error updating command",
+        description: `Failed to ${enabled ? 'enable' : 'disable'} ${commandName}.`,
+        variant: "destructive",
       });
+      
+      // Revert to original state on failure
+      setCommandStates(prev => ({
+        ...prev,
+        [commandName]: {
+          loading: false,
+          originalState: originalState,
+          currentState: originalState
+        }
+      }));
     }
-  };
+  }, [agent_name, activeCompany, mutateAgent, mutateCompany, searchParams, toast, delayedMutation, commandStates]);
+
+  // Create a version of the toggle handler that prevents concurrent toggles
+  const safeToggleCommand = useCallback((commandName: string, enabled: boolean) => {
+    // If the command is already loading, don't trigger another toggle
+    if (commandStates[commandName]?.loading) return;
+    
+    // Handle the toggle
+    handleToggleCommand(commandName, enabled);
+  }, [handleToggleCommand, commandStates]);
 
   // Handle override extension toggle
   const handleToggleOverride = (extensionKey: string) => {
@@ -139,6 +219,12 @@ export default function Abilities() {
   return (
     <SidebarPage title='Abilities'>
       <div className='space-y-6'>
+        {error && (
+          <Alert variant={error.type === 'error' ? 'destructive' : 'default'}>
+            <AlertDescription>{error.message}</AlertDescription>
+          </Alert>
+        )}
+        
         <div className='flex items-center justify-between mb-4'>
           <h3 className='text-lg font-medium'>Enabled Abilities</h3>
           <div className='flex items-center gap-2'>
@@ -203,18 +289,31 @@ export default function Abilities() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className='space-y-4'>
-                      {filteredCommands.map((command) => (
-                        <Card key={command.command_name} className='p-4 border border-border/50'>
-                          <div className='flex items-center mb-2'>
-                            <Switch
-                              checked={command.enabled}
-                              onCheckedChange={(checked) => handleToggleCommand(command.friendly_name, checked)}
-                            />
-                            <h4 className='text-lg font-medium'>&nbsp;&nbsp;{command.friendly_name}</h4>
-                          </div>
-                          <MarkdownBlock content={command.description?.split('\nArgs')[0] || 'No description available'} />
-                        </Card>
-                      ))}
+                      {filteredCommands.map((command) => {
+                        // Determine the current state, prioritizing the command state tracking
+                        const commandState = commandStates[command.friendly_name];
+                        const isChecked = commandState ? commandState.currentState : command.enabled;
+                        const isLoading = commandState?.loading ?? false;
+
+                        return (
+                          <Card key={command.command_name} className='p-4 border border-border/50'>
+                            <div className='flex items-center mb-2'>
+                              <Switch
+                                checked={isChecked}
+                                onCheckedChange={(checked) => safeToggleCommand(command.friendly_name, checked)}
+                                disabled={isLoading}
+                              />
+                              <div className="flex items-center">
+                                <h4 className='text-lg font-medium ml-2'>{command.friendly_name}</h4>
+                                {isLoading && (
+                                  <div className="ml-2 h-5 w-5 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+                                )}
+                              </div>
+                            </div>
+                            <MarkdownBlock content={command.description?.split('\nArgs')[0] || 'No description available'} />
+                          </Card>
+                        );
+                      })}
                     </CardContent>
                   </Card>
                 );
