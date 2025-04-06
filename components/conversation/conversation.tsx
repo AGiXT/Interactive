@@ -15,7 +15,7 @@ import { Badge, Check, Download, Paperclip, Pencil, Plus, Trash2, Upload } from 
 import { SidebarContent } from '@/components/layout/SidebarContentManager';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
+import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/ui/sidebar';
 import { ChatBar } from '@/components/conversation/input/chat-input';
 
 export type UIProps = {
@@ -32,6 +32,8 @@ const conversationSWRPath = '/conversation/';
 export function ChatSidebar({ currentConversation }: { currentConversation: any }): React.JSX.Element {
   const [loading, setLoading] = useState(false);
   const state = useContext(InteractiveConfigContext);
+  // Add the sidebar state hook
+  const { open, setOpen } = useSidebar('right');
 
   // Function to handle importing a conversation
   const handleImportConversation = async () => {
@@ -162,9 +164,28 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
     }
   };
 
+  // Track whether we expanded the sidebar for renaming
+  const [wasExpanded, setWasExpanded] = useState(false);
+
   const handleRenameConversation = async (newName: string): Promise<void> => {
     try {
-      await state.agixt.renameConversation(state.agent, currentConversation?.id || '-', newName);
+      // Make sure newName isn't empty
+      if (!newName.trim()) {
+        toast({
+          title: 'Error',
+          description: 'Conversation name cannot be empty',
+          duration: 5000,
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      await state.agixt.renameConversation(getCookie('agixt-agent'), currentConversation?.id || '-', newName);
+
+      // Update the current conversation in the component
+      if (currentConversation) {
+        currentConversation.name = newName;
+      }
 
       // Properly invalidate both the conversation list and the specific conversation
       await mutate('/conversations'); // Assuming this is the key used in useConversations()
@@ -175,7 +196,14 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
         description: 'Conversation renamed successfully',
         duration: 3000,
       });
+
+      // If we expanded the sidebar for renaming, collapse it again
+      if (wasExpanded) {
+        setOpen(false);
+        setWasExpanded(false);
+      }
     } catch (error) {
+      console.error('Rename error:', error);
       toast({
         title: 'Error',
         description: 'Failed to rename conversation',
@@ -279,7 +307,23 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
                     handleRenameConversation(newName);
                     setRenaming(false);
                   }
-                : () => setRenaming(true),
+                : () => {
+                    // First ensure the sidebar is open
+                    if (!open) {
+                      // Track that we expanded the sidebar
+                      setWasExpanded(true);
+                      setOpen(true);
+                      // Allow time for sidebar animation before enabling rename mode
+                      setTimeout(() => {
+                        setRenaming(true);
+                        setNewName(currentConversation?.name || '');
+                      }, 300);
+                    } else {
+                      // Sidebar is already open, directly enter rename mode
+                      setRenaming(true);
+                      setNewName(currentConversation?.name || '');
+                    }
+                  },
               disabled: false,
             },
             {
