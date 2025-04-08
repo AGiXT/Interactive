@@ -1,6 +1,6 @@
 'use client';
 
-import React, { ReactNode, useContext, useEffect, useRef, useState } from 'react';
+import React, { ReactNode, useContext, useState, useRef, useEffect } from 'react';
 import { BiCollapseVertical } from 'react-icons/bi';
 import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
 import { VoiceRecorder } from '@/components/conversation/input/VoiceRecorder';
@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { DropZone } from '@/components/conversation/input/DropZone';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { CheckCircle as LuCheckCircle } from 'lucide-react';
+import { CheckCircle as LuCheckCircle, UploadCloud } from 'lucide-react';
 import { LuPaperclip, LuSend, LuArrowUp, LuLoader, LuTrash2 } from 'react-icons/lu';
 import { Tooltip, TooltipBasic, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -25,6 +25,11 @@ import {
 import { deleteCookie, getCookie, setCookie } from 'cookies-next';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from '@/components/layout/toast';
+import { useRouter } from 'next/navigation';
+import { mutate } from 'swr';
 
 export function OverrideSwitch({ name, label }: { name: string; label: string }): React.JSX.Element {
   const [state, setState] = useState<boolean | null>(
@@ -125,9 +130,222 @@ export const UploadFiles = ({ handleUploadFiles, message, uploadedFiles, disable
             />
           </>
         </TooltipTrigger>
-        <TooltipContent>Send Message</TooltipContent>
+        <TooltipContent>Upload Files</TooltipContent>
       </Tooltip>
     </TooltipProvider>
+  );
+};
+
+// Import Conversation Dialog component
+export const ImportConversation = () => {
+  const state = useContext(InteractiveConfigContext);
+  const router = useRouter();
+  const [importMethod, setImportMethod] = useState<'file' | 'link'>('file');
+  const [conversationLink, setConversationLink] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  
+  const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0) return;
+    
+    try {
+      const file = event.target.files[0];
+      const fileName = file.name.replace(/\.[^/.]+$/, '');
+
+      // Read the file content
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          // Parse the JSON content
+          const content = JSON.parse(e.target.result as string);
+
+          // Use the name from the JSON if available, otherwise use filename
+          const baseName = content.name || fileName;
+          const timestamp = new Date().toISOString().split('.')[0].replace(/:/g, '-');
+          const conversationName = `${baseName}_${timestamp}`;
+
+          // Format the conversation content
+          let conversationContent = [];
+          if (content.messages && Array.isArray(content.messages)) {
+            conversationContent = content.messages.map((msg) => ({
+              role: msg.role || 'user',
+              message: msg.content || msg.message || '',
+              timestamp: msg.timestamp || new Date().toISOString(),
+            }));
+          } else if (content.conversation_history && Array.isArray(content.conversation_history)) {
+            conversationContent = content.conversation_history.map((msg) => ({
+              role: msg.role || 'user',
+              message: msg.message || msg.content || '',
+              timestamp: msg.timestamp || new Date().toISOString(),
+            }));
+          }
+
+          // Check if there are any messages to import
+          if (conversationContent.length === 0) {
+            throw new Error('No valid conversation messages found in the imported file');
+          }
+
+          // Create the new conversation
+          const newConversation = await state.agixt.newConversation(state.agent, conversationName, conversationContent);
+          const newConversationID = newConversation.id || '-';
+          
+          // Update the conversation list and navigate to the new conversation
+          await mutate('/conversations');
+
+          // Set the new conversation as active
+          state.mutate((oldState) => ({
+            ...oldState,
+            overrides: { ...oldState.overrides, conversation: conversationName },
+          }));
+
+          // Navigate to the new conversation
+          router.push(`/chat/${newConversationID}`);
+
+          toast({
+            title: 'Success',
+            description: 'Conversation imported successfully',
+            duration: 3000,
+          });
+          
+          setIsDialogOpen(false);
+        } catch (error) {
+          console.error('Error processing file:', error);
+          toast({
+            title: 'Error',
+            description: `Failed to process the imported conversation file: ${error.message || 'Unknown error'}`,
+            duration: 5000,
+            variant: 'destructive',
+          });
+        }
+      };
+
+      reader.readAsText(file);
+    } catch (error) {
+      console.error('Error importing conversation:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to import conversation',
+        duration: 5000,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleImportLink = async () => {
+    if (!conversationLink.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a valid conversation link',
+        duration: 3000,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // Extract conversation ID from link
+      const urlObj = new URL(conversationLink);
+      const pathParts = urlObj.pathname.split('/');
+      const conversationId = pathParts[pathParts.length - 1];
+
+      if (!conversationId) {
+        throw new Error('Invalid conversation link');
+      }
+
+      // Navigate to the conversation
+      router.push(`/chat/${conversationId}`);
+      
+      // Update the state
+      state.mutate((oldState) => ({
+        ...oldState,
+        overrides: { ...oldState.overrides, conversation: conversationId },
+      }));
+
+      setIsDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Invalid conversation link format',
+        duration: 3000,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  return (
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <DialogTrigger asChild>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size='icon'
+                variant='ghost'
+                className='rounded-full'
+                onClick={() => setIsDialogOpen(true)}
+              >
+                <UploadCloud className='w-5 h-5' />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Import Conversation</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Import Conversation</DialogTitle>
+          <DialogDescription>
+            Import a conversation from a file
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className='flex space-x-4 my-4'>
+          <Button 
+            variant={importMethod === 'file' ? 'default' : 'outline'} 
+            onClick={() => setImportMethod('file')}
+            className='flex-1'
+          >
+            From File
+          </Button>
+          <Button 
+            variant={importMethod === 'link' ? 'default' : 'outline'} 
+            onClick={() => setImportMethod('link')}
+            className='flex-1 disabled hidden'
+          >
+            From Link
+          </Button>
+        </div>
+
+        {importMethod === 'file' ? (
+          <div className='space-y-4'>
+            <div className='grid w-full max-w-sm items-center gap-1.5'>
+              <Label htmlFor='import-file'>Choose conversation file</Label>
+              <Input 
+                id='import-file' 
+                type='file' 
+                accept='.json'
+                onChange={handleImportFile}
+              />
+            </div>
+            <p className='text-sm text-muted-foreground'>
+              Select a JSON file containing conversation data to import
+            </p>
+          </div>
+        ) : (
+          <div className='space-y-4'>
+            <div className='grid w-full max-w-sm items-center gap-1.5'>
+              <Label htmlFor='conversation-link'>Conversation Link</Label>
+              <Input 
+                id='conversation-link' 
+                placeholder='https://chat.yourdomain.com/chat/conversation-id'
+                value={conversationLink}
+                onChange={(e) => setConversationLink(e.target.value)}
+              />
+            </div>
+            <Button onClick={handleImportLink}>Import from Link</Button>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -218,6 +436,7 @@ export function ChatBar({
   enableVoiceInput = false,
   showResetConversation = false,
   showOverrideSwitchesCSV = '',
+  isEmptyConversation = false,
 }: {
   onSend: (message: string | object, uploadedFiles?: { [x: string]: string }) => Promise<string>;
   disabled: boolean;
@@ -229,6 +448,7 @@ export function ChatBar({
   enableVoiceInput?: boolean;
   showResetConversation?: boolean;
   showOverrideSwitchesCSV?: string;
+  isEmptyConversation?: boolean;
 }): ReactNode {
   const state = useContext(InteractiveConfigContext);
   const [timer, setTimer] = useState<number>(-1);
@@ -323,6 +543,7 @@ export function ChatBar({
                 disabled={disabled}
               />
             )}
+            {isEmptyConversation && <ImportConversation />}
             {Object.keys(uploadedFiles).length > 0 && (
               <ListUploadedFiles uploadedFiles={uploadedFiles} setUploadedFiles={setUploadedFiles} />
             )}
@@ -364,6 +585,7 @@ export function ChatBar({
               disabled={disabled}
             />
           )}
+          {isEmptyConversation && <ImportConversation />}
           <Button
             id='message'
             size='lg'
