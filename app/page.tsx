@@ -1,160 +1,203 @@
+// ./app/page.tsx
 'use client';
 import { getCookie } from 'cookies-next';
 import { redirect } from 'next/navigation';
-import { PricingTable } from '@/components/auth/Subscribe';
 import { ThemeToggle } from '@/components/layout/themes';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import React, { useState } from 'react'; // Added useState
+import {
+  LuDatabase as Database,
+  LuBrainCircuit as BrainCircuit,
+  LuWebhook as Webhook,
+  LuGitBranch as GitBranch,
+  LuMemoryStick as MemoryStick,
+  LuPuzzle as Puzzle,
+  LuUsers as Users,
+  LuShieldCheck as ShieldCheck,
+  LuWorkflow as Workflow,
+  LuSettings2 as Settings2,
+  LuMessageSquare as MessageSquare,
+  LuBarChart3 as BarChart3,
+  LuFileText as FileText,
+  LuCircleDollarSign, // Added Icon for Crypto
+  LuSparkles, // Added Icon for Rewards
+  LuTag, // Added Icon for Discounts
+  LuWallet, // Added Icon for Wallet
+  LuCopy, // Added Icon for Copy
+  LuExternalLink, // Added Icon for External Link
+  LuCheck, // Added Icon for Check
+} from 'react-icons/lu';
+import { PricingTable } from '@/components/auth/Subscribe';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import React, { useState } from 'react';
-import {
-  LuDatabase as Database,
-  LuMessageSquare as MessageSquare,
-  LuFileText as FileText,
-  LuSend as Send,
-} from 'react-icons/lu';
-import { BarChart3 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Added Card imports
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'; // Added Tooltip imports
+import { toast } from '@/components/layout/toast'; // Added toast import
 
-const features = [
+// Feature Lists (remain the same)
+const coreFeatures = [
+  // ... (keep existing coreFeatures)
   {
-    title: 'Natural Language Queries',
-    description: 'Ask complex questions in plain English and receive detailed analyses and visualizations.',
+    icon: BrainCircuit,
+    title: 'Agent Orchestration',
+    description: 'Manage and coordinate multiple AI agents seamlessly across various tasks.',
   },
   {
-    title: 'Multi-Database Integration',
-    description: 'Seamlessly connect to SQLite, MySQL, or PostgreSQL databases. Cross-database analysis coming soon!',
+    icon: Webhook,
+    title: 'Multi-Provider Support',
+    description: 'Integrate with OpenAI, Anthropic, Google Gemini, ezLocalai, Hugging Face, and more.',
   },
   {
-    title: 'Predictive Analytics',
-    description: 'Leverage machine learning models to forecast trends and make data-driven decisions.',
+    icon: Workflow,
+    title: 'Chain Automation',
+    description: 'Create complex, multi-step workflows linking prompts, commands, and other chains.',
   },
   {
-    title: 'Automated Reporting',
-    description: 'Schedule and generate comprehensive reports with key insights and visualizations.',
+    icon: Puzzle,
+    title: 'Extensible Plugin System',
+    description: 'Enhance agent capabilities with extensions for web browsing, database interaction, GitHub, and more.',
   },
   {
-    title: 'Anomaly Detection',
-    description: 'Automatically identify outliers and unusual patterns in your data.',
+    icon: MemoryStick,
+    title: 'Adaptive Memory',
+    description: 'Combines long-term (vector DB) and short-term (conversation) memory for context-aware responses.',
   },
   {
-    title: 'Collaborative Insights',
-    description: 'Share and discuss findings with team members in real-time.',
+    icon: Settings2,
+    title: 'Advanced AI Modes',
+    description: 'Utilize Smart Instruct & Smart Chat for AI-driven planning, research, and execution.',
   },
 ];
 
+const integrationFeatures = [
+  // ... (keep existing integrationFeatures)
+  {
+    icon: GitBranch,
+    title: 'Developer Integrations',
+    description: 'Connect with GitHub for code analysis, issue management, and automated PRs.',
+  },
+  {
+    icon: Database,
+    title: 'Data Integrations',
+    description: 'Interact with SQL databases (PostgreSQL, MySQL, MSSQL) using natural language or direct queries.',
+  },
+  {
+    icon: MessageSquare,
+    title: 'Communication Tools',
+    description: 'Integrate with Microsoft 365, Google Workspace, Discord, and SendGrid for seamless communication.',
+  },
+];
+
+const managementFeatures = [
+  // ... (keep existing managementFeatures)
+  {
+    icon: Users,
+    title: 'Team Collaboration',
+    description: 'Multi-tenant support with role-based access control for secure team usage.',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Secure & Configurable',
+    description: 'Robust authentication (MFA, SSO), encrypted storage, and highly configurable settings.',
+  },
+  {
+    icon: FileText,
+    title: 'Comprehensive Management UI',
+    description: 'Manage agents, prompts, chains, training data, and user settings through an intuitive web interface.',
+  },
+];
+
+// How It Works steps (remain the same)
 const steps = [
+  // ... (keep existing steps)
   {
     icon: <Database className='w-6 h-6' />,
-    title: '1. Connect Your Data',
-    description: 'Securely connect your database(s) to our platform with ease.',
+    title: '1. Configure Agents',
+    description: 'Define agents, select AI providers, enable extensions, and set personas.',
   },
   {
     icon: <MessageSquare className='w-6 h-6' />,
-    title: '2. Ask Questions',
-    description: 'Interact with our AI using natural language to query your data.',
+    title: '2. Interact or Automate',
+    description: 'Chat with agents, provide instructions, or execute automated chains.',
   },
   {
-    icon: <BarChart3 className='w-6 h-6' />,
-    title: '3. AI Analysis',
-    description: 'Our advanced AI analyzes your data and generates valuable insights.',
+    icon: <BrainCircuit className='w-6 h-6' />,
+    title: '3. AI Orchestration',
+    description: 'AGiXT manages context, memory, commands, and provider interactions.',
   },
   {
     icon: <FileText className='w-6 h-6' />,
-    title: '4. Receive Insights',
-    description: 'Get detailed reports, visualizations, and actionable recommendations.',
+    title: '4. Receive Results',
+    description: 'Get intelligent responses, completed tasks, generated content, or executed actions.',
   },
 ];
 
-const conversation = [
+// $AGiXT Token Information
+const agixtTokenAddress = 'F9TgEJLLRUKDRF16HgjUCdJfJ5BK6ucyiW8uJxVPpump'; // <--- IMPORTANT: REPLACE WITH ACTUAL ADDRESS
+const solscanLink = `https://solscan.io/token/${agixtTokenAddress}`;
+const explorerLink = `https://explorer.solana.com/address/${agixtTokenAddress}`;
+
+const cryptoFeatures = [
   {
-    role: 'user',
-    content: 'What were our top-selling products last quarter?',
+    icon: LuCircleDollarSign,
+    title: 'Ecosystem Payments',
+    description: 'Utilize $AGiXT for seamless payments for API usage, agent interactions, training, and premium features.',
   },
   {
-    role: 'ai',
-    content:
-      'Based on the sales data from Q3, your top 3 products were: 1. Product A: $1.2M in revenue 2. Product B: $950K in revenue 3. Product C: $780K in revenue Would you like to see a breakdown by month or compare to previous quarters?',
+    icon: LuTag,
+    title: 'Exclusive Discounts',
+    description: 'Unlock discounts on services and features when paying with the native $AGiXT token.',
   },
   {
-    role: 'user',
-    content: 'Yes, please show me a monthly trend for these products.',
+    icon: LuSparkles,
+    title: 'Rewards & Incentives',
+    description: 'Earn $AGiXT by providing valuable feedback (RLHF) and contributing to the ecosystem.',
   },
   {
-    role: 'ai',
-    content:
-      "Certainly! I've generated a line chart showing the monthly sales trend for Products A, B, and C over the last quarter. The chart indicates that Product A had a significant spike in August, while Products B and C showed steady growth throughout the quarter.",
+    icon: LuWallet,
+    title: 'Integrated Wallets',
+    description: 'Each user and agent gets a secure, integrated Solana wallet for easy token management.',
   },
 ];
 
-function ExampleChat() {
-  const [messages, setMessages] = useState(conversation);
-  const [input, setInput] = useState('');
+// Helper function for copying text
+const copyToClipboard = (text: string, successMessage: string) => {
+  navigator.clipboard
+    .writeText(text)
+    .then(() => {
+      toast({ title: 'Copied!', description: successMessage });
+    })
+    .catch((err) => {
+      toast({ title: 'Error', description: 'Failed to copy.', variant: 'destructive' });
+      console.error('Failed to copy text: ', err);
+    });
+};
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (input.trim()) {
-      setMessages([...messages, { role: 'user', content: input }]);
-      setInput('');
-      // Simulate AI response
-      setTimeout(() => {
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: 'system',
-            content: "I'm analyzing your request. Please allow me a moment to process the data and generate insights.",
-          },
-        ]);
-      }, 1000);
-    }
-  };
-
-  return (
-    <div className='flex flex-col justify-center max-w-md mx-auto'>
-      <div className='border rounded-lg shadow-sm bg-background'>
-        <div className='flex flex-col space-y-1.5 p-6'>
-          <h3 className='text-2xl font-semibold leading-none tracking-tight'>Example Conversation</h3>
-          <p className='text-sm text-muted-foreground'>Ask questions and get insights from your data</p>
-        </div>
-        <div className='p-6 pt-0'>
-          <div className='space-y-4'>
-            {messages.map((message, index) => (
-              <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div
-                  className={`rounded-lg px-4 py-2 max-w-[80%] ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
-                >
-                  <p className='text-sm'>{message.content}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <form onSubmit={handleSubmit} className='flex items-center mt-4 space-x-2'>
-            <Input placeholder='Type your question...' value={input} onChange={(e) => setInput(e.target.value)} />
-            <Button type='submit'>
-              <Send className='w-4 h-4' />
-              <span className='sr-only'>Send</span>
-            </Button>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-}
-export default function Home(searchParams: { searchParams: { [key: string]: string | string[] | undefined } }) {
+export default function Home() {
   if (getCookie('jwt')) {
     redirect('/chat');
   }
 
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyAddress = () => {
+    copyToClipboard(agixtTokenAddress, 'Token address copied to clipboard.');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000); // Reset icon after 2 seconds
+  };
+
   return (
-    <div style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} className='w-full'>
+    <div style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} className='w-full bg-background text-foreground'>
+      {/* Header */}
       <header
-        className='sticky top-0 flex items-center justify-between gap-4 px-4 border-b md:px-6 bg-muted min-h-16'
+        className='sticky top-0 z-30 flex items-center justify-between gap-4 px-4 border-b md:px-6 bg-muted min-h-16' // Added z-30
         style={{ paddingTop: 'env(safe-area-inset-top)', height: 'calc(3.5rem + env(safe-area-inset-top))' }}
       >
         <div className='flex items-center'>
           <Link href='/' className='flex items-center gap-2 text-lg font-semibold md:text-lg text-foreground'>
-            <span className=''>{process.env.NEXT_PUBLIC_APP_NAME}</span>
+            <span className=''>{process.env.NEXT_PUBLIC_APP_NAME || 'AGiXT'}</span>
           </Link>
         </div>
         <div className='flex items-center gap-2'>
@@ -171,79 +214,234 @@ export default function Home(searchParams: { searchParams: { [key: string]: stri
           </Link>
         </div>
       </header>
+
       <main>
-        <section className='py-24 text-foreground bg-gradient-to-r from-primary-700 to-primary-900'>
-          <div className='container px-6 mx-auto text-center'>
-            <h1 className='mb-4 text-4xl font-bold md:text-6xl'>Your AI-Powered Business Intelligence Partner</h1>
-            <p className='mb-8 text-xl'>Unlock deep insights from your databases with natural language conversations</p>
+        {/* Hero Section */}
+        <section className='relative py-24 text-foreground bg-gradient-to-b from-background via-background to-muted/30'>
+          {' '}
+          {/* Adjusted gradient */}
+          <div className='container relative z-10 px-6 mx-auto text-center'>
+            {' '}
+            {/* Added relative z-10 */}
+            <h1 className='mb-4 text-4xl font-bold md:text-6xl'>AGiXT: Your Extensible AI Automation Platform</h1>
+            <p className='mb-8 text-xl text-muted-foreground max-w-3xl mx-auto'>
+              Orchestrate AI agents, manage instructions across diverse providers, and automate complex tasks with adaptive
+              memory and a powerful plugin system. Now powered by the $AGiXT token on Solana.
+            </p>
             <Link
-              href='/user/login'
-              className='inline-block px-6 py-3 font-semibold transition duration-300 border rounded-lg bg-primary text-primary-foreground hover:bg-primary-50'
+              href='/user'
+              className='inline-block px-8 py-3 text-lg font-semibold transition duration-300 border rounded-lg bg-primary text-primary-foreground hover:bg-primary/90'
             >
-              Get Started Now
+              Get Started Free
             </Link>
+            <img src='/PoweredBy_AGiXT.svg' alt='Powered by AGiXT' className='w-32 mx-auto mt-10' />
           </div>
         </section>
-        <img src='/PoweredBy_AGiXT.svg' alt='Powered by AGiXT' className='w-32 mx-auto' />
+
+        {/* Core Features Section */}
         <section id='features' className='py-20 bg-background'>
           <div className='container px-6 mx-auto'>
-            <h2 className='mb-12 text-3xl font-bold text-center'>Advanced Analytics at Your Fingertips</h2>
-            <div className='grid grid-cols-1 gap-12 md:grid-cols-3'>
-              {features.map((feature, index) => (
-                <div key={index} className='p-6 rounded-lg shadow-md bg-secondary-50'>
-                  <h3 className='mb-4 text-xl font-semibold text-primary-700'>{feature.title}</h3>
-                  <p>{feature.description}</p>
+            <h2 className='mb-16 text-3xl font-bold text-center'>Powerful Features, Limitless Potential</h2>
+            <div className='grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3'>
+              {coreFeatures.map((feature, index) => (
+                <Card
+                  key={index}
+                  className='flex flex-col items-center p-6 text-center shadow-sm hover:shadow-md transition-shadow'
+                >
+                  {' '}
+                  {/* Used Card */}
+                  <CardHeader className='p-0 mb-4'>
+                    <feature.icon className='w-10 h-10 text-primary' />
+                  </CardHeader>
+                  <CardContent className='p-0'>
+                    <h3 className='mb-2 text-xl font-semibold'>{feature.title}</h3>
+                    <p className='text-muted-foreground'>{feature.description}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* How It Works Section */}
+        <section className='py-20 bg-muted/50'>
+          {/* ... (keep existing How It Works section) ... */}
+          <div className='container px-6 mx-auto'>
+            <h2 className='mb-16 text-3xl font-bold text-center'>Simple Steps to Powerful AI Automation</h2>
+            <div className='grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-4'>
+              {steps.map((step, index) => (
+                <div key={index} className='flex flex-col items-center text-center'>
+                  <div className='flex items-center justify-center w-16 h-16 mb-4 rounded-full bg-primary text-primary-foreground'>
+                    {step.icon}
+                  </div>
+                  <h3 className='mb-2 text-xl font-semibold'>{step.title}</h3>
+                  <p className='text-muted-foreground'>{step.description}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
-        <section className='max-w-6xl p-4 mx-auto'>
-          <div className='grid gap-6 lg:grid-cols-[1fr,400px] lg:gap-12 xl:grid-cols-[1fr,450px]'>
-            <div className='flex flex-col justify-center space-y-4 md:justify-start'>
-              <div className='flex flex-col items-center space-y-2'>
-                <h2 className='text-3xl font-bold tracking-tighter sm:text-5xl'>How It Works</h2>
-                <p className='max-w-[600px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed dark:text-gray-400 text-center'>
-                  Unlock deep insights from your databases with natural language conversations. Here&apos;s how you can get
-                  started:
-                </p>
-              </div>
-              <div className='py-10 m-auto space-y-6 w-fit'>
-                {steps.map((step, index) => (
-                  <div key={index} className='flex items-center space-x-4'>
-                    <div className='flex items-center justify-center w-12 h-12 text-white rounded-full bg-primary'>
-                      {step.icon}
-                    </div>
-                    <div className='space-y-1'>
-                      <h3 className='text-xl font-bold'>{step.title}</h3>
-                      <p className='text-sm text-gray-500 dark:text-gray-400'>{step.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+
+        {/* --- NEW: $AGiXT Token Section --- */}
+        <section id='token' className='py-20 bg-gradient-to-br from-primary/5 via-background to-primary/5'>
+          <div className='container px-6 mx-auto'>
+            <div className='max-w-4xl mx-auto text-center'>
+              <LuCircleDollarSign className='w-16 h-16 mx-auto mb-6 text-primary' />
+              <h2 className='mb-4 text-3xl font-bold'>Fueling the AGiXT Ecosystem: The $AGiXT Token</h2>
+              <p className='mb-10 text-lg text-muted-foreground'>
+                $AGiXT is the official SPL utility token on the Solana blockchain, designed to power interactions, provide
+                discounts, and reward contributions within the AGiXT platform.
+              </p>
             </div>
-            <ExampleChat />
+
+            <div className='grid grid-cols-1 gap-8 mb-12 md:grid-cols-2 lg:grid-cols-4'>
+              {cryptoFeatures.map((feature) => (
+                <div
+                  key={feature.title}
+                  className='flex flex-col items-center p-6 text-center border rounded-lg shadow-sm bg-card'
+                >
+                  <feature.icon className='w-10 h-10 mb-4 text-primary' />
+                  <h3 className='mb-2 text-xl font-semibold'>{feature.title}</h3>
+                  <p className='text-muted-foreground'>{feature.description}</p>
+                </div>
+              ))}
+            </div>
+
+            <Card className='max-w-2xl p-6 mx-auto shadow-lg bg-card'>
+              <CardHeader className='p-0 mb-4 text-center'>
+                <CardTitle className='text-2xl'>Token Information</CardTitle>
+              </CardHeader>
+              <CardContent className='p-0 space-y-4'>
+                <div className='flex flex-col items-center justify-between gap-2 p-4 border rounded-md md:flex-row bg-muted/50'>
+                  <Label htmlFor='token-address' className='text-sm font-medium shrink-0'>
+                    $AGiXT Token Address (Solana):
+                  </Label>
+                  <div className='flex items-center w-full gap-2 md:w-auto'>
+                    <Input
+                      id='token-address'
+                      readOnly
+                      value={agixtTokenAddress}
+                      className='flex-grow font-mono text-xs truncate md:text-sm'
+                      aria-label='AGiXT Token Address'
+                    />
+                    <TooltipProvider delayDuration={100}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant='outline' size='icon' onClick={handleCopyAddress} className='shrink-0'>
+                            {copied ? <LuCheck className='w-4 h-4 text-green-500' /> : <LuCopy className='w-4 h-4' />}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Copy Address</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </div>
+                <div className='flex flex-col items-center justify-center gap-4 pt-2 md:flex-row'>
+                  <Button variant='outline' asChild>
+                    <a href={solscanLink} target='_blank' rel='noopener noreferrer'>
+                      View on Solscan <LuExternalLink className='w-4 h-4 ml-2' />
+                    </a>
+                  </Button>
+                  <Button variant='outline' asChild>
+                    <a href={explorerLink} target='_blank' rel='noopener noreferrer'>
+                      View on Solana Explorer <LuExternalLink className='w-4 h-4 ml-2' />
+                    </a>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </section>
-        <section className='py-20 text-foreground bg-primary-800'>
+        {/* --- END: $AGiXT Token Section --- */}
+
+        {/* Integrations Section */}
+        <section className='py-20 bg-background'>
+          {/* ... (keep existing Integrations section) ... */}
+          <div className='container px-6 mx-auto'>
+            <h2 className='mb-16 text-3xl font-bold text-center'>Seamless Integrations</h2>
+            <div className='grid grid-cols-1 gap-8 md:grid-cols-3'>
+              {integrationFeatures.map((feature, index) => (
+                <Card
+                  key={index}
+                  className='flex flex-col items-center p-6 text-center shadow-sm hover:shadow-md transition-shadow'
+                >
+                  <CardHeader className='p-0 mb-4'>
+                    <feature.icon className='w-10 h-10 text-primary' />
+                  </CardHeader>
+                  <CardContent className='p-0'>
+                    <h3 className='mb-2 text-xl font-semibold'>{feature.title}</h3>
+                    <p className='text-muted-foreground'>{feature.description}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Management Features Section */}
+        <section className='py-20 bg-muted/50'>
+          {/* ... (keep existing Management Features section) ... */}
+          <div className='container px-6 mx-auto'>
+            <h2 className='mb-16 text-3xl font-bold text-center'>Management & Security</h2>
+            <div className='grid grid-cols-1 gap-8 md:grid-cols-3'>
+              {managementFeatures.map((feature, index) => (
+                <Card
+                  key={index}
+                  className='flex flex-col items-center p-6 text-center shadow-sm hover:shadow-md transition-shadow'
+                >
+                  <CardHeader className='p-0 mb-4'>
+                    <feature.icon className='w-10 h-10 text-primary' />
+                  </CardHeader>
+                  <CardContent className='p-0'>
+                    <h3 className='mb-2 text-xl font-semibold'>{feature.title}</h3>
+                    <p className='text-muted-foreground'>{feature.description}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Call to Action Section */}
+        <section className='py-20 text-white bg-primary'>
+          {/* ... (keep existing CTA section) ... */}
           <div className='container px-6 mx-auto text-center'>
-            <h2 className='mb-4 text-3xl font-bold'>Ready to Unlock the Full Potential of Your Data?</h2>
-            <p className='mb-8 text-xl'>Start today and experience the power of AI-driven business intelligence.</p>
-            <Link href='/user/login'>
-              <Button size='lg'>Get Started Now</Button>
+            <h2 className='mb-4 text-3xl font-bold'>Ready to Automate and Innovate with AI?</h2>
+            <p className='mb-8 text-xl text-primary-foreground/90'>
+              Join the AGiXT platform today and start building intelligent agents.
+            </p>
+            <Link href='/user'>
+              <Button size='lg' variant='secondary' className='text-primary hover:bg-secondary/90'>
+                Sign Up or Login
+              </Button>
             </Link>
           </div>
         </section>
-        <div className='flex flex-col items-center justify-center'>
-          <PricingTable />
-        </div>
-        <section id='contact' className='py-20 bg-background'>
-          <div className='w-full max-w-2xl mx-auto space-y-8'>
-            <div className='space-y-2'>
-              <h1 className='text-3xl font-bold'>Contact Us</h1>
-              <p className='text-gray-500 dark:text-gray-400'>Please fill in the form below to get in touch.</p>
+
+        {/* Pricing Section */}
+        <section className='py-20 bg-background'>
+          <div className='container px-6 mx-auto'>
+            <h2 className='mb-4 text-3xl font-bold text-center'>Pricing Plans</h2>
+            <p className='mb-10 text-lg text-center text-muted-foreground'>
+              Choose a plan that suits your needs. Pay with traditional methods or use $AGiXT for discounts!
+            </p>
+            <div className='flex flex-col items-center justify-center'>
+              <PricingTable />
             </div>
-            <div className='space-y-4'>
+          </div>
+        </section>
+
+        {/* Contact Section */}
+        <section id='contact' className='py-20 bg-muted/50'>
+          {/* ... (keep existing Contact section) ... */}
+          <div className='w-full max-w-2xl px-6 mx-auto space-y-8'>
+            <div className='space-y-2 text-center'>
+              <h2 className='text-3xl font-bold'>Contact Us</h2>
+              <p className='text-muted-foreground'>Have questions? Fill out the form below to get in touch.</p>
+            </div>
+            <form className='space-y-4'>
               <div className='space-y-2'>
                 <Label htmlFor='name'>Name</Label>
                 <Input id='name' placeholder='Enter your name' />
@@ -256,13 +454,24 @@ export default function Home(searchParams: { searchParams: { [key: string]: stri
                 <Label htmlFor='message'>Message</Label>
                 <Textarea id='message' placeholder='Enter your message' className='min-h-[100px]' />
               </div>
-              <Button type='submit'>Submit</Button>
-            </div>
+              <Button type='submit' className='w-full'>
+                Submit
+              </Button>
+            </form>
           </div>
         </section>
-        <div className='flex flex-col items-center justify-center'>
-          <Link href='/docs/5-Reference/1-Privacy Policy'>Privacy Policy</Link>
-        </div>
+
+        {/* Footer Links */}
+        <footer className='py-6 text-center bg-background'>
+          <div className='flex justify-center gap-4'>
+            <Link href='/docs/5-Reference/1-Privacy%20Policy' className='text-sm text-muted-foreground hover:underline'>
+              Privacy Policy
+            </Link>
+            <Link href='/docs/5-Reference/2-Cryptocurrency' className='text-sm text-muted-foreground hover:underline'>
+              $AGiXT Token Info
+            </Link>
+          </div>
+        </footer>
       </main>
     </div>
   );
