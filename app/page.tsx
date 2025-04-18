@@ -421,17 +421,7 @@ export default function Home() {
         </section>
 
         {/* Pricing Section */}
-        <section className='py-20 bg-background'>
-          <div className='container px-6 mx-auto'>
-            <h2 className='mb-4 text-3xl font-bold text-center'>Pricing Plans</h2>
-            <p className='mb-10 text-lg text-center text-muted-foreground'>
-              Choose a plan that suits your needs. Pay with traditional methods or use $AGiXT for discounts!
-            </p>
-            <div className='flex flex-col items-center justify-center'>
-              <PricingTable />
-            </div>
-          </div>
-        </section>
+        <PricingTable />
 
         {/* Contact Section */}
         <section id='contact' className='py-20 bg-muted/50'>
