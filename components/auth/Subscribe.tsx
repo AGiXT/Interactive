@@ -69,16 +69,42 @@ export function PricingTable() {
   );
   return (
     <>
-      {pricingData.length > 0 && (
-        <>
-          <p className='mt-1 text-muted-foreground'>Whatever your status, our offers evolve according to your needs.</p>
+      {isLoading && (
+        <Alert className='mb-4'>
+          <AlertTitle>Loading...</AlertTitle>
+          <AlertDescription>Loading pricing plans...</AlertDescription>
+        </Alert>
+      )}
+      {error && (
+        <Alert className='mb-4'>
+          <AlertTitle>Something went wrong</AlertTitle>
+          <AlertDescription>{error.message}</AlertDescription>
+        </Alert>
+      )}
+      {pricingData?.length > 0 && (
+        <section className='py-20 bg-background'>
+          <div className='container px-6 mx-auto'>
+            <h2 className='mb-4 text-3xl font-bold text-center'>Pricing Plans</h2>
+            <p className='mb-10 text-lg text-center text-muted-foreground'>
+              Choose a plan that suits your needs. Pay with traditional methods or use $AGiXT for discounts!
+            </p>
+            <div className='flex flex-col items-center justify-center'>
+              {pricingData.length > 0 && (
+                <>
+                  <p className='mt-1 text-muted-foreground'>
+                    Whatever your status, our offers evolve according to your needs.
+                  </p>
 
-          <div className='flex flex-col items-center max-w-4xl gap-4 px-3 mx-auto my-10 md:items-end md:flex-row'>
-            {pricingData.map((product: Product) => (
-              <PricingCard key={product.name} price={product.prices[0]} {...product} /> //isAnnual={isAnnual}
-            ))}
+                  <div className='flex flex-col items-center max-w-4xl gap-4 px-3 mx-auto my-10 md:items-end md:flex-row'>
+                    {pricingData.map((product: Product) => (
+                      <PricingCard key={product.name} price={product.prices[0]} {...product} /> //isAnnual={isAnnual}
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
-        </>
+        </section>
       )}
     </>
   );
