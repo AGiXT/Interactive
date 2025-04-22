@@ -451,6 +451,7 @@ export const ConnectedServices = () => {
                         ? {
                             code_challenge: pkceData.challenge,
                             code_challenge_method: 'S256',
+                            pkce_state: pkceData.state,
                           }
                         : // Google specific param ONLY if NOT using PKCE for Google
                           !isPkceRequired && service.provider.toLowerCase() === 'google'
