@@ -284,12 +284,15 @@ export const ConnectedServices = () => {
   // --- onSuccess Handler ---
   // Ensure onSuccess calls fetchConnections AFTER the post request
   const onSuccess = async (response: any, providerName: string) => {
-    // Pass provider name explicitly
-    // const provider = disconnectDialog.provider?.toLowerCase() || ''; // This was incorrect - relies on disconnect dialog
     const lowerCaseProviderName = providerName.toLowerCase();
     console.log(`OAuth success/callback triggered for: ${lowerCaseProviderName}`);
-    // Clear dialog state if it was somehow involved (it shouldn't be for connect)
-    // setDisconnectDialog({ isOpen: false, provider: null });
+
+    // Log the state variables right before making the POST call for debugging
+    console.log('onSuccess - pkceData:', pkceData);
+    console.log(
+      `onSuccess - oAuth2Providers[${providerName}]?.pkce_required:`,
+      oAuth2Providers[providerName]?.pkce_required,
+    );
 
     try {
       const jwt = getCookie('jwt');
@@ -297,27 +300,29 @@ export const ConnectedServices = () => {
       if (!response.code) {
         console.error('No code received in OAuth response');
         setError(`OAuth failed: No authorization code received from ${providerName}.`);
-        await fetchConnections(); // Refresh state even on failure
+        await fetchConnections();
         return;
       }
 
       console.log(`Sending code to backend for ${lowerCaseProviderName}...`);
-      // Show some intermediate loading state?
-      await axios.post(
-        `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/oauth2/${lowerCaseProviderName}`, // Use lowerCaseProviderName
-        {
-          code: response.code,
-          // Send state back if it was used (PKCE)
-          ...(pkceData && oAuth2Providers[providerName]?.pkce_required && { state: pkceData.state }),
-          // Referrer might not be needed by backend, depends on implementation
-          // referrer: `${process.env.NEXT_PUBLIC_APP_URI}/user/close/${lowerCaseProviderName}`,
-        },
-        {
-          headers: { Authorization: jwt },
-        },
-      );
+
+      // Construct the body object
+      const requestBody: { code: string; pkce_state?: string } = {
+        code: response.code,
+      };
+
+      // Conditionally add pkce_state to the body
+      if (pkceData && oAuth2Providers[providerName]?.pkce_required) {
+        requestBody.pkce_state = pkceData.state;
+      }
+
+      console.log('Sending POST request body:', requestBody); // Log the body object
+
+      await axios.post(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/oauth2/${lowerCaseProviderName}`, requestBody, {
+        headers: { Authorization: jwt },
+      });
       console.log(`OAuth connection successful for ${lowerCaseProviderName}. Refreshing connections...`);
-      await fetchConnections(); // Refresh the list
+      await fetchConnections();
     } catch (err: any) {
       console.error(`OAuth post-callback error for ${lowerCaseProviderName}:`, err);
       let errorMsg = `Failed to connect ${providerName}.`;
@@ -331,11 +336,11 @@ export const ConnectedServices = () => {
           url: err.config.url,
           method: err.config.method,
           headers: err.config.headers,
-          data: err.config.data,
+          data: err.config.data, // Log the data that WAS sent
         });
       }
       setError(errorMsg);
-      await fetchConnections(); // Refresh state even on failure
+      await fetchConnections();
     }
   };
 
