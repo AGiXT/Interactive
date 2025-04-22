@@ -8,7 +8,7 @@ export type MiddlewareHook = (req: NextRequest) => Promise<{
 }>;
 
 export const generateCookieString = (key: string, value: string, age: string): string =>
-  `${key}=${value}; Domain=${process.env.NEXT_PUBLIC_COOKIE_DOMAIN}; Path=/; Max-Age=${age}; SameSite=strict;`;
+  `${key}=${value}; Domain=${process.env.NEXT_PUBLIC_COOKIE_DOMAIN}; Path=/; Max-Age=${age}; SameSite=Lax;`;
 
 export const getQueryParams = (req: NextRequest): any =>
   req.url.includes('?')
@@ -276,55 +276,112 @@ function logJwtError(exception: any, authWeb: string) {
   }
 }
 export const useOAuth2: MiddlewareHook = async (req) => {
-  const provider = req.nextUrl.pathname.split('?')[0].split('/').pop();
-  const redirect = new URL(`${authWeb}/close/${provider}`);
+  const provider = req.nextUrl.pathname.split('?')[0].split('/').pop()?.toLowerCase(); // Ensure provider is lowercase
+  const defaultRedirect = new URL(`${authWeb}/login`); // Fallback redirect
+
   let toReturn = {
     activated: false,
-    response: NextResponse.redirect(redirect),
+    response: NextResponse.redirect(defaultRedirect),
   };
-  const queryParams = getQueryParams(req);
-  if (queryParams.code) {
-    const oAuthEndpoint = `${process.env.AGIXT_SERVER || ''.replace('localhost', (process.env.SERVERSIDE_AGIXT_SERVER || '').split(',')[0])}/v1/oauth2/${provider}`;
 
-    const jwt = getJWT(req);
+  const queryParams = getQueryParams(req);
+
+  if (queryParams.code && provider) {
+    const oAuthEndpoint = `${process.env.AGIXT_SERVER}/v1/oauth2/${provider}`;
+    const invitationCookie = req.cookies.get('invitation')?.value;
+    const redirectUriForProvider = `${process.env.NEXT_PUBLIC_APP_URI}/user/close/${provider}`; // The URI registered with the provider
 
     try {
+      console.log(`[Middleware useOAuth2] Calling backend endpoint: ${oAuthEndpoint} for provider: ${provider}`);
       const response = await fetch(oAuthEndpoint, {
         method: 'POST',
         body: JSON.stringify({
           code: queryParams.code,
-          referrer: redirect.toString(),
-          state: queryParams.state,
-          invitation: req.cookies.get('invitation')?.value,
+          state: queryParams.state, // Pass the PKCE state
+          redirect_uri: redirectUriForProvider, // Often needed by backend for token exchange
+          // NOTE: code_verifier is usually needed here too. How does backend get it?
+          // See previous thoughts: Either frontend sends it, or backend stored it.
+          ...(invitationCookie && { invitation: invitationCookie }),
         }),
         headers: {
           'Content-Type': 'application/json',
-          Authorization: jwt || '',
+          // NO Authorization header here - JWT is likely missing anyway
         },
       });
 
       const auth = await response.json();
 
-      if (response.status !== 200) {
-        throw new Error(`Invalid token response, status ${response.status}.`);
+      if (!response.ok) {
+        const errorDetail = auth.detail || `Backend request failed with status ${response.status}`;
+        console.error(`[Middleware useOAuth2] Backend error for ${provider}:`, errorDetail);
+        // Redirect to an error page or login with error message
+        const errorRedirect = new URL(`${authWeb}/login`);
+        errorRedirect.searchParams.set('error', `oauth_backend_failed_${provider}`);
+        errorRedirect.searchParams.set('message', errorDetail);
+        toReturn = {
+          activated: true,
+          response: NextResponse.redirect(errorRedirect),
+        };
+        return toReturn; // Exit on backend error
       }
 
-      // Forward the original JWT in the response if present
-      const headers = new Headers();
-      if (jwt) {
-        headers.set('Authorization', jwt);
+      // --- Backend Response Handling ---
+      // Scenario 1: Backend included JWT in auth.detail URL
+      // Scenario 2: Backend set the Set-Cookie header in its response (less common for API)
+
+      // Assume Scenario 1 or 2: Redirect to the URL provided by the backend.
+      // The useJWTQueryParam hook (for scenario 1) or the browser (for scenario 2) will handle the JWT cookie.
+      console.log(`[Middleware useOAuth2] Backend successful for ${provider}. Redirecting to: ${auth.detail}`);
+      let finalRedirectUrl: URL;
+      try {
+        // Ensure auth.detail is a valid URL
+        finalRedirectUrl = new URL(auth.detail);
+      } catch (e) {
+        console.error(`[Middleware useOAuth2] Invalid redirect URL from backend: ${auth.detail}. Falling back.`);
+        // Fallback to a default logged-in page if backend URL is invalid
+        finalRedirectUrl = new URL('/chat', req.url); // Example fallback
       }
 
       toReturn = {
         activated: true,
-        response: NextResponse.redirect(auth.detail, {
-          headers: headers,
-        }),
+        response: NextResponse.redirect(finalRedirectUrl),
+        // Middleware doesn't need to set the cookie here if backend handles it (either via URL param or Set-Cookie)
       };
-    } catch (error) {
-      console.error('Middleware OAuth2 error:', error);
+    } catch (error: any) {
+      console.error(`[Middleware useOAuth2] Middleware fetch error for ${provider}:`, error);
+      const errorRedirect = new URL(`${authWeb}/login`);
+      errorRedirect.searchParams.set('error', `middleware_fetch_error_${provider}`);
+      errorRedirect.searchParams.set('message', error.message || 'Network error');
+      toReturn = {
+        activated: true,
+        response: NextResponse.redirect(errorRedirect),
+      };
     }
+  } else if (queryParams.error) {
+    // Handle errors reported directly by the OAuth provider in the callback URL
+    console.error(
+      `[Middleware useOAuth2] OAuth provider error for ${provider}:`,
+      queryParams.error,
+      queryParams.error_description,
+    );
+    const errorRedirect = new URL(`${authWeb}/login`);
+    errorRedirect.searchParams.set('error', `oauth_provider_error_${provider}`);
+    errorRedirect.searchParams.set(
+      'message',
+      queryParams.error_description || queryParams.error || 'Unknown provider error',
+    );
+    toReturn = {
+      activated: true,
+      response: NextResponse.redirect(errorRedirect),
+    };
+  } else if (!provider) {
+    console.error(`[Middleware useOAuth2] Could not determine provider from path: ${req.nextUrl.pathname}`);
+    toReturn = {
+      activated: true,
+      response: NextResponse.redirect(defaultRedirect), // Redirect to login
+    };
   }
+
   return toReturn;
 };
 
