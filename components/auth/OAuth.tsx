@@ -203,7 +203,7 @@ export default function OAuth(): ReactNode {
           let extraParams = {};
           if (provider.pkce_required && pkceData) {
             extraParams = {
-              state: pkceData.state,
+              pkce_state: pkceData.state,
               code_challenge: pkceData.challenge,
               code_challenge_method: 'S256',
             };
