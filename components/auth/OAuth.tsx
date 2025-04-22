@@ -122,7 +122,7 @@ export default function OAuth(): ReactNode {
   const [loading, setLoading] = useState(!providersLoaded);
   const [error, setError] = useState<string | null>(null);
   const [apiProviders, setApiProviders] = useState<ApiProvider[]>([]);
-  const [pkceData, setPkceData] = useState<{ challenge: string, state: string } | null>(null);
+  const [pkceData, setPkceData] = useState<{ challenge: string; state: string } | null>(null);
   // Ensure providers are loaded before rendering
   useEffect(() => {
     if (!providersLoaded) {
@@ -135,7 +135,7 @@ export default function OAuth(): ReactNode {
               scopes: value.scope,
               authorize: value.uri,
               client_id: value.client_id,
-              pkce_required: value.pkce_required
+              pkce_required: value.pkce_required,
             })),
           );
           setLoading(false);
@@ -153,7 +153,7 @@ export default function OAuth(): ReactNode {
           scopes: value.scope,
           authorize: value.uri,
           client_id: value.client_id,
-          pkce_required: value.pkce_required
+          pkce_required: value.pkce_required,
         })),
       );
       setLoading(false);
@@ -172,7 +172,7 @@ export default function OAuth(): ReactNode {
         console.error(err);
       }
     };
-    if (apiProviders.some(p => p.pkce_required)) {
+    if (apiProviders.some((p) => p.pkce_required)) {
       fetchPkce();
     }
   }, [apiProviders]);
@@ -185,7 +185,7 @@ export default function OAuth(): ReactNode {
     [mutate],
   );
 
-  if (loading || (apiProviders.some(p => p.pkce_required) && !pkceData)) {
+  if (loading || (apiProviders.some((p) => p.pkce_required) && !pkceData)) {
     return <div>Loading authentication options...</div>;
   }
 
@@ -210,6 +210,13 @@ export default function OAuth(): ReactNode {
           } else if (provider.name.toLowerCase() === 'google') {
             extraParams = { access_type: 'offline' };
           }
+          console.log('Provider name:', provider.name);
+          console.log('Provider client_id:', provider.client_id);
+          console.log('Provider scopes:', provider.scopes);
+          console.log('Provider authorize URL:', provider.authorize);
+          console.log('Provider pkce_required:', provider.pkce_required);
+          console.log('Extra params:', extraParams);
+          console.log('PKCE data:', pkceData);
           return (
             <OAuth2Login
               key={provider.name}
