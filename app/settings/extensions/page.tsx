@@ -307,13 +307,13 @@ export const ConnectedServices = () => {
       console.log(`Sending code to backend for ${lowerCaseProviderName}...`);
 
       // Construct the body object
-      const requestBody: { code: string; pkce_state?: string } = {
+      const requestBody: { code: string; state?: string } = {
         code: response.code,
       };
 
-      // Conditionally add pkce_state to the body
+      // Conditionally add state to the body
       if (pkceData && oAuth2Providers[providerName]?.pkce_required) {
-        requestBody.pkce_state = pkceData.state;
+        requestBody.state = pkceData.state;
       }
 
       console.log('Sending POST request body:', requestBody); // Log the body object
@@ -441,7 +441,6 @@ export const ConnectedServices = () => {
                     authorizationUrl={provider.uri}
                     responseType='code'
                     clientId={provider.client_id}
-                    state={getCookie('jwt')}
                     redirectUri={`${process.env.NEXT_PUBLIC_APP_URI}/user/close/${service.provider.toLowerCase()}`}
                     scope={provider.scope}
                     // Pass service.provider to onSuccess/onFailure
@@ -456,7 +455,7 @@ export const ConnectedServices = () => {
                         ? {
                             code_challenge: pkceData.challenge,
                             code_challenge_method: 'S256',
-                            pkce_state: pkceData.state,
+                            state: pkceData.state,
                           }
                         : // Google specific param ONLY if NOT using PKCE for Google
                           !isPkceRequired && service.provider.toLowerCase() === 'google'

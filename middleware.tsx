@@ -292,8 +292,9 @@ export const useOAuth2: MiddlewareHook = async (req) => {
       const response = await fetch(oAuthEndpoint, {
         method: 'POST',
         body: JSON.stringify({
+          code: queryParams.code,
           referrer: redirect.toString(),
-          ...queryParams,
+          state: queryParams.state,
           invitation: req.cookies.get('invitation')?.value,
         }),
         headers: {
