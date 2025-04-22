@@ -436,7 +436,7 @@ export const ConnectedServices = () => {
                     authorizationUrl={provider.uri}
                     responseType='code'
                     clientId={provider.client_id}
-                    state={isPkceRequired && pkceData ? pkceData.state : (getCookie('jwt') ?? undefined)}
+                    state={getCookie('jwt')}
                     redirectUri={`${process.env.NEXT_PUBLIC_APP_URI}/user/close/${service.provider.toLowerCase()}`}
                     scope={provider.scope}
                     // Pass service.provider to onSuccess/onFailure
