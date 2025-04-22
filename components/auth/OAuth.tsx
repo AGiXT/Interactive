@@ -196,30 +196,20 @@ export default function OAuth(): ReactNode {
   return (
     <>
       {apiProviders
-        .filter((provider) => provider.client_id) // Only show providers with client_id
-        .sort((a, b) => a.name.localeCompare(b.name)) // Sort alphabetically by name
+        .filter((provider) => provider.client_id)
+        .sort((a, b) => a.name.localeCompare(b.name))
         .map((provider) => {
           const name = provider.name.charAt(0).toUpperCase() + provider.name.slice(1);
-
-          // Separate PKCE props from other potential extraParams
-          let pkceProps = {};
-          let otherExtraParams = {}; // Use this for things like Google's access_type
-
+          let extraParams = {};
           if (provider.pkce_required && pkceData) {
-            pkceProps = {
-              state: pkceData.state, // Pass state directly
-              code_challenge: pkceData.challenge, // Pass challenge directly
-              code_challenge_method: 'S256', // Pass method directly
+            extraParams = {
+              state: pkceData.state,
+              code_challenge: pkceData.challenge,
+              code_challenge_method: 'S256',
             };
-            // Log to confirm this is being set for X
-            if (provider.name.toLowerCase() === 'x') {
-              console.log('Applying PKCE Props for X:', pkceProps);
-            }
           } else if (provider.name.toLowerCase() === 'google') {
-            // Put non-standard params here
-            otherExtraParams = { access_type: 'offline' };
+            extraParams = { access_type: 'offline' };
           }
-
           return (
             <OAuth2Login
               key={provider.name}
@@ -230,8 +220,7 @@ export default function OAuth(): ReactNode {
               redirectUri={`${process.env.NEXT_PUBLIC_APP_URI}/user/close/${provider.name.replaceAll('.', '-').replaceAll(' ', '-').replaceAll('_', '-').toLowerCase()}`}
               onSuccess={onOAuth2}
               onFailure={onOAuth2}
-              {...pkceProps} // <-- Spread the PKCE props directly onto the component
-              extraParams={otherExtraParams} // <-- Pass only *other* extra params here
+              extraParams={extraParams}
               isCrossOrigin
               render={(renderProps) => (
                 <Button variant='outline' type='button' className='space-x-1 bg-transparent' onClick={renderProps.onClick}>

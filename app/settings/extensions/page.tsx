@@ -7,7 +7,7 @@ import { useAgent } from '@/components/interactive/useAgent';
 import { useCompany } from '@/components/interactive/useUser';
 import { useEffect, useState } from 'react';
 import OAuth2Login from 'react-simple-oauth2-login';
-import { providers as oAuth2Providers } from '@/components/auth/OAuth';
+import { providers as oAuth2Providers, loadProviders as loadOAuthProviders } from '@/components/auth/OAuth';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -139,7 +139,11 @@ const providerDescriptions = {
 export const ConnectedServices = () => {
   const [connectedServices, setConnectedServices] = useState<ConnectedService[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Separate loading states
+  const [isLoadingProviders, setIsLoadingProviders] = useState(true);
+  const [isLoadingConnections, setIsLoadingConnections] = useState(false);
+  const [isLoadingPkce, setIsLoadingPkce] = useState(false);
+  const [pkceData, setPkceData] = useState<{ challenge: string; state: string } | null>(null);
   const [disconnectDialog, setDisconnectDialog] = useState<{
     isOpen: boolean;
     provider: string | null;
@@ -147,79 +151,181 @@ export const ConnectedServices = () => {
     isOpen: false,
     provider: null,
   });
+  // State to explicitly track if the initial provider load function has resolved
+  const [providersLoadAttempted, setProvidersLoadAttempted] = useState(false);
 
-  const fetchConnections = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/oauth2`, {
-        headers: {
-          Authorization: getCookie('jwt'),
-        },
-      });
-
-      const allServices = Object.keys(oAuth2Providers)
-        .filter((key) => oAuth2Providers[key].client_id)
-        .map((key) => ({
-          provider: key,
-          connected: response.data.includes(key.toLowerCase()),
-        }));
-
-      setConnectedServices(allServices);
-      setError(null);
-    } catch (err) {
-      console.error('Error fetching connections:', err);
-      setError('Failed to fetch connected services');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // --- Effect 1: Load OAuth Provider Configurations ---
   useEffect(() => {
-    fetchConnections();
-  }, []);
-
-  const handleDisconnect = async (provider: string) => {
-    try {
-      await axios.delete(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/oauth2/${provider.toLowerCase()}`, {
-        headers: {
-          Authorization: getCookie('jwt'),
-        },
+    console.log('Attempting to load OAuth providers...');
+    setIsLoadingProviders(true);
+    loadOAuthProviders()
+      .then(() => {
+        console.log('loadOAuthProviders resolved. oAuth2Providers object:', oAuth2Providers);
+        // Check if providers object is actually populated
+        if (Object.keys(oAuth2Providers).length === 0) {
+          console.warn('OAuth providers loaded, but the providers object is empty.');
+          // Potentially set an error if this is unexpected
+          // setError("Failed to retrieve provider configurations.");
+        }
+        setProvidersLoadAttempted(true); // Mark that the load function finished
+      })
+      .catch((err) => {
+        console.error('Error loading OAuth providers:', err);
+        setError('Failed to load authentication provider configurations.');
+        setProvidersLoadAttempted(true); // Mark attempt even on error
+      })
+      .finally(() => {
+        setIsLoadingProviders(false);
       });
-      await fetchConnections();
-      setDisconnectDialog({ isOpen: false, provider: null });
-    } catch (err) {
-      console.error('Error disconnecting service:', err);
-      setError('Failed to disconnect service');
+  }, []); // Run only once on mount
+
+  // --- Effect 2: Fetch User's Connections (after providers are loaded/attempted) ---
+  useEffect(() => {
+    // Only run if the provider load attempt is done AND wasn't loading anymore
+    if (providersLoadAttempted && !isLoadingProviders) {
+      // Check if providers actually loaded successfully before fetching connections
+      if (Object.keys(oAuth2Providers).length > 0) {
+        console.log('Providers loaded, fetching connections...');
+        fetchConnections();
+      } else {
+        console.log('Skipping connection fetch because providers are empty.');
+        // Ensure connections loading state is false if we skip
+        setIsLoadingConnections(false);
+      }
+    }
+  }, [providersLoadAttempted, isLoadingProviders]); // Depends on the load attempt completing
+
+  // --- Effect 3: Fetch PKCE Data (after connections are known) ---
+  useEffect(() => {
+    // Only run if connections are loaded and we are not currently loading them
+    if (!isLoadingConnections && connectedServices.length > 0) {
+      const needsPkce = connectedServices.some((service) => {
+        const providerData = oAuth2Providers[service.provider];
+        // Check if provider exists AND requires PKCE
+        return providerData?.pkce_required === true;
+      });
+
+      if (needsPkce && !pkceData && !isLoadingPkce) {
+        // Avoid fetching if already loading or data exists
+        const fetchPkce = async () => {
+          console.log('Fetching PKCE data...');
+          setIsLoadingPkce(true);
+          setError(null); // Clear previous PKCE errors
+          try {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/oauth2/pkce-simple`);
+            if (!res.ok) throw new Error(`Failed to fetch PKCE data (status: ${res.status})`);
+            const data = await res.json();
+            if (!data.code_challenge || !data.state) throw new Error('PKCE data missing challenge or state');
+            console.log('PKCE data fetched successfully.');
+            setPkceData({ challenge: data.code_challenge, state: data.state });
+          } catch (err: any) {
+            setError(`Failed to load security data: ${err.message}`);
+            console.error('PKCE fetch error:', err);
+            setPkceData(null); // Ensure pkceData is null on error
+          } finally {
+            setIsLoadingPkce(false);
+          }
+        };
+        fetchPkce();
+      } else if (!needsPkce) {
+        // If no service needs PKCE, ensure loading is false and data is null
+        if (isLoadingPkce) setIsLoadingPkce(false);
+        if (pkceData) setPkceData(null);
+      }
+    } else if (!isLoadingConnections && connectedServices.length === 0) {
+      // Handle case where connections are loaded but empty
+      if (isLoadingPkce) setIsLoadingPkce(false);
+      if (pkceData) setPkceData(null);
+    }
+  }, [connectedServices, isLoadingConnections, pkceData, isLoadingPkce]); // Dependencies
+
+  // --- fetchConnections Function ---
+  const fetchConnections = async () => {
+    setIsLoadingConnections(true);
+    setError(null); // Clear previous errors
+    try {
+      // Double check providers object is available here
+      console.log('fetchConnections: Checking oAuth2Providers:', oAuth2Providers);
+      if (Object.keys(oAuth2Providers).length === 0) {
+        throw new Error('Provider configurations not available when fetching connections.');
+      }
+
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/oauth2`, {
+        headers: { Authorization: getCookie('jwt') },
+      });
+      console.log('Connections data received:', response.data);
+
+      // Filter keys from oAuth2Providers *first*, then map
+      const allServices = Object.keys(oAuth2Providers)
+        .filter((key) => {
+          const providerExists = !!oAuth2Providers[key];
+          const clientIdExists = !!oAuth2Providers[key]?.client_id;
+          if (!providerExists) console.warn(`Provider key "${key}" found in object keys but data is missing.`);
+          if (providerExists && !clientIdExists) console.warn(`Provider "${key}" is missing client_id.`);
+          return providerExists && clientIdExists; // Ensure both exist
+        })
+        .map((key) => ({
+          provider: key, // Keep original casing (e.g., "Google") for lookup
+          connected: Array.isArray(response.data) ? response.data.includes(key.toLowerCase()) : false, // Check connection status using lowercase
+        }))
+        .sort((a, b) => a.provider.localeCompare(b.provider)); // Sort alphabetically
+
+      console.log('Mapped and sorted services:', allServices);
+      setConnectedServices(allServices);
+    } catch (err: any) {
+      console.error('Error fetching connections:', err);
+      setError(err.message || 'Failed to fetch connected services');
+      setConnectedServices([]); // Reset on error
+    } finally {
+      setIsLoadingConnections(false);
     }
   };
 
-  const onSuccess = async (response: any) => {
-    const provider = disconnectDialog.provider?.toLowerCase() || '';
+  // --- onSuccess Handler ---
+  // Ensure onSuccess calls fetchConnections AFTER the post request
+  const onSuccess = async (response: any, providerName: string) => {
+    // Pass provider name explicitly
+    // const provider = disconnectDialog.provider?.toLowerCase() || ''; // This was incorrect - relies on disconnect dialog
+    const lowerCaseProviderName = providerName.toLowerCase();
+    console.log(`OAuth success/callback triggered for: ${lowerCaseProviderName}`);
+    // Clear dialog state if it was somehow involved (it shouldn't be for connect)
+    // setDisconnectDialog({ isOpen: false, provider: null });
+
     try {
       const jwt = getCookie('jwt');
 
       if (!response.code) {
         console.error('No code received in OAuth response');
-        await fetchConnections();
+        setError(`OAuth failed: No authorization code received from ${providerName}.`);
+        await fetchConnections(); // Refresh state even on failure
         return;
       }
 
-      const result = await axios.post(
-        `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/oauth2/${provider}`,
+      console.log(`Sending code to backend for ${lowerCaseProviderName}...`);
+      // Show some intermediate loading state?
+      await axios.post(
+        `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/oauth2/${lowerCaseProviderName}`, // Use lowerCaseProviderName
         {
           code: response.code,
-          referrer: `${process.env.NEXT_PUBLIC_APP_URI}/user/close/${provider}`,
+          // Send state back if it was used (PKCE)
+          ...(pkceData && oAuth2Providers[providerName]?.pkce_required && { state: pkceData.state }),
+          // Referrer might not be needed by backend, depends on implementation
+          // referrer: `${process.env.NEXT_PUBLIC_APP_URI}/user/close/${lowerCaseProviderName}`,
         },
         {
-          headers: {
-            Authorization: jwt,
-          },
+          headers: { Authorization: jwt },
         },
       );
-      await fetchConnections();
+      console.log(`OAuth connection successful for ${lowerCaseProviderName}. Refreshing connections...`);
+      await fetchConnections(); // Refresh the list
     } catch (err: any) {
-      await fetchConnections();
-      console.error('OAuth error:', err);
+      console.error(`OAuth post-callback error for ${lowerCaseProviderName}:`, err);
+      let errorMsg = `Failed to connect ${providerName}.`;
+      if (err.response?.data?.detail) {
+        errorMsg += ` Server Error: ${err.response.data.detail}`;
+      } else if (err.message) {
+        errorMsg += ` Error: ${err.message}`;
+      }
       if (err.config) {
         console.error('Failed request details:', {
           url: err.config.url,
@@ -228,25 +334,82 @@ export const ConnectedServices = () => {
           data: err.config.data,
         });
       }
+      setError(errorMsg);
+      await fetchConnections(); // Refresh state even on failure
     }
   };
+
+  // handleDisconnect remains largely the same, ensure it calls fetchConnections
+  const handleDisconnect = async (provider: string) => {
+    console.log(`Disconnecting ${provider}...`);
+    setError(null);
+    try {
+      await axios.delete(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/oauth2/${provider.toLowerCase()}`, {
+        headers: { Authorization: getCookie('jwt') },
+      });
+      console.log(`${provider} disconnected successfully. Refreshing...`);
+      await fetchConnections(); // Refresh list
+      setDisconnectDialog({ isOpen: false, provider: null });
+    } catch (err: any) {
+      console.error('Error disconnecting service:', err);
+      setError(err.message || `Failed to disconnect ${provider}`);
+      // Still refresh potentially? Or leave the UI as is until user manually refreshes?
+      // await fetchConnections();
+    }
+  };
+
+  // --- Render Logic ---
+  const isLoading = isLoadingProviders || isLoadingConnections || isLoadingPkce;
+
+  // More specific loading messages
+  if (isLoadingProviders) {
+    return <div>Loading provider configurations...</div>;
+  }
+  if (isLoadingConnections) {
+    return <div>Loading your connection status...</div>;
+  }
+  // Note: isLoadingPkce might be true briefly even if not needed, check needsPkce
+  const needsPkce = connectedServices.some((s) => oAuth2Providers[s.provider]?.pkce_required);
+  if (needsPkce && isLoadingPkce) {
+    return <div>Loading security data...</div>;
+  }
 
   return (
     <>
       {error && (
-        <Alert variant='destructive'>
+        <Alert variant='destructive' className='mb-4'>
+          {' '}
+          {/* Added margin */}
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
       <div className='grid gap-4'>
+        {/* Show message if loading finished but no services */}
+        {!isLoading && connectedServices.length === 0 && !error && (
+          <div className='p-4 text-center text-muted-foreground border rounded-lg'>
+            No third-party services available for connection.
+          </div>
+        )}
+
         {connectedServices.map((service) => {
+          // **Crucial Check**: Ensure provider data exists before rendering
           const provider = oAuth2Providers[service.provider];
+          if (!provider) {
+            console.warn(`Skipping render for service "${service.provider}" - provider data missing.`);
+            return null; // Don't render if data is missing
+          }
+
+          const isPkceRequired = provider.pkce_required;
+          // PKCE is ready if it's not required, OR if it is required AND pkceData is loaded
+          const isPkceReady = !isPkceRequired || (isPkceRequired && !!pkceData);
+
           return (
             <div key={service.provider} className='flex flex-col space-y-4 p-4 border rounded-lg'>
+              {/* ... Icon, Name, Status ... */}
               <div className='flex items-center justify-between'>
                 <div className='flex items-center space-x-4'>
-                  {provider.icon}
+                  {provider.icon || <Wrench className='w-6 h-6 text-muted-foreground' />} {/* Fallback icon */}
                   <div>
                     <p className='font-medium'>{service.provider}</p>
                     <p className='text-sm text-muted-foreground'>{service.connected ? 'Connected' : 'Not connected'}</p>
@@ -256,40 +419,68 @@ export const ConnectedServices = () => {
                 {service.connected ? (
                   <Button
                     variant='outline'
-                    size='sm'
+                    size='sm' // You might adjust size if needed
                     onClick={() =>
                       setDisconnectDialog({
                         isOpen: true,
-                        provider: service.provider,
+                        provider: service.provider, // Use the correct provider name
                       })
                     }
-                    className='space-x-1'
+                    className='space-x-1' // Add spacing if icon and text are together
                   >
-                    <Unlink className='w-4 h-4 mr-2' />
-                    Disconnect
+                    <Unlink className='w-4 h-4 mr-2' /> {/* Include the icon */}
+                    Disconnect {/* Include the text */}
                   </Button>
                 ) : (
                   <OAuth2Login
                     authorizationUrl={provider.uri}
                     responseType='code'
                     clientId={provider.client_id}
-                    state={getCookie('jwt')}
+                    state={isPkceRequired && pkceData ? pkceData.state : (getCookie('jwt') ?? undefined)}
                     redirectUri={`${process.env.NEXT_PUBLIC_APP_URI}/user/close/${service.provider.toLowerCase()}`}
                     scope={provider.scope}
-                    onSuccess={onSuccess}
-                    onFailure={onSuccess}
+                    // Pass service.provider to onSuccess/onFailure
+                    onSuccess={(res) => onSuccess(res, service.provider)}
+                    onFailure={(err) => {
+                      console.error('OAuth Failure:', service.provider, err);
+                      setError(`Connection to ${service.provider} failed.`);
+                    }} // Simple failure handler
                     isCrossOrigin
-                    render={(renderProps) => (
-                      <Button variant='outline' onClick={renderProps.onClick} className='space-x-1'>
-                        <Plus className='w-4 h-4 mr-2' />
-                        Connect
-                      </Button>
-                    )}
+                    extraParams={
+                      isPkceRequired && pkceData
+                        ? {
+                            code_challenge: pkceData.challenge,
+                            code_challenge_method: 'S256',
+                          }
+                        : // Google specific param ONLY if NOT using PKCE for Google
+                          !isPkceRequired && service.provider.toLowerCase() === 'google'
+                          ? { access_type: 'offline' }
+                          : {}
+                    }
+                    render={(renderProps) => {
+                      // Disable button if PKCE is required but not ready, or if PKCE is currently loading
+                      const isDisabled = (isPkceRequired && !isPkceReady) || isLoadingPkce;
+                      return (
+                        <Button
+                          variant='outline'
+                          onClick={renderProps.onClick}
+                          className='space-x-1'
+                          disabled={isDisabled} // Use calculated disabled state
+                        >
+                          <Plus className='w-4 h-4 mr-2' />
+                          Connect {isDisabled && isPkceRequired ? '(Loading security...)' : ''}
+                        </Button>
+                      );
+                    }}
                   />
                 )}
               </div>
+              {/* ... Description ... */}
               <p className='text-sm text-muted-foreground'>
-                {providerDescriptions[service.provider] || 'Connect this service to enable AI integration.'}
+                {providerDescriptions[service.provider] ||
+                  provider.description ||
+                  'Connect this service to enable AI integration.'}{' '}
+                {/* Added provider.description as fallback */}
               </p>
             </div>
           );
