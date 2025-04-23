@@ -75,6 +75,7 @@
     "@radix-ui/react-tooltip": "^1.1.6",
     "@tanstack/react-table": "^8.20.5",
     "axios": "^1.8.2",
+    "better-react-mathjax": "^2.3.0",
     "class-variance-authority": "^0.7.1",
     "clipboard-copy": "^4.0.1",
     "clsx": "^2.1.1",
