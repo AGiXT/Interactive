@@ -127,7 +127,7 @@ const languageRenders: Record<string, (content: string, setLoading?: (loading: b
   sequence: (content: string) => <Mermaid chart={`sequenceDiagram\n${content}`} />,
   flow: (content: string) => <Mermaid chart={`flowchart TD\n${content}`} />,
   mermaid: (content: string) => <Mermaid chart={content} />,
-  latex: (content: string) => <Latex>{content}</Latex>,
+  // latex: (content: string) => <Latex>{content}</Latex>, // Removed to prevent rendering LaTeX code blocks as actual LaTeX
 };
 
 export type CodeBlockProps = {

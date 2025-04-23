@@ -63,6 +63,7 @@ export default function MarkdownBlock({ content, chatItem, setLoading }: Markdow
 
     return { columns, rows };
   }
+
   try {
     return (
       <>
@@ -73,6 +74,7 @@ export default function MarkdownBlock({ content, chatItem, setLoading }: Markdow
                 key={`${index}-${segment.content}`}
                 remarkPlugins={[[remarkGfm]]}
                 // disallowedElements={['code']}
+                className='react-markdown'
                 components={{
                   h1({ children }) {
                     return <MarkdownHeading tag='h1'>{children}</MarkdownHeading>;
@@ -131,11 +133,7 @@ export default function MarkdownBlock({ content, chatItem, setLoading }: Markdow
           } else if (segment.type === 'latex') {
             return <LaTeX key={`${index}-${segment.content}`}>{segment.content}</LaTeX>;
           } else if (segment.type === 'latex-display') {
-            return (
-              <LaTeX key={`${index}-${segment.content}`} display>
-                {segment.content}
-              </LaTeX>
-            );
+            return <LaTeX key={`${index}-${segment.content}`} display>{segment.content}</LaTeX>;
           } else {
             return (
               <CodeBlock key={`${index}-${segment.content}`} inline={segment.type === 'code'} fileName={fileName}>

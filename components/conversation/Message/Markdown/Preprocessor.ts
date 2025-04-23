@@ -43,7 +43,7 @@ function processLaTeX(text: string): Segment[] {
   let processed: Segment[] = [{ content: text }];
   
   // First process display math ($$) to avoid conflicts with inline math
-  processed = reprocess(processed, (content: string) => splitUnEscaped(content, '$$'), 'latex-display', true);
+  processed = reprocess(processed, (content: string) => splitUnEscaped(content, '$$'), 'latex-display', false);
   
   // Then process inline math ($)
   processed = reprocess(processed, (content: string) => splitUnEscaped(content, '$'), 'latex');
@@ -59,6 +59,16 @@ export default function textToMarkdown(text: string) {
   processed = processed.map((segment) => {
     if (segment.type === undefined) {
       return processLaTeX(segment.content);
+    }
+    return [segment];
+  }).flat();
+  
+  // Process raw image URLs to convert them into markdown image syntax
+  processed = processed.map((segment) => {
+    if (segment.type === undefined) {
+      const imageUrlRegex = /(https?:\/\/[^\s<>"']+\.(?:jpg|jpeg|png|gif|bmp|webp)(?:[^\s<>"']*))/gi;
+      const contentWithImages = segment.content.replace(imageUrlRegex, '![Image]($1)');
+      return [{ content: contentWithImages }];
     }
     return [segment];
   }).flat();
