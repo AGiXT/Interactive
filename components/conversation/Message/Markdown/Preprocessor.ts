@@ -13,16 +13,33 @@ function reprocess(processed: Segment[], rule: any, type: BlockType, keepDelimit
   return processed
     .map((value) => {
       if (value.type === undefined) {
-        const result = rule(value.content).map((value: string, index: number) => {
+        const parts = rule(value.content); // Get parts split by delimiter
+        // Check for unterminated blocks *before* mapping.
+        // Log error only if the delimiter count is unbalanced (even parts) AND there's more than one part
+        // (meaning the delimiter was actually present but unterminated).
+        if (parts.length % 2 === 0 && parts.length > 1) {
+          console.error(`Unterminated ${type} detected in content: ${value.content}`);
+          // Return the original segment to avoid breaking rendering completely
+          return [value];
+        }
+
+        const result = parts.map((part: string, index: number) => {
           const isContent = index % 2 === 1;
+          let finalContent = part;
+
+          // If it's the content segment and we need to keep delimiters, reconstruct it.
+          if (isContent && keepDelimiters) {
+            const delimiter = type === 'latex-display' ? '$$' : '$';
+            finalContent = `${delimiter}${part}${delimiter}`; // Add delimiters back
+          }
+
           return {
             type: isContent ? type : undefined,
-            content: isContent && keepDelimiters ? `$$${value}$$` : value,
+            content: finalContent, // Use the potentially reconstructed content
           };
         });
-        if (result.length % 2 !== 1) {
-          throw new Error(`Unterminated ${type} detected in content: ${value.content}!`);
-        }
+
+        // Filter out empty segments that might result from splitting
         return result.filter((segment: Segment) => segment.content);
       } else {
         return [value];
@@ -43,19 +60,31 @@ function processLaTeX(text: string): Segment[] {
   let processed: Segment[] = [{ content: text }];
   
   // First process display math ($$) to avoid conflicts with inline math
-  processed = reprocess(processed, (content: string) => splitUnEscaped(content, '$$'), 'latex-display', false);
-  
+  processed = reprocess(processed, (content: string) => splitUnEscaped(content, '$$'), 'latex-display', true); // Keep delimiters
+
   // Then process inline math ($)
-  processed = reprocess(processed, (content: string) => splitUnEscaped(content, '$'), 'latex');
-  
+  processed = reprocess(processed, (content: string) => splitUnEscaped(content, '$'), 'latex', true); // Keep delimiters
+
   return processed;
 }
 
 export default function textToMarkdown(text: string) {
   // Process code blocks first
   let processed = reprocess([{ content: text }], (content: string) => splitUnEscaped(content, '```'), 'codeblock');
+
+  // Refine codeblock segments: Check for 'latex' language identifier
+  processed = processed.map(segment => {
+    if (segment.type === 'codeblock' && segment.content.startsWith('latex\n')) {
+      return {
+        ...segment,
+        type: 'latex-display', // Change type to render as LaTeX display block
+        content: segment.content.substring(6), // Remove 'latex\n' prefix
+      };
+    }
+    return segment;
+  });
   
-  // Then process LaTeX for non-code segments
+  // Then process LaTeX ($ and $$) for non-code segments
   processed = processed.map((segment) => {
     if (segment.type === undefined) {
       return processLaTeX(segment.content);

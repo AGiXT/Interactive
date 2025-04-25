@@ -8,9 +8,10 @@ interface LaTeXProps {
 
 export default function LaTeX({ children, display = false }: LaTeXProps) {
   // Since the preprocessor may have removed delimiters, re-add them based on display or inline mode
-  const content = children.trim();
-  const formattedContent = display ? `$$${content}$$` : `$${content}$`;
-  
+  // const content = children.trim(); // No longer needed, preprocessor keeps delimiters
+  // const formattedContent = display ? `$$${content}$$` : `$${content}$`; // No longer needed
+  const content = children; // Use children directly as it contains delimiters
+
   // Configuration for MathJax
   const config = {
     loader: { load: ["input/tex", "output/chtml"] },
@@ -32,7 +33,7 @@ export default function LaTeX({ children, display = false }: LaTeXProps) {
           className={display ? 'block my-4 text-center' : 'inline'}
           inline={!display}
         >
-          {formattedContent}
+          {content}
         </MathJax>
       </MathJaxContext>
     );
