@@ -84,9 +84,10 @@ export default function textToMarkdown(text: string) {
     return segment;
   });
   
-  // Then process LaTeX ($ and $$) for non-code segments
+  // Then process LaTeX math ($ and $$) for non-code, non-table segments
   processed = processed.map((segment) => {
     if (segment.type === undefined) {
+      // Pass the content through processLaTeX which handles $ and $$
       return processLaTeX(segment.content);
     }
     return [segment];
