@@ -1,5 +1,7 @@
 import React from 'react';
 import { MathJax, MathJaxContext } from 'better-react-mathjax';
+import { DataTable } from '../data-table'; // Corrected path
+import { createColumns, type ColumnData } from '../data-table/data-table-columns'; // Corrected path & added ColumnData type import
 
 interface LaTeXProps {
   children: string;
@@ -130,6 +132,71 @@ export default function LaTeX({ children, display = false }: LaTeXProps) {
   // Process LaTeX: first convert tables, then convert lists
   const contentAfterTables = latexTabularToMarkdownTable(rawContent);
   const processedContent = latexListToMarkdown(contentAfterTables);
+  // Check if the processed content is likely a Markdown table
+  const isMarkdownTable = /\|\s*-{3,}\s*\|/.test(processedContent);
+
+  // If it's a Markdown table, parse it and render using DataTable
+  if (isMarkdownTable) {
+    try {
+      const lines = processedContent.trim().split('\n');
+      if (lines.length < 2) { // Need at least header and separator
+        console.error("Invalid Markdown table format (not enough lines):", processedContent);
+        return <span className="text-red-500">Invalid Table Format</span>;
+      }
+
+      // Extract headers (from the first line)
+      const headerCells = lines[0]
+        .split('|')
+        .map(cell => cell.trim())
+        .filter(cell => cell !== ''); // Remove empty strings from start/end pipes
+
+      if (headerCells.length === 0) {
+        console.error("Could not parse table headers:", lines[0]);
+        return <span className="text-red-500">Invalid Table Header</span>;
+      }
+
+      // Create data objects (from line 2 onwards, skipping separator)
+      const data = lines.slice(2) // Skip header and separator line
+        .map(rowLine => {
+          const cells = rowLine
+            .split('|')
+            .map(cell => cell.trim())
+            .filter(cell => cell !== ''); // Remove empty strings from start/end pipes
+
+          // Ensure the number of cells matches the number of headers
+          if (cells.length !== headerCells.length) {
+             console.warn("Row cell count mismatch:", cells, "Headers:", headerCells, "Line:", rowLine);
+             // Pad with empty strings if necessary, or handle as error
+             while (cells.length < headerCells.length) cells.push('');
+             // Alternatively, skip row or return error:
+             // return null;
+          }
+
+
+          const rowObject: { [key: string]: string } = {};
+          headerCells.forEach((header, index) => {
+            rowObject[header] = cells[index] || ''; // Assign cell value or empty string if missing
+          });
+          return rowObject;
+        })
+        .filter(obj => obj !== null && Object.values(obj).some(val => val !== '')); // Filter out nulls (if skipping rows) and empty rows
+
+      // Map header strings to ColumnData objects
+      const columnData: ColumnData[] = headerCells.map(header => ({
+        field: header, // Use header as the field key for the data object
+        headerName: header // Use header as the display name
+      }));
+
+      // Generate columns using the imported function
+      const columns = createColumns(columnData);
+
+      // Render the DataTable
+      return <DataTable columns={columns} data={data} />;
+    } catch (error) {
+       console.error("Error parsing Markdown table or rendering DataTable:", error, "Content:", processedContent);
+       return <span className="text-red-500">Error Rendering Table</span>;
+    }
+  }
 
   // Configuration for MathJax
   const config = {
