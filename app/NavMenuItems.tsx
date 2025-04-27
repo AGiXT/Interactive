@@ -212,3 +212,8 @@ export const items: Item[] = [
     ],
   },
 ];
+
+roleThreshold?: number;
+  max_role?: number;
+
+  roleThreshold: 4,
