@@ -67,17 +67,17 @@ export default function Home({ params }: { params: { id: string } }) {
   return (
     <SidebarPage title='Chat'>
       <ConvSwitch id={params.id} />
-      <AGiXTInteractive
-        uiConfig={{
-          showChatThemeToggles: false,
-          enableVoiceInput: true,
-          footerMessage: '',
-          alternateBackground: 'primary',
-        }}
-        overrides={{
-          conversation: params.id,
-        }}
-      />
+      {user && user.role === 'Child' ? (<Button className="w-full">Record Audio</Button>) : (<AGiXTInteractive
+              uiConfig={{
+                showChatThemeToggles: false,
+                enableVoiceInput: true,
+                footerMessage: '',
+                alternateBackground: 'primary',
+              }}
+              overrides={{
+                conversation: params.id,
+              }}
+            />)}
     </SidebarPage>
   );
 }
