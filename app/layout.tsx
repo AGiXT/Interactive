@@ -59,3 +59,6 @@ export default function RootLayout({ children }: { children: ReactNode }): React
     </html>
   );
 }
+import { useUser } from '@/components/interactive/useUser';
+const { data: user, isLoading: isUserLoading } = useUser();
+{user && user.role !== 'Child' && (<SidebarMain side='left' />)}
