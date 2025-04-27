@@ -537,3 +537,12 @@ export function SidebarMain({ ...props }: React.ComponentProps<typeof Sidebar>) 
     </Sidebar>
   );
 }
+
+const router = useRouter();
+  const role = getCookie('role');
+
+  {role !== '4' &&<SidebarContent>{children}</SidebarContent>}{role === '4' &&<SidebarContent>This account is limited.</SidebarContent>}
+
+  if (role === '4') {
+      return null;
+    }
