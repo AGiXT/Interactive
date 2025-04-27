@@ -553,7 +553,6 @@ export function ChatBar({
                 <BiCollapseVertical className='w-4 h-4' />
               </Button>
             </TooltipBasic>
-            {showOverrideSwitchesCSV && <OverrideSwitches showOverrideSwitches={showOverrideSwitchesCSV} />}
             {enableVoiceInput && <VoiceRecorder onSend={onSend} disabled={disabled} />}
             {showResetConversation && <ResetConversation state={state} setCookie={setCookie} />}
             {!alternativeInputActive && (
