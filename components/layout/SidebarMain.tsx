@@ -508,21 +508,21 @@ export function SidebarMain({ ...props }: React.ComponentProps<typeof Sidebar>) 
 
   return (
     <Sidebar collapsible='icon' {...props} className='hide-scrollbar'>
-      <SidebarHeader>
-        {isAuthenticated ? (
-          <AgentSelector />
-        ) : (
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <Link href='/' passHref>
-                <SidebarMenuButton side='left' size='lg' className='gap-2'>
-                  <ChevronLeft className='h-4 w-4' />
-                  Back to Home
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        )}
+      <SidebarHeader>{isAuthenticated && activeCompany?.roleId !== 4 ? (
+                &lt;AgentSelector /&gt;
+              ) : (
+                &lt;SidebarMenu&gt;
+                  &lt;SidebarMenuItem&gt;
+                    &lt;Link href='/' passHref&gt;
+                      &lt;SidebarMenuButton side='left' size='lg' className='gap-2'&gt;
+                        &lt;ChevronLeft className='h-4 w-4' /&gt;
+                        Back to Home
+                      &lt;/SidebarMenuButton&gt;
+                    &lt;/Link&gt;
+                  &lt;/SidebarMenuItem&gt;
+                &lt;/SidebarMenu&gt;
+              )}
+            &lt;/SidebarHeader&gt;
       </SidebarHeader>
       <SidebarContent>
         <NavMain />
@@ -531,7 +531,7 @@ export function SidebarMain({ ...props }: React.ComponentProps<typeof Sidebar>) 
       <SidebarFooter>
         {/* <NotificationsNavItem /> */}
         <ToggleSidebar side='left' />
-        {isAuthenticated && <NavUser />}
+        {isAuthenticated && activeCompany?.roleId !== 4 && &lt;NavUser /&gt;}
       </SidebarFooter>
       <SidebarRail side='left' />
     </Sidebar>
