@@ -65,19 +65,26 @@ export function ConvSwitch({ id }: { id: string }) {
 
 export default function Home({ params }: { params: { id: string } }) {
   return (
-    <SidebarPage title='Chat'>
-      <ConvSwitch id={params.id} />
-      <AGiXTInteractive
-        uiConfig={{
-          showChatThemeToggles: false,
-          enableVoiceInput: true,
-          footerMessage: '',
-          alternateBackground: 'primary',
-        }}
-        overrides={{
-          conversation: params.id,
-        }}
-      />
-    </SidebarPage>
+    &lt;SidebarPage title='Chat'&gt;
+          &lt;ConvSwitch id={params.id} /&gt;
+          {activeCompany?.roleId === 4 ? (
+            &lt;div className='flex items-center justify-center h-full'&gt;
+              &lt;Button size='lg'&gt;Voice Recording&lt;/Button&gt;
+            &lt;/div&gt;
+          ) : (
+            &lt;AGiXTInteractive
+              uiConfig={{
+                showChatThemeToggles: false,
+                enableVoiceInput: true,
+                footerMessage: '',
+                alternateBackground: 'primary',
+              }}
+              overrides={{
+                conversation: params.id,
+              }}
+            /&gt;
+          )}
+        &lt;/SidebarPage&gt;
   );
 }
+"use client";
