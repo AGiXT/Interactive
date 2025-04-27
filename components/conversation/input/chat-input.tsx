@@ -643,3 +643,4 @@ export function useDynamicInput(initialValue = '', uploadedFiles: { [x: string]:
 
   return { textareaRef, isActive, setIsActive, handleFocus, handleBlur, value, setValue };
 }
+"use client";
