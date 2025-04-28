@@ -62,13 +62,18 @@ export default function Abilities() {
   const { data: activeCompany, mutate: mutateCompany } = useCompany();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  
+
   // Track loading commands and their original states
-  const [commandStates, setCommandStates] = useState<Record<string, { 
-    loading: boolean; 
-    originalState: boolean; 
-    currentState: boolean; 
-  }>>({});
+  const [commandStates, setCommandStates] = useState<
+    Record<
+      string,
+      {
+        loading: boolean;
+        originalState: boolean;
+        currentState: boolean;
+      }
+    >
+  >({});
 
   // State for override extensions
   const [overrideStates, setOverrideStates] = useState<Record<string, boolean>>({});
@@ -92,7 +97,7 @@ export default function Abilities() {
 
   // Add a function to ensure consistent behavior between single and batch operations
   const delayedMutation = async () => {
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
     if (searchParams.get('mode') === 'company') {
       await mutateCompany();
     } else {
@@ -101,90 +106,96 @@ export default function Abilities() {
   };
 
   // Handle toggle function for individual commands
-  const handleToggleCommand = useCallback(async (commandName: string, enabled: boolean) => {
-    // Store the original state before attempting to change
-    const originalState = commandStates[commandName]?.currentState ?? false;
+  const handleToggleCommand = useCallback(
+    async (commandName: string, enabled: boolean) => {
+      // Store the original state before attempting to change
+      const originalState = commandStates[commandName]?.currentState ?? false;
 
-    // Immediately update command state with loading and optimistic state
-    setCommandStates(prev => ({
-      ...prev,
-      [commandName]: {
-        loading: true,
-        originalState: originalState,
-        currentState: enabled
-      }
-    }));
-    
-    try {
-      // Make the actual API call
-      const result = await axios.patch(
-        searchParams.get('mode') === 'company'
-          ? `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/companies/${activeCompany?.id}/command`
-          : `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/agent/${agent_name}/command`,
-        {
-          command_name: commandName,
-          enable: enabled,
+      // Immediately update command state with loading and optimistic state
+      setCommandStates((prev) => ({
+        ...prev,
+        [commandName]: {
+          loading: true,
+          originalState: originalState,
+          currentState: enabled,
         },
-        {
-          headers: {
-            Authorization: getCookie('jwt'),
+      }));
+
+      try {
+        // Make the actual API call
+        const result = await axios.patch(
+          searchParams.get('mode') === 'company'
+            ? `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/companies/${activeCompany?.id}/command`
+            : `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/agent/${agent_name}/command`,
+          {
+            command_name: commandName,
+            enable: enabled,
           },
-        },
-      );
+          {
+            headers: {
+              Authorization: getCookie('jwt'),
+            },
+          },
+        );
 
-      // Handle success
-      if (result.status === 200) {
-        // Show success toast
+        // Handle success
+        if (result.status === 200) {
+          // Show success toast
+          toast({
+            title: 'Command updated',
+            description: `${commandName} was ${enabled ? 'enabled' : 'disabled'} successfully.`,
+          });
+
+          // Update final state on success
+          setCommandStates((prev) => ({
+            ...prev,
+            [commandName]: {
+              loading: false,
+              originalState: enabled,
+              currentState: enabled,
+            },
+          }));
+
+          // Use the consistent delay function for mutation
+          delayedMutation().catch(console.error);
+        } else {
+          throw new Error('API request failed');
+        }
+      } catch (error) {
+        console.error('Failed to toggle command:', error);
+
+        // Show error toast
         toast({
-          title: "Command updated",
-          description: `${commandName} was ${enabled ? 'enabled' : 'disabled'} successfully.`,
+          title: 'Error updating command',
+          description: `Failed to ${enabled ? 'enable' : 'disable'} ${commandName}.`,
+          variant: 'destructive',
         });
-        
-        // Update final state on success
-        setCommandStates(prev => ({
+
+        // Revert to original state on failure
+        setCommandStates((prev) => ({
           ...prev,
           [commandName]: {
             loading: false,
-            originalState: enabled,
-            currentState: enabled
-          }
+            originalState: originalState,
+            currentState: originalState,
+          },
         }));
-        
-        // Use the consistent delay function for mutation
-        delayedMutation().catch(console.error);
-      } else {
-        throw new Error('API request failed');
       }
-    } catch (error) {
-      console.error('Failed to toggle command:', error);
-      
-      // Show error toast
-      toast({
-        title: "Error updating command",
-        description: `Failed to ${enabled ? 'enable' : 'disable'} ${commandName}.`,
-        variant: "destructive",
-      });
-      
-      // Revert to original state on failure
-      setCommandStates(prev => ({
-        ...prev,
-        [commandName]: {
-          loading: false,
-          originalState: originalState,
-          currentState: originalState
-        }
-      }));
-    }
-  }, [agent_name, activeCompany, mutateAgent, mutateCompany, searchParams, toast, delayedMutation, commandStates]);
+    },
+    [agent_name, activeCompany, mutateAgent, mutateCompany, searchParams, toast, delayedMutation, commandStates],
+  );
 
   // Create a version of the toggle handler that prevents concurrent toggles
-  const safeToggleCommand = useCallback((commandName: string, enabled: boolean) => {
-    // If the command is already loading, don't trigger another toggle
-    if (commandStates[commandName]?.loading) return;
-    
-    // Handle the toggle
-    handleToggleCommand(commandName, enabled);
-  }, [handleToggleCommand, commandStates]);
+  const safeToggleCommand = useCallback(
+    (commandName: string, enabled: boolean) => {
+      // If the command is already loading, don't trigger another toggle
+      if (commandStates[commandName]?.loading) return;
+
+      // Handle the toggle
+      handleToggleCommand(commandName, enabled);
+    },
+    [handleToggleCommand, commandStates],
+  );
 
   // Handle override extension toggle
   const handleToggleOverride = (extensionKey: string) => {
@@ -224,7 +235,7 @@ export default function Abilities() {
             <AlertDescription>{error.message}</AlertDescription>
           </Alert>
         )}
-        
+
         <div className='flex items-center justify-between mb-4'>
           <h3 className='text-lg font-medium'>Enabled Abilities</h3>
           <div className='flex items-center gap-2'>
@@ -235,29 +246,6 @@ export default function Abilities() {
 
         <div className='grid gap-4'>
           <Input placeholder='Search...' value={searchText} onChange={(e) => setSearchText(e.target.value)} />
-
-          {/* AGiXT Core Features Card - Only show if not in company mode and matches filters */}
-          {searchParams.get('mode') !== 'company' && filteredOverrides.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Agent Capabilities</CardTitle>
-                <CardDescription>Core features and capabilities</CardDescription>
-              </CardHeader>
-              <CardContent className='space-y-4'>
-                {filteredOverrides.map(([key, extension]) => (
-                  <Card key={key} className='p-4 border border-border/50'>
-                    <div className='flex items-center mb-2'>
-                      <Switch checked={overrideStates[key] || false} onCheckedChange={() => handleToggleOverride(key)} />
-                      <div className='flex items-center ml-2'>
-                        <h4 className='text-lg font-medium'>{extension.label}</h4>
-                      </div>
-                    </div>
-                    <MarkdownBlock content={extension.description} />
-                  </Card>
-                ))}
-              </CardContent>
-            </Card>
-          )}
 
           {/* Standard Extensions */}
           {extensionsWithCommands.length === 0 && filteredOverrides.length === 0 ? (
@@ -303,10 +291,10 @@ export default function Abilities() {
                                 onCheckedChange={(checked) => safeToggleCommand(command.friendly_name, checked)}
                                 disabled={isLoading}
                               />
-                              <div className="flex items-center">
+                              <div className='flex items-center'>
                                 <h4 className='text-lg font-medium ml-2'>{command.friendly_name}</h4>
                                 {isLoading && (
-                                  <div className="ml-2 h-5 w-5 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+                                  <div className='ml-2 h-5 w-5 animate-spin rounded-full border-4 border-blue-500 border-t-transparent'></div>
                                 )}
                               </div>
                             </div>
