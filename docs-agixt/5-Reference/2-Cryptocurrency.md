@@ -10,6 +10,7 @@ Not a developer? Try our hosted version of AGiXT at [Everything.Software](https:
 
 - Check out the [AGiXT Tokenomics plan here.](https://github.com/Josh-XT/AGiXT/discussions/1406)
 - Follow us on [X](https://x.com/AGi_XT) for the latest updates.
+- Join our [Telegram (agixtofficial)](https://t.me/agixtofficial) for the latest news and updates.
 - Join our [Discord](https://discord.gg/RDcRvFdqw4) to chat with the team and community.
 - Check out our open source [GitHub](https://github.com/Josh-XT/AGiXT) project.
 - Check out [our previous announcements on our GitHub](https://github.com/Josh-XT/AGiXT/discussions)
