@@ -232,7 +232,7 @@ export default function Home() {
               href='/user'
               className='inline-block px-8 py-3 text-lg font-semibold transition duration-300 border rounded-lg bg-primary text-primary-foreground hover:bg-primary/90'
             >
-              Get Started Free
+              Get Started Today
             </Link>
             <img src='/PoweredBy_AGiXT.svg' alt='Powered by AGiXT' className='w-32 mx-auto mt-10' />
           </div>
