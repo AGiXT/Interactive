@@ -1,7 +1,7 @@
 import { chainMutations, createGraphQLClient } from '@/components/interactive/lib';
 import '@/components/interactive/zod2gql';
 import axios from 'axios';
-import { getCookie } from 'cookies-next';
+import { getCookie, setCookie } from 'cookies-next';
 import useSWR, { SWRResponse } from 'swr';
 import { z } from 'zod';
 
@@ -51,6 +51,7 @@ export function useCompany(id?: string): SWRResponse<Company | null> {
           const targetCompany =
             companies?.find((c) => (agentName ? c.agents.some((a) => a.name === agentName) : c.primary)) || null;
           if (!targetCompany) return null;
+          setCookie('agixt-company', targetCompany.id);
           targetCompany.extensions = (
             await axios.get(
               `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/companies/${targetCompany.id}/extensions`,
@@ -85,7 +86,7 @@ export const UserSchema = z.object({
   email: z.string().email(),
   firstName: z.string().min(1),
   id: z.string().uuid(),
-  lastName: z.string()
+  lastName: z.string(),
 });
 
 export type User = z.infer<typeof UserSchema>;
