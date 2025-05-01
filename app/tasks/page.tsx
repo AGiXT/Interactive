@@ -139,46 +139,65 @@ export default function TasksPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [isReoccurring, setIsReoccurring] = useState(false);
   const [createFormData, setCreateFormData] = useState<Partial<Task>>({});
+    const [selectedConversationId, setSelectedConversationId] = useState<string | null>('');
 
   const handleCreate = async () =>{
-    try {
-      const endpoint = isReoccurring ? '/v1/reoccurring_task' : '/v1/task';
-      const payload = isReoccurring
-        ? { // Reoccurring payload
-            agent_name: "XT", // Default agent name, could make this selectable
-            title: createFormData.title,
-            task_description: createFormData.description,
-            start_date: createFormData.start_date,
-            end_date: createFormData.end_date,
-            frequency: createFormData.frequency,
-            conversation_id: createFormData.conversation_id,
-          }
-        : { // One-time payload
-            agent_name: "XT", // Default agent name
-            title: createFormData.title,
-            task_description: createFormData.description,
-            days: createFormData.days || 0,
-            hours: createFormData.hours || 0,
-            minutes: createFormData.minutes || 5, // Default to 5 minutes if not set
-            conversation_id: createFormData.conversation_id,
-          };
+      try {
+        const endpoint = isReoccurring ? '/v1/reoccurring_task' : '/v1/task';
+        let assignedConversationId = selectedConversationId;
 
-      await axios.post(
-        `${process.env.NEXT_PUBLIC_AGIXT_SERVER}${endpoint}`,
-        payload,
-        {
-          headers: { Authorization: getCookie('jwt') },
-        },
-      );
-      mutate('/v1/tasks'); // Refresh tasks list
-      setCreateDialogOpen(false);
-      setCreateFormData({}); // Clear form
-      setIsReoccurring(false); // Reset toggle
-      toast({ title: 'Success', description: 'Task created successfully.' });
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.response?.data?.detail || 'Failed to create task.', variant: 'destructive' });
-    }
-  };
+        if (assignedConversationId === 'new') {
+          const agentName = getCookie('agixt-agent') || process.env.NEXT_PUBLIC_AGIXT_AGENT || "XT";
+          const state = useContext(InteractiveConfigContext);
+          if (!state?.agixt) {
+              toast({ title: 'Error', description: 'SDK not initialized.', variant: 'destructive' });
+              return;
+          }
+
+          const newConvName = '-';
+          const newConvResponse = await state.agixt.newConversation(agentName, newConvName);
+          assignedConversationId = newConvResponse.id;
+
+          mutate('/conversations');
+        }
+
+        const payload = isReoccurring
+          ? {
+              agent_name: "XT",
+              title: createFormData.title,
+              task_description: createFormData.description,
+              start_date: createFormData.start_date,
+              end_date: createFormData.end_date,
+              frequency: createFormData.frequency,
+              conversation_id: assignedConversationId || undefined,
+            }
+          : {
+              agent_name: "XT",
+              title: createFormData.title,
+              task_description: createFormData.description,
+              days: createFormData.days || 0,
+              hours: createFormData.hours || 0,
+              minutes: createFormData.minutes || 5,
+              conversation_id: assignedConversationId || undefined,
+            };
+
+        await axios.post(
+          `${process.env.NEXT_PUBLIC_AGIXT_SERVER}${endpoint}`,
+          payload,
+          {
+            headers: { Authorization: getCookie('jwt') },
+          },
+        );
+        mutate('/v1/tasks');
+        setCreateDialogOpen(false);
+        setCreateFormData({});
+        setSelectedConversationId('');
+        setIsReoccurring(false);
+        toast({ title: 'Success', description: 'Task created successfully.' });
+      } catch (error: any) {
+        toast({ title: 'Error', description: error.response?.data?.detail || 'Failed to create task.', variant: 'destructive' });
+      }
+    };
 
   return (<SidebarPage title='Tasks'><div className='space-y-4'><div className='flex justify-end'><Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}><DialogTrigger asChild><Button><LuPlus className='h-4 w-4 mr-2' />Create New Task</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Create New Task</DialogTitle></DialogHeader><div className='grid gap-4 py-4'><div className='space-y-2'><Label htmlFor='create-title'>Title</Label><Input
                     id='create-title'
@@ -188,12 +207,10 @@ export default function TasksPage() {
                     id='create-description'
                     value={createFormData.description || ''}
                     onChange={(e) =>setCreateFormData({ ...createFormData, description: e.target.value })}
-                  /></div><div className='space-y-2'><Label htmlFor='create-conversation-id'>Conversation ID (Optional)</Label><Input
-                    id='create-conversation-id'
-                    value={createFormData.conversation_id || ''}
-                    onChange={(e) =>setCreateFormData({ ...createFormData, conversation_id: e.target.value })}
-                    placeholder="e.g., 6cece1db-e42b-4255-8346-2554847a1d5b"
-                  /></div><div className='flex items-center space-x-2'><Checkbox
+                  /></div><div className='space-y-2'><Label htmlFor='create-conversation-select'>Assign to Conversation (Optional)</Label><Select
+                                        value={selectedConversationId || ''}
+                                        onValueChange={(value) =>setSelectedConversationId(value)}
+                                      ><SelectTrigger id='create-conversation-select'><SelectValue placeholder='Select or create conversation' /></SelectTrigger><SelectContent><SelectItem value=''>- None -</SelectItem><SelectItem value='new'>- Create New Conversation -</SelectItem>{conversations?.map((conv) =>(<SelectItem key={conv.id} value={conv.id}>{conv.name}</SelectItem>))}</SelectContent></Select></div><div className='flex items-center space-x-2'>
                     id='is-reoccurring'
                     checked={isReoccurring}
                     onCheckedChange={(checked) =>setIsReoccurring(!!checked)}
@@ -227,3 +244,5 @@ export default function TasksPage() {
                         onChange={(e) =>setCreateFormData({ ...createFormData, minutes: Number(e.target.value) })}
                       /></div></>)}</div><DialogFooter><Button variant='outline' onClick={() =>setCreateDialogOpen(false)}>Cancel</Button><Button onClick={handleCreate}>Create Task</Button></DialogFooter></DialogContent></Dialog></div>{isLoading ? (<p>Loading tasks...</p>) : error ? (<p className='text-destructive'>Error loading tasks: {error.message}</p>) : (<DataTable columns={columns} data={tasks || []} />)}</div></SidebarPage>);
 }
+import { useContext } from 'react';
+import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
