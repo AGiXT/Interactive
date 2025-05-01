@@ -52,12 +52,12 @@ export const items: Item[] = [
     icon: LuLink,
     items: [
       {
-        title: 'Chains',
+        title: 'Automation Chains',
         icon: Workflow,
         url: '/settings/chains',
       },
       {
-        title: 'Prompts',
+        title: 'Prompt Library',
         icon: SquareLibrary,
         url: '/settings/prompts',
       },
@@ -67,11 +67,6 @@ export const items: Item[] = [
         url: '/tasks',
       },
     ],
-  },
-  {
-    title: 'Prompt Library',
-    icon: SquareLibrary,
-    url: '/settings/prompts',
   },
   {
     title: 'Agent Management',
