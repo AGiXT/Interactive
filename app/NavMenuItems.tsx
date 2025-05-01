@@ -13,6 +13,7 @@ import {
   Users,
   VenetianMask,
   Workflow,
+  ListTodo,
 } from 'lucide-react';
 import { TbMessageCirclePlus } from 'react-icons/tb';
 type NestedItem = {
@@ -49,12 +50,23 @@ export const items: Item[] = [
   {
     title: 'Automation',
     icon: LuLink,
-    url: '/settings/chains',
-  },
-  {
-    title: 'Prompt Library',
-    icon: SquareLibrary,
-    url: '/settings/prompts',
+    items: [
+      {
+        title: 'Automation Chains',
+        icon: Workflow,
+        url: '/settings/chains',
+      },
+      {
+        title: 'Prompt Library',
+        icon: SquareLibrary,
+        url: '/settings/prompts',
+      },
+      {
+        title: 'Tasks',
+        icon: ListTodo,
+        url: '/tasks',
+      },
+    ],
   },
   {
     title: 'Agent Management',
