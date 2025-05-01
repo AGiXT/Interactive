@@ -63,7 +63,7 @@ function processLaTeX(text: string): Segment[] {
   processed = reprocess(processed, (content: string) => splitUnEscaped(content, '$$'), 'latex-display', true); // Keep delimiters
 
   // Then process inline math ($)
-  processed = reprocess(processed, (content: string) => splitUnEscaped(content, '$'), 'latex', true); // Keep delimiters
+  processed = reprocess(processed, (content: string) => splitUnEscaped(content, '$'), 'latex', false); // Do NOT keep delimiters for inline
 
   return processed;
 }
