@@ -78,7 +78,8 @@ export default function textToMarkdown(text: string) {
       return {
         ...segment,
         type: 'latex-display', // Change type to render as LaTeX display block
-        content: segment.content.substring(6), // Remove 'latex\n' prefix
+        // Wrap the content with $$ for MathJax display math
+        content: `$$${segment.content.substring(6)}$$`,
       };
     }
     return segment;
