@@ -1,4 +1,273 @@
 'use client';
+'use client';
+
+import { SidebarPage } from '@/components/layout/SidebarPage';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DataTable } from '@/components/conversation/Message/data-table';
+import { ColumnDef } from '@tanstack/react-table';
+import { useEffect, useState } from 'react';
+import { getCookie } from 'cookies-next';
+import { LuPlus, LuPencil, LuTrash2, LuExternalLink } from 'react-icons/lu'; // Added icons
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog'; // Added dialog components
+import { Label } from '@/components/ui/label'; // Added Label
+import { Input } from '@/components/ui/input'; // Added Input
+import { Textarea } from '@/components/ui/textarea'; // Added Textarea
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Added Select
+import { useToast } from '@/components/layout/toast'; // Added toast
+import axios from 'axios'; // Added axios
+
+interface Task {
+  id: string;
+  agent_name: string;
+  title: string;
+  task_description: string;
+  due_date: string;
+  estimated_hours: string;
+  priority: string;
+  is_reoccurring: boolean;
+  frequency?: string; // Added frequency for reoccurring tasks
+}
+
+const tasksColumns: ColumnDef<Task>[] = [
+  {
+    accessorKey: 'title',
+    header: 'Title',
+    cell: ({ row }) =>row.getValue('title'),
+  },
+  {
+    accessorKey: 'agent_name',
+    header: 'Agent',
+    cell: ({ row }) =>row.getValue('agent_name'),
+  },
+  {
+    accessorKey: 'due_date',
+    header: 'Due Date',
+    cell: ({ row }) =>{
+      const date = new Date(row.getValue('due_date'));
+      return date.toLocaleString();
+    },
+  },
+  {
+    accessorKey: 'priority',
+    header: 'Priority',
+    cell: ({ row }) =>row.getValue('priority'),
+  },
+  {
+    accessorKey: 'is_reoccurring',
+    header: 'Reoccurring',
+    cell: ({ row }) =>(row.getValue('is_reoccurring') ? 'Yes' : 'No'),
+  },
+  {
+    id: 'actions',
+    header: 'Actions',
+    cell: ({ row }) =>{
+      const task = row.original;
+      const [editDialogOpen, setEditDialogOpen] = useState(false);
+      const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+      const [editedTask, setEditedTask] = useState(task);
+      const { toast } = useToast();
+
+      const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>{
+        const { name, value } = e.target;
+        setEditedTask(prev =>({ ...prev, [name]: value }));
+      };
+
+      const handleEditSubmit = async () =>{
+        try {
+          const token = getCookie('jwt');
+          if (!token) {
+            toast({ title: 'Error', description: 'Authentication token not found.', variant: 'destructive' });
+            return;
+          }
+          const response = await axios.put(
+            `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/task`,
+            {
+              task_id: editedTask.id,
+              title: editedTask.title,
+              description: editedTask.task_description, // Backend uses 'description'
+              due_date: editedTask.due_date,
+              estimated_hours: editedTask.estimated_hours,
+              priority: editedTask.priority,
+            },
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `${token}`,
+              },
+            }
+          );
+          if (response.status === 200) {
+            toast({ title: 'Success', description: 'Task updated successfully.' });
+            // You might need to refresh the table data here
+            // For now, we'll just close the dialog
+            setEditDialogOpen(false);
+            window.location.reload(); // Simple reload for now
+          } else {
+            toast({ title: 'Error', description: response.data?.detail || 'Failed to update task.', variant: 'destructive' });
+          }
+        } catch (error: any) {
+          toast({ title: 'Error', description: error.response?.data?.detail || error.message || 'An error occurred while updating task.', variant: 'destructive' });
+        }
+      };
+
+      const handleDeleteSubmit = async () =>{
+        try {
+          const token = getCookie('jwt');
+          if (!token) {
+            toast({ title: 'Error', description: 'Authentication token not found.', variant: 'destructive' });
+            return;
+          }
+          const response = await axios.delete(
+            `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/task/${task.id}`,
+            {
+              headers: {
+                'Authorization': `${token}`,
+              },
+            }
+          );
+          if (response.status === 200) {
+            toast({ title: 'Success', description: 'Task deleted successfully.' });
+            // Refresh table data
+            setDeleteDialogOpen(false);
+            window.location.reload(); // Simple reload for now
+          } else {
+            toast({ title: 'Error', description: response.data?.detail || 'Failed to delete task.', variant: 'destructive' });
+          }
+        } catch (error: any) {
+          toast({ title: 'Error', description: error.response?.data?.detail || error.message || 'An error occurred while deleting task.', variant: 'destructive' });
+        }
+      };
+
+
+      return (<div className='flex space-x-2'><Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}><DialogTrigger asChild><Button variant="outline" size="sm"><LuPencil className="h-4 w-4 mr-1" />Edit</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Edit Task</DialogTitle><DialogDescription>Modify the details of the task.</DialogDescription></DialogHeader><div className="grid gap-4 py-4"><div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="title" className="text-right">Title</Label><Input id="title" name="title" value={editedTask.title} onChange={handleEditChange} className="col-span-3" /></div><div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="task_description" className="text-right">Description</Label><Textarea id="task_description" name="task_description" value={editedTask.task_description} onChange={handleEditChange} className="col-span-3" /></div><div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="due_date" className="text-right">Due Date</Label>{/* Input type date/datetime-local might be better */}<Input id="due_date" name="due_date" type="datetime-local" value={editedTask.due_date ? new Date(editedTask.due_date).toISOString().slice(0, 16) : ''} onChange={handleEditChange} className="col-span-3" /></div><div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="estimated_hours" className="text-right">Estimated Hours</Label><Input id="estimated_hours" name="estimated_hours" type="number" value={editedTask.estimated_hours} onChange={handleEditChange} className="col-span-3" /></div><div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="priority" className="text-right">Priority</Label><Select name="priority" value={editedTask.priority.toString()} onValueChange={(value) =>handleEditChange({ target: { name: 'priority', value } } as any)}><SelectTrigger className="col-span-3"><SelectValue placeholder="Select priority" /></SelectTrigger><SelectContent>{['1', '2', '3', '4', '5'].map(p =><SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select></div></div><DialogFooter><Button variant="outline" onClick={() =>setEditDialogOpen(false)}>Cancel</Button><Button onClick={handleEditSubmit}>Save changes</Button></DialogFooter></DialogContent></Dialog><Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}><DialogTrigger asChild><Button variant="destructive" size="sm"><LuTrash2 className="h-4 w-4 mr-1" />Delete</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Confirm Deletion</DialogTitle><DialogDescription>Are you sure you want to delete the task "{task.title}"?</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" onClick={() =>setDeleteDialogOpen(false)}>Cancel</Button><Button variant="destructive" onClick={handleDeleteSubmit}>Delete</Button></DialogFooter></DialogContent></Dialog></div>);
+    },
+  },
+];
+
+export default function TasksPage() {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [newTask, setNewTask] = useState({
+    agent_name: 'XT', // Default agent name
+    title: '',
+    task_description: '',
+    days: '0',
+    hours: '0',
+    minutes: '5',
+    start_date: '', // For reoccurring
+    end_date: '', // For reoccurring
+    frequency: 'daily', // For reoccurring
+    is_reoccurring: false,
+    conversation_id: '', // Optional
+  });
+  const { toast } = useToast();
+
+  const fetchTasks = async () =>{
+    setLoading(true);
+    try {
+      const token = getCookie('jwt');
+      if (!token) {
+        toast({ title: 'Error', description: 'Authentication token not found.', variant: 'destructive' });
+        setLoading(false);
+        return;
+      }
+      const response = await fetch(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/tasks`, {
+        headers: {
+          'Authorization': `${token}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setTasks(data.tasks);
+      } else {
+        toast({ title: 'Error', description: 'Failed to fetch tasks.', variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'An error occurred while fetching tasks.', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() =>{
+    fetchTasks();
+  }, []);
+
+  const handleCreateChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>{
+    const { name, value, type, checked } = e.target as HTMLInputElement;
+    setNewTask(prev =>({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  const handleCreateSubmit = async () =>{
+    try {
+      const token = getCookie('jwt');
+      if (!token) {
+        toast({ title: 'Error', description: 'Authentication token not found.', variant: 'destructive' });
+        return;
+      }
+
+      const endpoint = newTask.is_reoccurring ? '/v1/reoccurring_task' : '/v1/task';
+      const body: any = {
+        agent_name: newTask.agent_name,
+        title: newTask.title,
+        task_description: newTask.task_description,
+        conversation_id: newTask.conversation_id || undefined, // Optional
+      };
+
+      if (newTask.is_reoccurring) {
+        body.start_date = newTask.start_date;
+        body.end_date = newTask.end_date;
+        body.frequency = newTask.frequency;
+      } else {
+        body.days = parseInt(newTask.days);
+        body.hours = parseInt(newTask.hours);
+        body.minutes = parseInt(newTask.minutes);
+      }
+
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_AGIXT_SERVER}${endpoint}`,
+        body,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `${token}`,
+          },
+        }
+      );
+
+      if (response.status === 200 || response.status === 201) {
+        toast({ title: 'Success', description: 'Task created successfully.' });
+        setCreateDialogOpen(false);
+        setNewTask({ // Reset form
+          agent_name: 'XT',
+          title: '',
+          task_description: '',
+          days: '0',
+          hours: '0',
+          minutes: '5',
+          start_date: '',
+          end_date: '',
+          frequency: 'daily',
+          is_reoccurring: false,
+          conversation_id: '',
+        });
+        fetchTasks(); // Refresh the list
+      } else {
+        toast({ title: 'Error', description: response.data?.detail || 'Failed to create task.', variant: 'destructive' });
+      }
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.response?.data?.detail || error.message || 'An error occurred while creating task.', variant: 'destructive' });
+    }
+  };
+
+
+  return (<SidebarPage title='Task Management'><Card><CardHeader className='flex flex-row items-center justify-between'><CardTitle>Scheduled Tasks</CardTitle><Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}><DialogTrigger asChild><Button size='sm'><LuPlus className="h-4 w-4 mr-1" />Create Task</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Create New Task</DialogTitle><DialogDescription>Schedule a new one-time or reoccurring task for an agent.</DialogDescription></DialogHeader><div className="grid gap-4 py-4"><div className="flex items-center space-x-2"><Label htmlFor="is_reoccurring">Reoccurring Task?</Label><Input id="is_reoccurring" name="is_reoccurring" type="checkbox" checked={newTask.is_reoccurring} onChange={handleCreateChange} className="w-4 h-4" /></div><div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="agent_name" className="text-right">Agent Name</Label>{/* TODO: Use a proper agent selector */}<Input id="agent_name" name="agent_name" value={newTask.agent_name} onChange={handleCreateChange} className="col-span-3" /></div><div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="title" className="text-right">Title</Label><Input id="title" name="title" value={newTask.title} onChange={handleCreateChange} className="col-span-3" required /></div><div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="task_description" className="text-right">Description</Label><Textarea id="task_description" name="task_description" value={newTask.task_description} onChange={handleCreateChange} className="col-span-3" required /></div>{newTask.is_reoccurring ? (<><div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="start_date" className="text-right">Start Date</Label><Input id="start_date" name="start_date" type="date" value={newTask.start_date} onChange={handleCreateChange} className="col-span-3" required /></div><div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="end_date" className="text-right">End Date</Label><Input id="end_date" name="end_date" type="date" value={newTask.end_date} onChange={handleCreateChange} className="col-span-3" required /></div><div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="frequency" className="text-right">Frequency</Label><Select name="frequency" value={newTask.frequency} onValueChange={(value) =>handleCreateChange({ target: { name: 'frequency', value } } as any)}><SelectTrigger className="col-span-3"><SelectValue placeholder="Select frequency" /></SelectTrigger><SelectContent>{['daily', 'weekly', 'monthly', 'annually'].map(f =><SelectItem key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</SelectItem>)}</SelectContent></Select></div></>) : (<><div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="days" className="text-right">Days from now</Label><Input id="days" name="days" type="number" value={newTask.days} onChange={handleCreateChange} className="col-span-3" required /></div><div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="hours" className="text-right">Hours from now</Label><Input id="hours" name="hours" type="number" value={newTask.hours} onChange={handleCreateChange} className="col-span-3" required /></div><div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="minutes" className="text-right">Minutes from now</Label><Input id="minutes" name="minutes" type="number" value={newTask.minutes} onChange={handleCreateChange} className="col-span-3" required /></div></>)}<div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="conversation_id" className="text-right">Conversation ID (Optional)</Label><Input id="conversation_id" name="conversation_id" value={newTask.conversation_id} onChange={handleCreateChange} className="col-span-3" /></div></div><DialogFooter><Button variant="outline" onClick={() =>setCreateDialogOpen(false)}>Cancel</Button><Button onClick={handleCreateSubmit} disabled={!newTask.title || !newTask.task_description || (newTask.is_reoccurring && (!newTask.start_date || !newTask.end_date || !newTask.frequency)) || (!newTask.is_reoccurring && (newTask.days === '' || newTask.hours === '' || newTask.minutes === ''))}>Create Task</Button></DialogFooter></DialogContent></Dialog></CardHeader><CardContent>{loading ? (<p>Loading tasks...</p>) : (<DataTable columns={tasksColumns} data={tasks} />)}</CardContent></Card></SidebarPage>);
+}
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
