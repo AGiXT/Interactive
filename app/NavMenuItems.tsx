@@ -220,3 +220,11 @@ LuCheck, // Added Icon for Check
     icon: LuClipboardList,
     url: '/tasks',
   },
+        LuCheck, // Added Icon for Check
+          LuClipboardList, // Added Icon for Task Management
+        ] from 'react-icons/lu';
+        {
+            title: 'Task Management',
+            icon: LuClipboardList,
+            url: '/tasks',
+          },
