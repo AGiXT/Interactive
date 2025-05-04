@@ -137,6 +137,7 @@ export const useAuth: MiddlewareHook = async (req) => {
   // Skip auth for public user routes (login, register) and OAuth close page
   if (
     req.nextUrl.pathname.startsWith('/user/close') ||
+    req.nextUrl.pathname.startsWith('/user/mobile') ||
     req.nextUrl.pathname === '/user' ||
     req.nextUrl.pathname === '/user/login' ||
     req.nextUrl.pathname === '/user/register'
@@ -334,22 +335,23 @@ export const useJWTQueryParam: MiddlewareHook = async (req) => {
   const toReturn = {
     activated: false,
     // This should set the cookie and then re-run the middleware (without query params).
-    response: req.nextUrl.pathname.startsWith('/user/close')
-      ? NextResponse.next({
-          // @ts-expect-error NextJS' types are wrong.
-          headers: {
-            'Set-Cookie': [generateCookieString('jwt', queryParams.token ?? queryParams.jwt, (86400 * 7).toString())],
-          },
-        })
-      : NextResponse.redirect(req.cookies.get('href')?.value ?? process.env.APP_URI ?? '', {
-          // @ts-expect-error NextJS' types are wrong.
-          headers: {
-            'Set-Cookie': [
-              generateCookieString('jwt', queryParams.token ?? queryParams.jwt, (86400 * 7).toString()),
-              generateCookieString('href', '', (0).toString()),
-            ],
-          },
-        }),
+    response:
+      req.nextUrl.pathname.startsWith('/user/close') || req.nextUrl.pathname.startsWith('/user/mobile')
+        ? NextResponse.next({
+            // @ts-expect-error NextJS' types are wrong.
+            headers: {
+              'Set-Cookie': [generateCookieString('jwt', queryParams.token ?? queryParams.jwt, (86400 * 7).toString())],
+            },
+          })
+        : NextResponse.redirect(req.cookies.get('href')?.value ?? process.env.APP_URI ?? '', {
+            // @ts-expect-error NextJS' types are wrong.
+            headers: {
+              'Set-Cookie': [
+                generateCookieString('jwt', queryParams.token ?? queryParams.jwt, (86400 * 7).toString()),
+                generateCookieString('href', '', (0).toString()),
+              ],
+            },
+          }),
   };
   if (queryParams.token || queryParams.jwt) {
     toReturn.activated = true;
