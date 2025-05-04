@@ -278,7 +278,9 @@ function logJwtError(exception: any, authWeb: string) {
 }
 export const useOAuth2: MiddlewareHook = async (req) => {
   const provider = req.nextUrl.pathname.split('?')[0].split('/').pop();
-  const redirect = new URL(`${authWeb}/close/${provider}`);
+  const redirect = req.nextUrl.pathname.startsWith('/user/mobile')
+    ? new URL(`${authWeb}/mobile/${provider}`)
+    : new URL(`${authWeb}/close/${provider}`);
   let toReturn = {
     activated: false,
     response: NextResponse.redirect(redirect),
