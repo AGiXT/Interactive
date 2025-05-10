@@ -67,6 +67,7 @@ export const items: Item[] = [
         url: '/tasks',
       },
     ],
+    roleThreshold: 3,
   },
   {
     title: 'Agent Management',
@@ -102,6 +103,7 @@ export const items: Item[] = [
         url: '/settings',
       },
     ],
+    roleThreshold: 3,
   },
   {
     title: 'Team',
@@ -222,5 +224,6 @@ export const items: Item[] = [
         ],
       },
     ],
+    roleThreshold: 3,
   },
 ];

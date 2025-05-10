@@ -642,7 +642,9 @@ export function SidebarMain({ ...props }: React.ComponentProps<typeof Sidebar>) 
   const [hasStarted, setHasStarted] = useState(false);
   const pathname = usePathname();
   const { data: user } = useUser();
+  const { data: activeCompany } = useCompany();
   const isAuthenticated = !!user?.email;
+  const isChildRole = activeCompany?.roleId === 4;
 
   useEffect(() => {
     if (getCookie('agixt-has-started') === 'true') {
@@ -655,8 +657,17 @@ export function SidebarMain({ ...props }: React.ComponentProps<typeof Sidebar>) 
   return (
     <Sidebar collapsible='icon' {...props} className='hide-scrollbar'>
       <SidebarHeader>
-        {isAuthenticated ? (
+        {isAuthenticated && !isChildRole ? (
           <AgentSelector />
+        ) : isAuthenticated && isChildRole ? (
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton side='left' size='lg' className='gap-2'>
+                <ChevronLeft className='h-4 w-4' />
+                Child Mode
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
         ) : (
           <SidebarMenu>
             <SidebarMenuItem>
@@ -677,7 +688,7 @@ export function SidebarMain({ ...props }: React.ComponentProps<typeof Sidebar>) 
       <SidebarFooter>
         {/* <NotificationsNavItem /> */}
         <ToggleSidebar side='left' />
-        {isAuthenticated && <NavUser />}
+        {isAuthenticated && !isChildRole && <NavUser />}
       </SidebarFooter>
       <SidebarRail side='left' />
     </Sidebar>

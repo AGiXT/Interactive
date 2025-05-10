@@ -7,9 +7,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 export interface VoiceRecorderProps {
   onSend: (message: string | object, uploadedFiles?: { [x: string]: string }) => Promise<void>;
   disabled: boolean;
+  className?: string;
 }
 
-export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onSend, disabled }) => {
+export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onSend, disabled, className }) => {
   const [isRecording, setIsRecording] = useState(false);
   const silenceTimer = useRef<NodeJS.Timeout | null>(null);
   const audioContext = useRef<AudioContext | null>(null);
@@ -240,6 +241,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onSend, disabled }
           className={cn(
             'transition-all duration-300 ease-in-out rounded-full',
             isRecording ? 'w-10 bg-red-500 hover:bg-red-600' : 'w-10',
+            className
           )}
           size='icon'
           variant='ghost'

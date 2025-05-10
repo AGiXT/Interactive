@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/ui/sidebar';
 import { ChatBar } from '@/components/conversation/input/chat-input';
+import { VoiceRecorder } from '@/components/conversation/input/VoiceRecorder';
 import { Button } from '@/components/ui/button';
 
 export type UIProps = {
@@ -616,17 +617,32 @@ export function Chat({
         setLoading={setLoading}
         loading={loading}
       />
-      <ChatBar
-        onSend={chat}
-        disabled={loading}
-        enableFileUpload={enableFileUpload}
-        enableVoiceInput={enableVoiceInput}
-        loading={loading}
-        setLoading={setLoading}
-        showOverrideSwitchesCSV={showOverrideSwitchesCSV}
-        showResetConversation={false}
-        isEmptyConversation={isEmptyConversation}
-      />
+      {activeCompany?.roleId === 4 ? (
+        <div className='relative border-t z-10 bg-background py-4 px-4 flex flex-col items-center justify-center'>
+          <div className='flex items-center justify-center w-24 h-24 rounded-full bg-primary shadow-lg hover:scale-105 transition-transform'>
+            <VoiceRecorder 
+              onSend={chat} 
+              disabled={loading}
+              className='w-20 h-20 !text-white' 
+            />
+          </div>
+          <div className='mt-2 text-sm font-medium text-center text-muted-foreground'>
+            {loading ? 'Listening...' : 'Tap to speak'}
+          </div>
+        </div>
+      ) : (
+        <ChatBar
+          onSend={chat}
+          disabled={loading}
+          enableFileUpload={enableFileUpload}
+          enableVoiceInput={enableVoiceInput}
+          loading={loading}
+          setLoading={setLoading}
+          showOverrideSwitchesCSV={showOverrideSwitchesCSV}
+          showResetConversation={false}
+          isEmptyConversation={isEmptyConversation}
+        />
+      )}
     </>
   );
 }
