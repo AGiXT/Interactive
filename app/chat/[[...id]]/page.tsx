@@ -1,11 +1,13 @@
 'use client';
 
 import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { SidebarPage } from '@/components/layout/SidebarPage';
-import React, { ReactNode, useMemo } from 'react';
+import React, { ReactNode } from 'react';
 import { Chat } from '@/components/conversation/conversation';
 import { Overrides } from '@/components/interactive/InteractiveConfigContext';
+import { useConversations } from '@/components/interactive/useConversation';
+import { ChatTopBar } from '@/components/conversation/ChatTopBar';
 
 export type FormProps = {
   fieldOverrides?: { [key: string]: ReactNode };
@@ -64,8 +66,22 @@ export function ConvSwitch({ id }: { id: string }) {
 }
 
 export default function Home({ params }: { params: { id: string } }) {
+  const state = useInteractiveConfig();
+  const { data: conversations } = useConversations();
+  const [currentConversation, setCurrentConversation] = useState<any>(null);
+  
+  useEffect(() => {
+    if (conversations && params.id) {
+      const conv = conversations.find((conv) => conv.id === params.id);
+      setCurrentConversation(conv);
+    }
+  }, [conversations, params.id]);
+  
   return (
-    <SidebarPage title='Chat'>
+    <SidebarPage 
+      title={currentConversation?.name || 'Chat'} 
+      headerActions={<ChatTopBar currentConversation={currentConversation} />}
+    >
       <ConvSwitch id={params.id} />
       <AGiXTInteractive
         uiConfig={{
