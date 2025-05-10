@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useContext } from 'react';
 import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
 import { toast } from '@/components/layout/toast';
@@ -25,29 +23,38 @@ export function ChatTopBar({ currentConversation }: ChatTopBarProps) {
   const state = useContext(InteractiveConfigContext);
   const router = useRouter();
 
+  // Debug information
+  console.log('ChatTopBar rendered with currentConversation:', currentConversation);
+
   // Function to handle conversation deletion
   const handleDeleteConversation = async (): Promise<void> => {
     try {
-      await state.agixt.deleteConversation(currentConversation?.id || '-');
+      if (currentConversation?.id) {
+        await state?.agixt?.deleteConversation(currentConversation.id);
 
-      // Properly invalidate both the conversation list and the specific conversation cache
-      await mutate('/conversations');
-      await mutate(conversationSWRPath + state.overrides.conversation);
+        // Properly invalidate both the conversation list and the specific conversation cache
+        await mutate('/conversations');
+        if (state?.overrides?.conversation) {
+          await mutate(conversationSWRPath + state.overrides.conversation);
+        }
 
-      // Update the state
-      state.mutate((oldState) => ({
-        ...oldState,
-        overrides: { ...oldState.overrides, conversation: '-' },
-      }));
+        // Update the state
+        if (state?.mutate) {
+          state.mutate((oldState: any) => ({
+            ...oldState,
+            overrides: { ...oldState.overrides, conversation: '-' },
+          }));
+        }
 
-      // Navigate to the main chat route
-      router.push('/chat');
+        // Navigate to the main chat route
+        router.push('/chat');
 
-      toast({
-        title: 'Success',
-        description: 'Conversation deleted successfully',
-        duration: 3000,
-      });
+        toast({
+          title: 'Success',
+          description: 'Conversation deleted successfully',
+          duration: 3000,
+        });
+      }
     } catch (error) {
       toast({
         title: 'Error',
@@ -71,17 +78,21 @@ export function ChatTopBar({ currentConversation }: ChatTopBarProps) {
         return;
       }
 
-      await state.agixt.renameConversation(getCookie('agixt-agent'), currentConversation?.id || '-', newName);
+      if (currentConversation?.id && state?.agixt) {
+        await state.agixt.renameConversation(getCookie('agixt-agent') as string || '', currentConversation.id, newName);
 
-      // Properly invalidate both the conversation list and the specific conversation
-      await mutate('/conversations');
-      await mutate(conversationSWRPath + state.overrides.conversation);
+        // Properly invalidate both the conversation list and the specific conversation
+        await mutate('/conversations');
+        if (state?.overrides?.conversation) {
+          await mutate(conversationSWRPath + state.overrides.conversation);
+        }
 
-      toast({
-        title: 'Success',
-        description: 'Conversation renamed successfully',
-        duration: 3000,
-      });
+        toast({
+          title: 'Success',
+          description: 'Conversation renamed successfully',
+          duration: 3000,
+        });
+      }
     } catch (error) {
       console.error('Rename error:', error);
       toast({
@@ -96,37 +107,39 @@ export function ChatTopBar({ currentConversation }: ChatTopBarProps) {
   const handleExportConversation = async (): Promise<void> => {
     try {
       // Get the full conversation content
-      const conversationContent = await state.agixt.getConversation('', currentConversation?.id || '-');
+      if (currentConversation?.id && state?.agixt) {
+        const conversationContent = await state.agixt.getConversation('', currentConversation.id);
 
-      // Format the conversation for export
-      const exportData = {
-        name: currentConversation?.name || 'Conversation',
-        id: currentConversation?.id || '-',
-        created_at: currentConversation?.createdAt || new Date().toISOString(),
-        messages: conversationContent.map((msg) => ({
-          role: msg.role,
-          content: msg.message,
-          timestamp: msg.timestamp,
-        })),
-      };
+        // Format the conversation for export
+        const exportData = {
+          name: currentConversation?.name || 'Conversation',
+          id: currentConversation.id,
+          created_at: currentConversation?.createdAt || new Date().toISOString(),
+          messages: conversationContent.map((msg: any) => ({
+            role: msg.role,
+            content: msg.message,
+            timestamp: msg.timestamp,
+          })),
+        };
 
-      // Create and trigger download
-      const element = document.createElement('a');
-      const file = new Blob([JSON.stringify(exportData, null, 2)], {
-        type: 'application/json',
-      });
-      element.href = URL.createObjectURL(file);
-      element.download = `${currentConversation?.name || 'Conversation'}_${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(element);
-      element.click();
-      document.body.removeChild(element);
-      URL.revokeObjectURL(element.href);
+        // Create and trigger download
+        const element = document.createElement('a');
+        const file = new Blob([JSON.stringify(exportData, null, 2)], {
+          type: 'application/json',
+        });
+        element.href = URL.createObjectURL(file);
+        element.download = `${currentConversation?.name || 'Conversation'}_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
+        URL.revokeObjectURL(element.href);
 
-      toast({
-        title: 'Success',
-        description: 'Conversation exported successfully',
-        duration: 3000,
-      });
+        toast({
+          title: 'Success',
+          description: 'Conversation exported successfully',
+          duration: 3000,
+        });
+      }
     } catch (error) {
       toast({
         title: 'Error',
@@ -144,39 +157,45 @@ export function ChatTopBar({ currentConversation }: ChatTopBarProps) {
 
   const isButtonsDisabled = !currentConversation?.id || currentConversation?.id === '-';
 
+  // Debug information
+  console.log('ChatTopBar - currentConversation:', currentConversation);
+  console.log('ChatTopBar - isButtonsDisabled:', isButtonsDisabled);
+
   return (
     <>
-      <div className='flex items-center gap-2'>
-        {!isButtonsDisabled && (
-          <>
-            <Button variant='ghost' size='icon' onClick={openRenameDialog} disabled={isButtonsDisabled} className='h-8 w-8'>
-              <Pencil className='h-4 w-4' />
-              <span className='sr-only'>Rename</span>
-            </Button>
+      <div className='flex items-center gap-2 h-full'>
+        <Button
+          variant='outline'
+          size='sm'
+          onClick={openRenameDialog}
+          disabled={isButtonsDisabled}
+          className='h-8'
+        >
+          <Pencil className='h-4 w-4 mr-2' />
+          Rename
+        </Button>
 
-            <Button
-              variant='ghost'
-              size='icon'
-              onClick={handleExportConversation}
-              disabled={isButtonsDisabled}
-              className='h-8 w-8'
-            >
-              <Download className='h-4 w-4' />
-              <span className='sr-only'>Export</span>
-            </Button>
+        <Button
+          variant='outline'
+          size='sm'
+          onClick={handleExportConversation}
+          disabled={isButtonsDisabled}
+          className='h-8'
+        >
+          <Download className='h-4 w-4 mr-2' />
+          Export
+        </Button>
 
-            <Button
-              variant='ghost'
-              size='icon'
-              onClick={() => setDeleteDialogOpen(true)}
-              disabled={isButtonsDisabled}
-              className='h-8 w-8'
-            >
-              <Trash2 className='h-4 w-4' />
-              <span className='sr-only'>Delete</span>
-            </Button>
-          </>
-        )}
+        <Button
+          variant='outline'
+          size='sm'
+          onClick={() => setDeleteDialogOpen(true)}
+          disabled={isButtonsDisabled}
+          className='h-8'
+        >
+          <Trash2 className='h-4 w-4 mr-2' />
+          Delete
+        </Button>
       </div>
 
       {/* Rename Dialog */}
