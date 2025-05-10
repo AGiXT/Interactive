@@ -100,35 +100,35 @@ export const useAuth: MiddlewareHook = async (req) => {
   }
 
   // Handle email verification
-  if (queryParams['verify_email'] && queryParams['email']) {
+  if (queryParams.verify_email && queryParams.email) {
     await fetch(`${process.env.AGIXT_SERVER}/v1/user/verify/email`, {
       method: 'POST',
       body: JSON.stringify({
-        email: queryParams['email'],
-        code: queryParams['verify_email'],
+        email: queryParams.email,
+        code: queryParams.verify_email,
       }),
       headers: {
         'Content-Type': 'application/json',
       },
     });
+  }
 
-    if (queryParams.invitation_id && queryParams.email) {
-      const cookieArray = [
-        generateCookieString('email', queryParams.email, (86400).toString()),
-        generateCookieString('invitation', queryParams.invitation_id, (86400).toString()),
-      ];
-      if (queryParams.company) {
-        cookieArray.push(generateCookieString('company', queryParams.company, (86400).toString()));
-      }
-      toReturn.activated = true;
-      toReturn.response = NextResponse.redirect(`${authWeb}/register`, {
-        // @ts-expect-error NextJS' types are wrong.
-        headers: {
-          'Set-Cookie': cookieArray,
-        },
-      });
-      return toReturn;
+  if (queryParams.invitation_id && queryParams.email) {
+    const cookieArray = [
+      generateCookieString('email', queryParams.email, (86400).toString()),
+      generateCookieString('invitation', queryParams.invitation_id, (86400).toString()),
+    ];
+    if (queryParams.company) {
+      cookieArray.push(generateCookieString('company', queryParams.company, (86400).toString()));
     }
+    toReturn.activated = true;
+    toReturn.response = NextResponse.redirect(`${authWeb}/register`, {
+      // @ts-expect-error NextJS' types are wrong.
+      headers: {
+        'Set-Cookie': cookieArray,
+      },
+    });
+    return toReturn;
   }
 
   // Check if the route requires authentication
