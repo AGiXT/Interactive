@@ -46,8 +46,9 @@ interface User {
 }
 
 const ROLES = [
-  { id: 2, name: 'Admin' },
-  { id: 3, name: 'User' },
+  { id: 2, name: 'Admin', description: 'Full access to all features, including user management' },
+  { id: 3, name: 'User', description: 'Standard user with access to most features' },
+  { id: 4, name: 'Child', description: 'Simplified interface with restricted features for children' },
 ];
 
 interface Invitation {
@@ -244,6 +245,38 @@ export const TeamUsers = () => {
               <DropdownMenuItem
                 onClick={(e) => {
                   const data = {
+                      role_id: 4,
+                      company_id: activeCompany?.id,
+                      user_id: row.original.id
+                    }
+                  axios.put(
+                    `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user/role`,
+                    data,
+                    {
+                      headers: {
+                        Authorization: getCookie('jwt'),
+                        'Content-Type': 'application/json',
+                        },
+                      },
+                    ).then((response)=>{
+                    mutate();
+                    setResponseMessage('User Role updated successfully!');
+                    })
+                  }
+                }
+                className='p-0'
+              >
+                <Button 
+                  variant='ghost' 
+                  className='justify-start w-full text-white-600 hover:text-blue-600 text-left whitespace-normal break-words px-2'
+                >
+                  Change Role To Child
+                </Button>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={(e) => {
+                  const data = {
                       role_id: 2,
                       company_id: activeCompany?.id,
                       user_id: row.original.id
@@ -379,6 +412,7 @@ export const TeamUsers = () => {
           1: 'Root Admin',
           2: 'Team Admin',
           3: 'User',
+          4: 'Child',
         };
         return (
           <div className='flex w-[100px] items-center'>
@@ -580,15 +614,25 @@ export const TeamUsers = () => {
 
         <div className='space-y-2'>
           <Label htmlFor='role'>Role</Label>
+          <p className='text-sm text-muted-foreground mb-2'>Select the appropriate role for this user. Hover over roles for details.</p>
           <Select value={roleId} onValueChange={setRoleId}>
             <SelectTrigger className='w-full'>
               <SelectValue placeholder='Select a role' />
             </SelectTrigger>
             <SelectContent>
               {ROLES.map((role) => (
-                <SelectItem key={role.id} value={role.id.toString()}>
-                  {role.name}
-                </SelectItem>
+                <TooltipProvider key={role.id}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <SelectItem key={role.id} value={role.id.toString()}>
+                        {role.name}
+                      </SelectItem>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      <p>{role.description}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               ))}
             </SelectContent>
           </Select>
