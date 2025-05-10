@@ -45,7 +45,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { setCookie } from 'cookies-next';
-import { Check, ChevronsUpDown, Plus } from 'lucide-react';
+import { Check, ChevronsUpDown, Plus, BookOpen } from 'lucide-react';
 import { FaRobot } from 'react-icons/fa';
 import { Agent, useAgent, useAgents } from '@/components/interactive/useAgent';
 import { useMemo } from 'react';
@@ -59,16 +59,69 @@ export function AgentSelector() {
   const { data: activeCompany, mutate: mutateActiveCompany, error: companyError } = useCompany();
   const { data: agentsData } = useAgents();
   const router = useRouter();
-  console.error({ agentError, companyError });
+  const [isSwitching, setIsSwitching] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  
+  // Handle data fetch errors more gracefully
+  useEffect(() => {
+    if (agentError || companyError) {
+      console.error({ agentError, companyError });
+      
+      // Retry fetching if we have errors and haven't exceeded max retries
+      if (retryCount < 3) {
+        const timer = setTimeout(() => {
+          setRetryCount(prev => prev + 1);
+          mutateActiveAgent();
+          mutateActiveCompany();
+        }, 1000); // Wait 1 second before retrying
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [agentError, companyError, mutateActiveAgent, mutateActiveCompany, retryCount]);
 
-  const switchAgents = (agent: Agent) => {
-    // setActiveAgent(agent);
-    setCookie('agixt-agent', agent.name, {
-      domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
-    });
-    mutateActiveCompany();
-    mutateActiveAgent();
+  // Ensure agent and company data stay in sync
+  useEffect(() => {
+    const agentName = getCookie('agixt-agent');
+    
+    // Check if activeAgent exists but doesn't match the cookie
+    if (activeAgent?.agent && agentName && activeAgent.agent.name !== agentName) {
+      mutateActiveAgent();
+    }
+    
+    // Check if we have an activeAgent but no company or mismatched company
+    if (activeAgent?.agent && (!activeCompany || !activeCompany.agents.some(a => a.id === activeAgent.agent?.id))) {
+      mutateActiveCompany();
+    }
+  }, [activeAgent, activeCompany, mutateActiveAgent, mutateActiveCompany]);
+
+  const switchAgents = async (agent: Agent) => {
+    try {
+      setIsSwitching(true);
+      
+      // Set the cookie first
+      setCookie('agixt-agent', agent.name, {
+        domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
+      });
+      
+      // Update company state first (since agent depends on it)
+      await mutateActiveCompany();
+      
+      // Then update agent state
+      await mutateActiveAgent();
+      
+      // Reset retry counter on successful switch
+      setRetryCount(0);
+    } catch (error) {
+      console.error('Error switching agents:', error);
+    } finally {
+      setIsSwitching(false);
+    }
   };
+
+  // Determine if we're in a loading or error state
+  const isLoading = !activeAgent || !activeCompany || isSwitching;
+  const hasError = (agentError || companyError) && retryCount >= 3;
 
   return (
     <SidebarMenu>
@@ -79,15 +132,34 @@ export function AgentSelector() {
               side='left'
               size='lg'
               className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
+              disabled={isSwitching}
             >
               <div className='flex items-center justify-center rounded-lg aspect-square size-8 bg-sidebar-primary text-sidebar-primary-foreground'>
                 <FaRobot className='size-4' />
               </div>
               <div className='grid flex-1 text-sm leading-tight text-left'>
-                <span className='font-semibold truncate'>{activeAgent?.agent?.name}</span>
-                <span className='text-xs truncate'>{activeCompany?.name}</span>
+                {isLoading ? (
+                  <>
+                    <span className='font-semibold truncate'>Loading...</span>
+                    <span className='text-xs truncate'>Please wait</span>
+                  </>
+                ) : hasError ? (
+                  <>
+                    <span className='font-semibold truncate text-destructive'>Error</span>
+                    <span className='text-xs truncate'>Try again later</span>
+                  </>
+                ) : (
+                  <>
+                    <span className='font-semibold truncate'>{activeAgent?.agent?.name}</span>
+                    <span className='text-xs truncate'>{activeCompany?.name}</span>
+                  </>
+                )}
               </div>
-              <ChevronsUpDown className='ml-auto' />
+              {isSwitching ? (
+                <div className='ml-auto h-4 w-4 animate-spin rounded-full border-b-2 border-t-2 border-primary'></div>
+              ) : (
+                <ChevronsUpDown className='ml-auto' />
+              )}
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -97,12 +169,13 @@ export function AgentSelector() {
             sideOffset={4}
           >
             <DropdownMenuLabel className='text-xs text-muted-foreground'>Agents</DropdownMenuLabel>
-            {agentsData &&
+            {agentsData && agentsData.length > 0 ? (
               agentsData.map((agent) => (
                 <DropdownMenuItem
                   key={agent.id}
-                  onClick={() => switchAgents(agent)}
+                  onClick={() => !isSwitching && switchAgents(agent)}
                   className='flex items-center justify-between p-2 cursor-pointer'
+                  disabled={isSwitching}
                 >
                   <div className='flex flex-col'>
                     <span>{agent.name}</span>
@@ -110,13 +183,17 @@ export function AgentSelector() {
                   </div>
                   {activeAgent?.agent?.id === agent.id && <Check className='w-4 h-4 ml-2' />}
                 </DropdownMenuItem>
-              ))}
+              ))
+            ) : (
+              <div className='py-2 px-2 text-sm text-muted-foreground'>No agents available</div>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className='gap-2 p-2 cursor-pointer'
               onClick={() => {
                 router.push('/settings');
               }}
+              disabled={isSwitching}
             >
               <div className='flex items-center justify-center border rounded-md size-6 bg-background'>
                 <Plus className='size-4' />
@@ -286,9 +363,35 @@ export function NavMain() {
   const router = useRouter();
   const pathname = usePathname();
   const queryParams = useSearchParams();
-  const { data: company, error: companyError, isLoading: isCompanyLoading } = useCompany();
+  const { data: company, error: companyError, isLoading: isCompanyLoading, mutate: mutateCompany } = useCompany();
   const { toggleSidebar, open } = useSidebar('left');
   const [isJwtLoaded, setIsJwtLoaded] = useState(false);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+
+  // Handle loading timeout
+  useEffect(() => {
+    // Set a timeout to force loading to end after 5 seconds
+    const timer = setTimeout(() => {
+      if (isCompanyLoading && !company) {
+        setLoadingTimeout(true);
+      }
+    }, 5000);
+    
+    return () => clearTimeout(timer);
+  }, [isCompanyLoading, company]);
+
+  // Add retry logic for failed loading
+  useEffect(() => {
+    if (companyError && retryCount < 3) {
+      const timer = setTimeout(() => {
+        setRetryCount(prev => prev + 1);
+        mutateCompany();
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [companyError, mutateCompany, retryCount]);
 
   // Check JWT existence once component mounts
   useEffect(() => {
@@ -320,8 +423,51 @@ export function NavMain() {
     }));
   }, [company, companyError, pathname, queryParams]);
 
-  // Show loading state until all data is ready
-  const isLoading = !isJwtLoaded || isCompanyLoading;
+  // Show loading state until all data is ready (with timeout)
+  const isLoading = (!isJwtLoaded || isCompanyLoading) && !loadingTimeout;
+  
+  // If timeout occurred or we've retried and still have an error, show a partial UI
+  if (loadingTimeout || (companyError && retryCount >= 3)) {
+    return (
+      <SidebarGroup>
+        <SidebarGroupLabel>Pages</SidebarGroupLabel>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton 
+              side='left'
+              className='text-destructive'
+              onClick={() => {
+                setLoadingTimeout(false);
+                setRetryCount(0);
+                mutateCompany();
+              }}
+            >
+              <span>Error loading pages</span>
+              <span className='text-xs text-muted-foreground'>Click to retry</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          {/* Always show Documentation as fallback */}
+          <Collapsible asChild defaultOpen className='group/collapsible'>
+            <SidebarMenuItem>
+              <CollapsibleTrigger asChild>
+                <SidebarMenuButton
+                  side='left'
+                  tooltip="Documentation"
+                  onClick={() => {
+                    if (!open) toggleSidebar();
+                    router.push('/docs');
+                  }}
+                >
+                  <BookOpen />
+                  <span>Documentation</span>
+                </SidebarMenuButton>
+              </CollapsibleTrigger>
+            </SidebarMenuItem>
+          </Collapsible>
+        </SidebarMenu>
+      </SidebarGroup>
+    );
+  }
 
   if (isLoading) {
     return (
