@@ -130,6 +130,45 @@ export const useAuth: MiddlewareHook = async (req) => {
       return toReturn;
     }
   }
+  
+  // Handle invitation links directly (without email verification)
+  if (queryParams.invitation_id && queryParams.email) {
+    const cookieArray = [
+      generateCookieString('email', queryParams.email, (86400).toString()),
+      generateCookieString('invitation', queryParams.invitation_id, (86400).toString()),
+    ];
+    if (queryParams.company) {
+      cookieArray.push(generateCookieString('company', queryParams.company, (86400).toString()));
+    }
+    toReturn.activated = true;
+    toReturn.response = NextResponse.redirect(`${authWeb}/register`, {
+      // @ts-expect-error NextJS' types are wrong.
+      headers: {
+        'Set-Cookie': cookieArray,
+      },
+    });
+    return toReturn;
+  }
+  
+  // Handle invitation links directly
+  if (queryParams.invitation_id && queryParams.email) {
+    const cookieArray = [
+      generateCookieString('email', queryParams.email, (86400).toString()),
+      generateCookieString('invitation', queryParams.invitation_id, (86400).toString()),
+    ];
+    if (queryParams.company) {
+      cookieArray.push(generateCookieString('company', queryParams.company, (86400).toString()));
+    }
+    toReturn.activated = true;
+    toReturn.response = NextResponse.redirect(`${authWeb}/register`, {
+      // @ts-expect-error NextJS' types are wrong.
+      headers: {
+        'Set-Cookie': cookieArray,
+      },
+    });
+    return toReturn;
+  }
+  }
 
   // Check if the route requires authentication
   const isPrivateRoute = process.env.PRIVATE_ROUTES?.split(',').some((path) => req.nextUrl.pathname.startsWith(path));

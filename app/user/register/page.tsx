@@ -83,8 +83,20 @@ export default function Register(): ReactNode {
 
   // Check for invitation cookie
   useEffect(() => {
-    if (getCookie('invitation')) {
-      setInvite(getCookie('company') || '');
+    const invitation = getCookie('invitation');
+    const emailCookie = getCookie('email');
+    const company = getCookie('company');
+    
+    if (invitation) {
+      setInvite(company?.toString() || '');
+      
+      // Pre-fill email field if available
+      if (emailCookie && formRef.current) {
+        const emailInput = formRef.current.querySelector('input[name="email"]');
+        if (emailInput) {
+          emailInput.value = emailCookie.toString();
+        }
+      }
     }
   }, []);
 

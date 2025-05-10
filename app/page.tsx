@@ -1,11 +1,11 @@
 // ./app/page.tsx
 'use client';
-import { getCookie } from 'cookies-next';
-import { redirect } from 'next/navigation';
+import { getCookie, setCookie } from 'cookies-next';
+import { redirect, useRouter } from 'next/navigation';
 import { ThemeToggle } from '@/components/layout/themes';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import React, { useState } from 'react'; // Added useState
+import React, { useState, useEffect } from 'react'; // Added useEffect
 import {
   LuDatabase as Database,
   LuBrainCircuit as BrainCircuit,
@@ -176,6 +176,32 @@ const copyToClipboard = (text: string, successMessage: string) => {
 };
 
 export default function Home() {
+  const router = useRouter();
+  
+  // Check for invitation parameters in URL
+  useEffect(() => {
+    // Get the current URL and parse the search parameters
+    const url = new URL(window.location.href);
+    const params = url.searchParams;
+    
+    // Check if invitation_id and email parameters exist
+    if (params.has('invitation_id') && params.has('email')) {
+      const invitationId = params.get('invitation_id');
+      const email = params.get('email');
+      const company = params.get('company') || '';
+      
+      // Store these values in cookies
+      setCookie('invitation', invitationId, { maxAge: 86400 });
+      setCookie('email', email, { maxAge: 86400 });
+      if (company) {
+        setCookie('company', company, { maxAge: 86400 });
+      }
+      
+      // Redirect to registration page
+      router.push('/user/register');
+    }
+  }, [router]);
+
   if (getCookie('jwt')) {
     redirect('/chat');
   }
