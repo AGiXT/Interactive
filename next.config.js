@@ -12,6 +12,25 @@ let nextConfig = {
     // Warning: Dangerously allow production builds to successfully complete even if your project has type errors.
     ignoreBuildErrors: true,
   },
+  async redirects() {
+    return [
+      {
+        source: '/',
+        has: [
+          {
+            type: 'query',
+            key: 'invitation_id',
+          },
+          {
+            type: 'query',
+            key: 'email',
+          }
+        ],
+        destination: '/invite?invitation_id=:invitation_id&email=:email&company=:company',
+        permanent: false,
+      },
+    ];
+  },
   env: {
     NEXT_PUBLIC_COOKIE_DOMAIN: (() => {
       const domain = ((APP_URI ?? '').split('://')[1] ?? '').split(':')[0];

@@ -1,6 +1,6 @@
 'use client';
 import axios, { AxiosError } from 'axios';
-import { getCookie } from 'cookies-next';
+import { getCookie, setCookie } from 'cookies-next';
 import { useRouter } from 'next/navigation';
 import React, { FormEvent, ReactNode, useEffect, useState, useRef } from 'react';
 import { ReCAPTCHA } from 'react-google-recaptcha';
@@ -81,8 +81,31 @@ export default function Register(): ReactNode {
     }
   };
 
-  // Check for invitation cookie
+  // Check for invitation parameters in URL and cookies
   useEffect(() => {
+    // First, check for URL parameters if they exist
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      const params = url.searchParams;
+      
+      if (params.has('invitation_id') && params.has('email')) {
+        const invitationId = params.get('invitation_id');
+        const email = params.get('email');
+        const company = params.get('company') || '';
+        
+        // Store these values in cookies
+        setCookie('invitation', invitationId, { maxAge: 86400 });
+        setCookie('email', email, { maxAge: 86400 });
+        if (company) {
+          setCookie('company', company, { maxAge: 86400 });
+        }
+        
+        // Clear the URL parameters to avoid reprocessing
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+    
+    // Then check for invitation in cookies
     const invitation = getCookie('invitation');
     const emailCookie = getCookie('email');
     const company = getCookie('company');

@@ -583,7 +583,7 @@ export const TeamUsers = () => {
       if (response.status === 200) {
         if (response.data?.id) {
           setResponseMessage(
-            `Invitation sent successfully! The invite link is ${process.env.NEXT_PUBLIC_APP_URI}/?invitation_id=${response.data.id}&email=${email}`,
+            `Invitation sent successfully! The invite link is ${process.env.NEXT_PUBLIC_APP_URI}/invite?invitation_id=${response.data.id}&email=${email}${activeCompany?.name ? `&company=${encodeURIComponent(activeCompany.name)}` : ''}`,
           );
         } else {
           setResponseMessage('Invitation sent successfully!');
@@ -727,7 +727,7 @@ export default function TeamPage() {
       if (response.status === 200) {
         if (response.data?.id) {
           setResponseMessage(
-            `Invitation sent successfully! The invite link is ${process.env.NEXT_PUBLIC_APP_URI}/?invitation_id=${response.data.id}&email=${email}`,
+            `Invitation sent successfully! The invite link is ${process.env.NEXT_PUBLIC_APP_URI}/invite?invitation_id=${response.data.id}&email=${email}${companyData?.name ? `&company=${encodeURIComponent(companyData.name)}` : ''}`,
           );
         } else {
           setResponseMessage('Invitation sent successfully!');

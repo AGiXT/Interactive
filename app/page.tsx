@@ -180,28 +180,24 @@ export default function Home() {
   
   // Check for invitation parameters in URL
   useEffect(() => {
-    // Get the current URL and parse the search parameters
-    const url = new URL(window.location.href);
-    const params = url.searchParams;
-    
-    // Check if invitation_id and email parameters exist
-    if (params.has('invitation_id') && params.has('email')) {
-      const invitationId = params.get('invitation_id');
-      const email = params.get('email');
-      const company = params.get('company') || '';
+    if (typeof window !== 'undefined') {
+      // Get the current URL and parse the search parameters
+      const url = new URL(window.location.href);
+      const params = url.searchParams;
       
-      // Store these values in cookies
-      setCookie('invitation', invitationId, { maxAge: 86400 });
-      setCookie('email', email, { maxAge: 86400 });
-      if (company) {
-        setCookie('company', company, { maxAge: 86400 });
+      // Check if invitation_id and email parameters exist
+      if (params.has('invitation_id') && params.has('email')) {
+        // Redirect to /invite page with the same parameters
+        let redirectUrl = `/invite?invitation_id=${params.get('invitation_id')}&email=${params.get('email')}`;
+        if (params.has('company')) {
+          redirectUrl += `&company=${params.get('company')}`;
+        }
+        router.push(redirectUrl);
+        return;
       }
-      
-      // Redirect to registration page
-      router.push('/user/register');
     }
   }, [router]);
-
+  
   if (getCookie('jwt')) {
     redirect('/chat');
   }

@@ -131,43 +131,27 @@ export const useAuth: MiddlewareHook = async (req) => {
     }
   }
   
-  // Handle invitation links directly (without email verification)
-  if (queryParams.invitation_id && queryParams.email) {
-    const cookieArray = [
-      generateCookieString('email', queryParams.email, (86400).toString()),
-      generateCookieString('invitation', queryParams.invitation_id, (86400).toString()),
-    ];
+  // Handle invitation links on the home page
+  if (req.nextUrl.pathname === '/' && queryParams.invitation_id && queryParams.email) {
+    // Create a redirect URL to the invite page
+    const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URI}/invite`;
+    const url = new URL(inviteUrl);
+    url.searchParams.set('invitation_id', queryParams.invitation_id);
+    url.searchParams.set('email', queryParams.email);
     if (queryParams.company) {
-      cookieArray.push(generateCookieString('company', queryParams.company, (86400).toString()));
+      url.searchParams.set('company', queryParams.company);
     }
+    
     toReturn.activated = true;
-    toReturn.response = NextResponse.redirect(`${authWeb}/register`, {
-      // @ts-expect-error NextJS' types are wrong.
-      headers: {
-        'Set-Cookie': cookieArray,
-      },
-    });
+    toReturn.response = NextResponse.redirect(url.toString());
     return toReturn;
   }
   
-  // Handle invitation links directly
-  if (queryParams.invitation_id && queryParams.email) {
-    const cookieArray = [
-      generateCookieString('email', queryParams.email, (86400).toString()),
-      generateCookieString('invitation', queryParams.invitation_id, (86400).toString()),
-    ];
-    if (queryParams.company) {
-      cookieArray.push(generateCookieString('company', queryParams.company, (86400).toString()));
-    }
+  // Handle invitation links on the home page
+  if (req.nextUrl.pathname === '/' && queryParams.invitation_id && queryParams.email) {
     toReturn.activated = true;
-    toReturn.response = NextResponse.redirect(`${authWeb}/register`, {
-      // @ts-expect-error NextJS' types are wrong.
-      headers: {
-        'Set-Cookie': cookieArray,
-      },
-    });
+    toReturn.response = NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URI}/invite?invitation_id=${queryParams.invitation_id}&email=${queryParams.email}${queryParams.company ? `&company=${queryParams.company}` : ''}`);
     return toReturn;
-  }
   }
 
   // Check if the route requires authentication
