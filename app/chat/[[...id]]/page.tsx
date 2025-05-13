@@ -1,10 +1,8 @@
 'use client';
 
 import { useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
-import { useEffect, useState, useCallback } from 'react';
-import { SidebarPage } from '@/components/layout/SidebarPage';
+import { useEffect, useState, useCallback, useRef, useContext, useMemo } from 'react'; // Added useMemo
 import React from 'react';
-import { Chat } from '@/components/conversation/conversation';
 import { Overrides } from '@/components/interactive/InteractiveConfigContext';
 import { useConversations } from '@/components/interactive/useConversation';
 import { useRouter } from 'next/navigation';
@@ -13,14 +11,42 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Chat } from '@/components/conversation/conversation'; // Assuming Chat is the main chat display
+import { SidebarInset } from '@/components/ui/sidebar';
+import {
+  Edit,
+  Download,
+  Trash,
+  ChevronDown,
+  MessageSquare,
+  Copy,
+  Check,
+  Plus,
+  Loader2, // Added for processing state
+} from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { SidebarTrigger } from '@/components/ui/sidebar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuGroup,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+import useSWR, { mutate } from 'swr'; // Ensured mutate is imported from SWR
+import { getCookie } from 'cookies-next';
 
+// Props definitions (FormProps, UIProps, AGiXTInteractiveProps) remain the same
 export type FormProps = {
-  fieldOverrides?: { [key: string]: ReactNode };
+  fieldOverrides?: { [key: string]: React.ReactNode };
   formContext?: object;
-  additionalFields?: { [key: string]: ReactNode };
-  additionalOutputButtons: { [key: string]: ReactNode };
+  additionalFields?: { [key: string]: React.ReactNode };
+  additionalOutputButtons: { [key: string]: React.ReactNode };
   onSubmit?: (data: object) => void;
 };
+
 export type UIProps = {
   showSelectorsCSV?: string;
   enableFileUpload?: boolean;
@@ -56,157 +82,358 @@ const AGiXTInteractive = ({
     }),
     [uiConfig],
   );
+  // Ensure Chat component is correctly imported and used
+  // For this example, assuming 'Chat' is the component that renders the actual chat logs and input bar
   return <Chat {...uiConfigWithEnv} {...overrides} />;
 };
 
 export function ConvSwitch({ id }: { id: string }) {
-  const state = useInteractiveConfig();
+  const interactiveConfig = useInteractiveConfig(); // Renamed to avoid conflict
+  const prevIdRef = useRef(id);
+
   useEffect(() => {
-    state?.mutate((oldState) => ({
-      ...oldState,
-      overrides: { ...oldState.overrides, conversation: id || '-' },
-    }));
-  }, [id, state]);
+    if (id !== prevIdRef.current && interactiveConfig && interactiveConfig.mutate) {
+      prevIdRef.current = id;
+      interactiveConfig.mutate((oldState) => {
+        if (oldState.overrides.conversation !== id) {
+          return {
+            ...oldState,
+            overrides: { ...oldState.overrides, conversation: id || '-' },
+          };
+        }
+        return oldState;
+      });
+    }
+  }, [id, interactiveConfig]);
+
   return null;
 }
 
 export default function Home({ params }: { params: { id: string[] } }) {
   const router = useRouter();
+  const interactiveConfig = useInteractiveConfig(); // Use the hook correctly
   const conversationId = params.id?.[0] || '';
   const { data: conversations = [], mutate: mutateConversations } = useConversations();
-  
-  // State for rename dialog
+
+  const agentName = getCookie('agixt-agent') || process.env.NEXT_PUBLIC_AGIXT_AGENT || 'AGiXT';
+  const conversationSWRPath = '/conversation/'; // Used for SWR cache mutation
+
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
-  const [newName, setNewName] = useState('');
-  
-  // Find the current conversation
+  const [currentNewName, setCurrentNewName] = useState(''); // Renamed to avoid conflict with 'newName' in global scope
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isCopySuccess, setIsCopySuccess] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
   const currentConversation = React.useMemo(() => {
-    return conversations.find(conv => conv.id === conversationId);
+    return conversations.find((conv) => conv.id === conversationId);
   }, [conversationId, conversations]);
-  
-  // Get conversation name (if available and not '-')
+
   const conversationName = currentConversation?.name !== '-' ? currentConversation?.name : '';
-  
-  // Open rename dialog
+
+  const handleNewConversation = useCallback(() => {
+    router.push('/chat');
+    setIsDropdownOpen(false);
+  }, [router]);
+
   const handleRenameClick = useCallback(() => {
-    setNewName(conversationName || '');
+    setCurrentNewName(conversationName || '');
     setIsRenameDialogOpen(true);
+    setIsDropdownOpen(false);
   }, [conversationName]);
-  
-  // Handle rename submission
-  const handleRename = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!conversationId || !newName) return;
-    
-    try {
-      const response = await fetch(`/api/conversations/${conversationId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName }),
-      });
-      
-      if (!response.ok) throw new Error('Failed to rename conversation');
-      
-      mutateConversations();
-      setIsRenameDialogOpen(false);
-      toast({ title: 'Success', description: 'Conversation renamed successfully' });
-    } catch (error) {
-      console.error('Error renaming conversation:', error);
-      toast({ title: 'Error', description: 'Failed to rename conversation', variant: 'destructive' });
-    }
-  }, [conversationId, newName, mutateConversations]);
-  
-  // Handle export
-  const handleExport = useCallback(async () => {
+
+  const handleCopyLink = useCallback(() => {
     if (!conversationId) return;
-    
+    const url = `${window.location.origin}/chat/${conversationId}`;
+    navigator.clipboard
+      .writeText(url)
+      .then(() => {
+        setIsCopySuccess(true);
+        setTimeout(() => setIsCopySuccess(false), 2000);
+        toast({ title: 'Success', description: 'Chat link copied to clipboard' });
+      })
+      .catch(() => {
+        toast({ title: 'Error', description: 'Failed to copy link', variant: 'destructive' });
+      });
+    setIsDropdownOpen(false);
+  }, [conversationId]);
+
+  const handleRename = useCallback(
+    async (e?: React.FormEvent) => {
+      // Optional event for form submission
+      if (e) e.preventDefault();
+      if (!conversationId || !currentNewName.trim() || isProcessing || !interactiveConfig?.agixt) return;
+
+      setIsProcessing(true);
+      try {
+        await interactiveConfig.agixt.renameConversation(agentName, conversationId, currentNewName.trim());
+        await mutateConversations();
+        await mutate(conversationSWRPath + conversationId);
+        setIsRenameDialogOpen(false);
+        toast({ title: 'Success', description: 'Conversation renamed successfully' });
+      } catch (error) {
+        console.error('Error renaming conversation:', error);
+        toast({ title: 'Error', description: 'Failed to rename conversation', variant: 'destructive' });
+      } finally {
+        setIsProcessing(false);
+      }
+    },
+    [
+      conversationId,
+      currentNewName,
+      interactiveConfig,
+      agentName,
+      mutateConversations,
+      isProcessing,
+    ],
+  );
+
+  const handleExport = useCallback(async () => {
+    if (!conversationId || isProcessing || !interactiveConfig?.agixt) return;
+    setIsProcessing(true);
     try {
-      const response = await fetch(`/api/conversations/${conversationId}/export`);
-      if (!response.ok) throw new Error('Failed to export conversation');
-      
-      const data = await response.json();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const conversationData = await interactiveConfig.agixt.getConversation('', conversationId);
+      const blob = new Blob([JSON.stringify(conversationData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
-      
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${conversationName || 'conversation'}.json`;
+      a.download = `${conversationName || 'conversation'}-${conversationId.substring(0,8)}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
       toast({ title: 'Success', description: 'Conversation exported successfully' });
+      setIsDropdownOpen(false);
     } catch (error) {
       console.error('Error exporting conversation:', error);
       toast({ title: 'Error', description: 'Failed to export conversation', variant: 'destructive' });
+    } finally {
+      setIsProcessing(false);
     }
-  }, [conversationId, conversationName]);
-  
-  // Handle delete
+  }, [conversationId, conversationName, interactiveConfig, isProcessing]);
+
   const handleDelete = useCallback(async () => {
-    if (!conversationId) return;
-    
+    if (!conversationId || isProcessing || !interactiveConfig?.agixt) return;
+    if (!window.confirm('Are you sure you want to delete this conversation? This action cannot be undone.')) {
+      setIsDropdownOpen(false);
+      return;
+    }
+    setIsProcessing(true);
     try {
-      const response = await fetch(`/api/conversations/${conversationId}`, {
-        method: 'DELETE',
-      });
-      
-      if (!response.ok) throw new Error('Failed to delete conversation');
-      
-      mutateConversations();
+      await interactiveConfig.agixt.deleteConversation(conversationId, agentName);
+      await mutateConversations();
+      await mutate(conversationSWRPath + conversationId); // Mutate specific conversation to clear it
+
+      if (interactiveConfig.mutate) {
+        interactiveConfig.mutate((oldState) => ({
+          ...oldState,
+          overrides: { ...oldState.overrides, conversation: '-' },
+        }));
+      }
       router.push('/chat');
       toast({ title: 'Success', description: 'Conversation deleted successfully' });
+      setIsDropdownOpen(false);
     } catch (error) {
       console.error('Error deleting conversation:', error);
       toast({ title: 'Error', description: 'Failed to delete conversation', variant: 'destructive' });
+    } finally {
+      setIsProcessing(false);
     }
-  }, [conversationId, mutateConversations, router]);
+  }, [
+    conversationId,
+    interactiveConfig,
+    agentName,
+    mutateConversations,
+    router,
+    isProcessing,
+  ]);
 
   return (
     <>
-      <SidebarPage 
-        title='Chat'
-        conversationName={conversationName}
-        showControls={!!conversationId}
-        onRename={handleRenameClick}
-        onExport={handleExport}
-        onDelete={handleDelete}
+      <SidebarInset>
+        <header
+          className="flex shrink-0 items-center justify-between gap-2 px-4 sm:px-6 transition-[width,height] ease-linear w-full sticky top-0 z-20 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b"
+          style={{ paddingTop: 'env(safe-area-inset-top)', height: 'calc(3.5rem + env(safe-area-inset-top))' }}
+        >
+          {/* Left side: Mobile Sidebar Trigger */}
+          <div className="flex items-center h-full md:hidden">
+            <SidebarTrigger className="size-9" /> {/* Adjusted size slightly */}
+            <Separator orientation="vertical" className="h-4 ml-2" />
+          </div>
+          
+          {/* Center: Chat title - this will take available space */}
+          <div className="flex-grow flex items-center justify-center overflow-hidden">
+            <h1 className="text-lg font-medium truncate" title={conversationName || "Chat"}>
+              {conversationName || "Chat"}
+            </h1>
+          </div>
+
+          {/* Right side: Action Buttons and Dropdown Menu */}
+          <div className="flex items-center h-full gap-1 sm:gap-2">
+            <Button
+                variant="outline"
+                size="icon"
+                onClick={handleNewConversation}
+                title="New Conversation"
+                disabled={isProcessing}
+                className="size-9" // Consistent icon button size
+              >
+                <Plus className="h-4 w-4" />
+            </Button>
+            
+            {/* Actions for existing conversations, wrapped in a dropdown for smaller screens or as individual buttons */}
+            {conversationId && (
+                <>
+                    {/* Visible buttons on larger screens */}
+                    <div className="hidden sm:flex items-center gap-1 sm:gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          onClick={handleRenameClick} 
+                          title="Rename Conversation"
+                          disabled={isProcessing}
+                          className="size-9"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          onClick={handleExport} 
+                          title="Export Conversation"
+                          disabled={isProcessing}
+                          className="size-9"
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          onClick={handleDelete} 
+                          title="Delete Conversation"
+                          className="hover:bg-destructive/10 size-9"
+                          disabled={isProcessing}
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                         <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={handleCopyLink}
+                            title="Copy Link"
+                            disabled={isProcessing}
+                            className="size-9"
+                          >
+                            {isCopySuccess ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                          </Button>
+                    </div>
+
+                    {/* Dropdown menu for smaller screens or as primary actions container */}
+                    <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="sm:hidden size-9"> {/* Hidden on sm and up */}
+                                <ChevronDown className="h-5 w-5 opacity-75" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuItem onClick={handleRenameClick} disabled={isProcessing}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                <span>Rename</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={handleExport} disabled={isProcessing}>
+                                <Download className="mr-2 h-4 w-4" />
+                                <span>Export</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={handleCopyLink} disabled={isProcessing}>
+                                {isCopySuccess ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <Copy className="mr-2 h-4 w-4" />}
+                                <span>Copy Link</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                                onClick={handleDelete} 
+                                className="text-destructive focus:text-destructive"
+                                disabled={isProcessing}
+                            >
+                                <Trash className="mr-2 h-4 w-4" />
+                                <span>Delete</span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </>
+            )}
+             {/* Optional stats badges could go here, but might clutter the top bar */}
+            {currentConversation?.attachmentCount > 0 && (
+              <div className="ml-2 hidden md:block"> {/* Hide on small screens if too cluttered */}
+                <span className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-xs font-medium">
+                  {currentConversation.attachmentCount} attachment{currentConversation.attachmentCount !== 1 ? 's' : ''}
+                </span>
+              </div>
+            )}
+          </div>
+        </header>
+
+        <main
+          className={cn('flex flex-col flex-1 gap-6 px-6 py-4')}
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 4rem)' }} // Adjust padding for input bar
+        >
+          <ConvSwitch id={conversationId} />
+          <AGiXTInteractive
+            uiConfig={{
+              showChatThemeToggles: false,
+              enableVoiceInput: true,
+              footerMessage: '',
+              alternateBackground: 'primary',
+            }}
+            overrides={{
+              conversation: conversationId,
+            }}
+          />
+        </main>
+      </SidebarInset>
+
+      <Dialog
+        open={isRenameDialogOpen}
+        onOpenChange={(open) => {
+          if (!isProcessing) setIsRenameDialogOpen(open);
+        }}
       >
-        <ConvSwitch id={conversationId} />
-        <AGiXTInteractive
-          uiConfig={{
-            showChatThemeToggles: false,
-            enableVoiceInput: true,
-            footerMessage: '',
-            alternateBackground: 'primary',
-          }}
-          overrides={{
-            conversation: conversationId,
-          }}
-        />
-      </SidebarPage>
-      
-      {/* Rename Dialog */}
-      <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Rename Conversation</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleRename}>
-            <div className='grid gap-4 py-4'>
-              <div className='grid gap-2'>
-                <Label htmlFor='name'>Name</Label>
-                <Input 
-                  id='name' 
-                  value={newName} 
-                  onChange={(e) => setNewName(e.target.value)}
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  value={currentNewName}
+                  onChange={(e) => setCurrentNewName(e.target.value)}
                   autoFocus
+                  disabled={isProcessing}
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button type='submit'>Save changes</Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsRenameDialogOpen(false)}
+                disabled={isProcessing}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isProcessing || !currentNewName.trim()}>
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save changes'
+                )}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
