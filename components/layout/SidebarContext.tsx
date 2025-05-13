@@ -13,7 +13,8 @@ import { ViewVerticalIcon } from '@radix-ui/react-icons';
 import { usePathname } from 'next/navigation';
 import { useSidebarContent } from '@/components/layout/SidebarContentManager';
 
-const visibleOnPaths = ['/chat'];
+// Remove '/chat' from the visibleOnPaths array
+const visibleOnPaths = [];
 
 export function SidebarContext({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { toggleSidebar } = useSidebar('right');
