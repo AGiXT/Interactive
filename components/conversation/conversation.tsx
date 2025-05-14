@@ -1,23 +1,26 @@
 'use client';
 
-import axios from 'axios';
-import { getCookie } from 'cookies-next';
-import { useRouter } from 'next/navigation';
-import React, { useContext, useEffect, useState, useRef } from 'react';
+import { useContext, useEffect, useState, useRef, useCallback } from 'react';
 import useSWR, { mutate } from 'swr';
-import { useCompany } from '@/components/interactive/useUser';
-import { toast } from '@/components/layout/toast';
+import { getCookie } from 'cookies-next';
+import axios from 'axios';
+import { useRouter } from 'next/navigation';
+
 import { InteractiveConfigContext, Overrides } from '@/components/interactive/InteractiveConfigContext';
+import { useCompany } from '@/components/interactive/useUser';
 import { useConversations } from '@/components/interactive/useConversation';
+import { toast } from '@/components/layout/toast';
+
 import { Activity as ChatActivity } from '@/components/conversation/activity';
 import Message from '@/components/conversation/Message/Message';
-import { Badge, Check, Download, Paperclip, Pencil, Plus, Trash2 } from 'lucide-react';
 import { SidebarContent } from '@/components/layout/SidebarContentManager';
+import { ChatBar } from '@/components/conversation/input/chat-input';
+
+import { Badge, Paperclip, Pencil, Plus, Check, Download, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/ui/sidebar';
-import { ChatBar } from '@/components/conversation/input/chat-input';
-import { Button } from '@/components/ui/button';
 
 export type UIProps = {
   showSelectorsCSV?: string;
@@ -32,25 +35,34 @@ const conversationSWRPath = '/conversation/';
 
 export function ChatSidebar({ currentConversation }: { currentConversation: any }): React.JSX.Element {
   const [loading, setLoading] = useState(false);
-  const state = useContext(InteractiveConfigContext);
+  const interactiveConfig = useContext(InteractiveConfigContext);
   const router = useRouter();
-  // Add the sidebar state hook
   const { open, setOpen } = useSidebar('right');
 
+  // Track state for rename operation
+  const [wasExpanded, setWasExpanded] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  
   // Function to handle conversation deletion
   const handleDeleteConversation = async (): Promise<void> => {
     try {
-      await state.agixt.deleteConversation(currentConversation?.id || '-');
+      setLoading(true);
+      const agentName = getCookie('agixt-agent') || process.env.NEXT_PUBLIC_AGIXT_AGENT || 'AGiXT';
+      await interactiveConfig.agixt.deleteConversation(currentConversation?.id || '-', agentName);
 
       // Properly invalidate both the conversation list and the specific conversation cache
       await mutate('/conversations');
-      await mutate(conversationSWRPath + state.overrides.conversation);
+      await mutate(conversationSWRPath + interactiveConfig.overrides.conversation);
 
-      // Update the state
-      state.mutate((oldState) => ({
-        ...oldState,
-        overrides: { ...oldState.overrides, conversation: '-' },
-      }));
+      // Update the state to a new conversation
+      if (interactiveConfig.mutate) {
+        interactiveConfig.mutate((oldState) => ({
+          ...oldState,
+          overrides: { ...oldState.overrides, conversation: '-' },
+        }));
+      }
 
       // Navigate to the main chat route
       router.push('/chat');
@@ -61,20 +73,21 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
         duration: 3000,
       });
     } catch (error) {
+      console.error('Delete error:', error);
       toast({
         title: 'Error',
         description: 'Failed to delete conversation',
         duration: 5000,
         variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Track whether we expanded the sidebar for renaming
-  const [wasExpanded, setWasExpanded] = useState(false);
-
   const handleRenameConversation = async (newName: string): Promise<void> => {
     try {
+      setLoading(true);
       // Make sure newName isn't empty
       if (!newName.trim()) {
         toast({
@@ -86,11 +99,12 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
         return;
       }
       
-      await state.agixt.renameConversation(getCookie('agixt-agent'), currentConversation?.id || '-', newName);
+      const agentName = getCookie('agixt-agent') || process.env.NEXT_PUBLIC_AGIXT_AGENT || 'AGiXT';
+      await interactiveConfig.agixt.renameConversation(agentName, currentConversation?.id || '-', newName);
 
       // Properly invalidate both the conversation list and the specific conversation
       await mutate('/conversations');
-      await mutate(conversationSWRPath + state.overrides.conversation);
+      await mutate(conversationSWRPath + interactiveConfig.overrides.conversation);
 
       toast({
         title: 'Success',
@@ -103,6 +117,7 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
         setOpen(false);
         setWasExpanded(false);
       }
+      setRenaming(false);
     } catch (error) {
       console.error('Rename error:', error);
       toast({
@@ -111,13 +126,16 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
         duration: 5000,
         variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleExportConversation = async (): Promise<void> => {
     try {
+      setLoading(true);
       // Get the full conversation content
-      const conversationContent = await state.agixt.getConversation('', currentConversation?.id || '-');
+      const conversationContent = await interactiveConfig.agixt.getConversation('', currentConversation?.id || '-');
 
       // Format the conversation for export
       const exportData = {
@@ -149,30 +167,54 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
         duration: 3000,
       });
     } catch (error) {
+      console.error('Export error:', error);
       toast({
         title: 'Error',
         description: 'Failed to export conversation',
         duration: 5000,
         variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
     }
   };
   
-  const [newName, setNewName] = useState('');
-  const [renaming, setRenaming] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-
+  // Initialize the rename value when renaming state changes
   useEffect(() => {
     if (renaming) {
       setNewName(currentConversation?.name || '');
     }
   }, [renaming, currentConversation]);
 
+  // Clean up loading state on unmount
   useEffect(() => {
     return () => {
       setLoading(false);
     };
   }, []);
+
+  const handleRenameClick = () => {
+    // First ensure the sidebar is open
+    if (!open) {
+      // Track that we expanded the sidebar
+      setWasExpanded(true);
+      setOpen(true);
+      // Allow time for sidebar animation before enabling rename mode
+      setTimeout(() => {
+        setRenaming(true);
+        setNewName(currentConversation?.name || '');
+      }, 300);
+    } else {
+      // Sidebar is already open, directly enter rename mode
+      setRenaming(true);
+      setNewName(currentConversation?.name || '');
+    }
+  };
+  
+  // Don't show sidebar content if no conversation exists
+  if (!currentConversation || currentConversation.id === '-') {
+    return null;
+  }
 
   return (
     <SidebarContent title="Conversation">
@@ -189,7 +231,6 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       handleRenameConversation(newName);
-                      setRenaming(false);
                     } else if (e.key === 'Escape') {
                       setRenaming(false);
                     }
@@ -198,16 +239,14 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  onClick={() => {
-                    handleRenameConversation(newName);
-                    setRenaming(false);
-                  }}
+                  onClick={() => handleRenameConversation(newName)}
+                  disabled={loading}
                 >
                   <Check className="h-4 w-4" />
                 </Button>
               </div>
             ) : (
-              <h4 className="text-lg font-medium mb-2">{currentConversation?.name || 'New Conversation'}</h4>
+              <h4 className="text-lg font-medium mb-2">{currentConversation?.name || 'Conversation'}</h4>
             )}
             {currentConversation && currentConversation.attachmentCount > 0 && (
               <Badge className='gap-1 mb-2'>
@@ -224,48 +263,38 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
               title: 'New Conversation',
               icon: Plus,
               func: () => {
+                if (interactiveConfig?.mutate) {
+                  interactiveConfig.mutate((oldState) => ({
+                    ...oldState,
+                    overrides: { ...oldState.overrides, conversation: '-' },
+                  }));
+                  
+                  // Force an invalidation of any existing conversation data
+                  mutate(conversationSWRPath + interactiveConfig.overrides.conversation);
+                }
                 router.push('/chat');
               },
-              disabled: renaming,
+              disabled: loading || renaming,
             },
             {
               title: renaming ? 'Save Name' : 'Rename Conversation',
               icon: renaming ? Check : Pencil,
               func: renaming
-                ? () => {
-                    handleRenameConversation(newName);
-                    setRenaming(false);
-                  }
-                : () => {
-                    // First ensure the sidebar is open
-                    if (!open) {
-                      // Track that we expanded the sidebar
-                      setWasExpanded(true);
-                      setOpen(true);
-                      // Allow time for sidebar animation before enabling rename mode
-                      setTimeout(() => {
-                        setRenaming(true);
-                        setNewName(currentConversation?.name || '');
-                      }, 300);
-                    } else {
-                      // Sidebar is already open, directly enter rename mode
-                      setRenaming(true);
-                      setNewName(currentConversation?.name || '');
-                    }
-                  },
-              disabled: false,
+                ? () => handleRenameConversation(newName)
+                : handleRenameClick,
+              disabled: loading,
             },
             {
               title: 'Export Conversation',
               icon: Download,
-              func: () => handleExportConversation(),
-              disabled: renaming || !currentConversation?.id || currentConversation?.id === '-',
+              func: handleExportConversation,
+              disabled: loading || renaming || !currentConversation?.id || currentConversation?.id === '-',
             },
             {
               title: 'Delete Conversation',
               icon: Trash2,
               func: () => setDeleteDialogOpen(true),
-              disabled: renaming || !currentConversation?.id || currentConversation?.id === '-',
+              disabled: loading || renaming || !currentConversation?.id || currentConversation?.id === '-',
             },
           ].map(
             (item) => (
@@ -279,6 +308,8 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
           )}
         </SidebarMenu>
       </SidebarGroup>
+      
+      {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -288,7 +319,7 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={loading}>
               Cancel
             </Button>
             <Button 
@@ -297,8 +328,9 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
                 handleDeleteConversation();
                 setDeleteDialogOpen(false);
               }}
+              disabled={loading}
             >
-              Delete
+              {loading ? 'Deleting...' : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -318,9 +350,10 @@ export function ChatLog({
   loading: boolean;
   alternateBackground?: string;
 }): React.JSX.Element {
-  let lastUserMessage = ''; // track the last user message
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  let lastUserMessage = ''; // track the last user message
 
+  // Scroll to bottom when conversation updates
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversation]);
@@ -328,7 +361,7 @@ export function ChatLog({
   return (
     <div className='flex flex-col-reverse flex-grow overflow-auto bg-background pb-28' style={{ flexBasis: '0px' }}>
       <div className='flex flex-col h-min'>
-        {conversation.length > 0 && conversation.map ? (
+        {conversation && conversation.length > 0 ? (
           conversation.map((chatItem, index: number) => {
             if (chatItem.role === 'user') {
               lastUserMessage = chatItem.message;
@@ -395,21 +428,26 @@ export function ChatLog({
             <p className='text-muted-foreground'>Start a conversation by typing a message below</p>
           </div>
         )}
-
         <div ref={messagesEndRef} />
       </div>
     </div>
   );
 }
 
+// Helper function to format the conversation data from the API
 export async function getAndFormatConversation(state): Promise<any[]> {
+  // For empty/new conversations, return empty array
+  if (!state.overrides.conversation || state.overrides.conversation === '-') {
+    return [];
+  }
+
   const rawConversation = await state.agixt.getConversation('', state.overrides.conversation, 100, 1);
 
   // Create a map of activity messages for faster lookups
   const activityMessages = {};
   const formattedConversation = [];
 
-  // First pass: identify and store all activities
+  // First pass: identify and store all main activities
   rawConversation.forEach((message) => {
     const messageType = message.message.split(' ')[0];
     if (!messageType.startsWith('[SUBACTIVITY]')) {
@@ -472,40 +510,71 @@ export function Chat({
   conversation: conversationOverride,
 }: Overrides & UIProps): React.JSX.Element {
   const [loading, setLoading] = useState(false);
-  const state = useContext(InteractiveConfigContext);
+  const interactiveConfig = useContext(InteractiveConfigContext);
   const { data: conversations, isLoading: isLoadingConversations } = useConversations();
   const router = useRouter();
 
   // Find the current conversation
-  const currentConversation = conversations?.find((conv) => conv.id === state.overrides.conversation);
-  const conversation = useSWR(
-    conversationSWRPath + state.overrides.conversation,
+  const currentConversation = conversations?.find((conv) => conv.id === interactiveConfig.overrides.conversation);
+  
+  // Fetch conversation data with SWR
+  const { data: conversationData = [], mutate: mutateConversation } = useSWR(
+    conversationSWRPath + interactiveConfig.overrides.conversation,
     async () => {
-      return await getAndFormatConversation(state);
+      return await getAndFormatConversation(interactiveConfig);
     },
     {
       fallbackData: [],
       refreshInterval: loading ? 1000 : 0,
+      revalidateOnFocus: false,
     },
   );
   
   // Check if the conversation is empty
-  const isEmptyConversation = conversation.data?.length === 0;
+  const isEmptyConversation = !conversationData?.length;
   
+  // Get company info for API calls
   const { data: activeCompany } = useCompany();
   
+  // Handle array-type conversation ID in state (shouldn't happen, but as precaution)
   useEffect(() => {
-    if (Array.isArray(state.overrides.conversation)) {
-      state.mutate((oldState) => ({
+    if (Array.isArray(interactiveConfig.overrides.conversation)) {
+      interactiveConfig.mutate((oldState) => ({
         ...oldState,
         overrides: { ...oldState.overrides, conversation: oldState.overrides.conversation[0] },
       }));
     }
-  }, [state.overrides.conversation]);
+  }, [interactiveConfig]);
   
-  async function chat(messageTextBody, messageAttachedFiles): Promise<string> {
-    const messages = [];
+  // Refresh conversation data when conversation ID changes or loading state changes
+  useEffect(() => {
+    mutateConversation();
+  }, [interactiveConfig.overrides.conversation, mutateConversation]);
 
+  useEffect(() => {
+    if (!loading) {
+      const timer = setTimeout(() => {
+        mutateConversation();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, mutateConversation]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      setLoading(false);
+    };
+  }, []);
+
+  // Handler for sending messages
+  async function chat(messageTextBody, messageAttachedFiles): Promise<string> {
+    // Don't send empty messages
+    if (!messageTextBody.trim() && Object.keys(messageAttachedFiles).length === 0) {
+      return '';
+    }
+
+    const messages = [];
     messages.push({
       role: 'user',
       content: [
@@ -526,15 +595,20 @@ export function Chat({
     });
 
     setLoading(true);
+    
+    // Slight delay to allow UI to update
     await new Promise((resolve) => setTimeout(resolve, 100));
-    mutate(conversationSWRPath + state.overrides.conversation);
+    
+    // Refresh conversation data immediately to show the message
+    mutateConversation();
+    
     try {
       const completionResponse = await axios.post(
         `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/chat/completions`,
         {
           messages: messages,
           model: getCookie('agixt-agent'),
-          user: state.overrides.conversation,
+          user: interactiveConfig.overrides.conversation,
         },
         {
           headers: {
@@ -542,32 +616,36 @@ export function Chat({
           },
         },
       );
+      
       if (completionResponse.status === 200) {
         const chatCompletion = completionResponse.data;
-
+        
         // Store conversation ID
         const conversationId = chatCompletion.id;
-
-        // Update conversation state
-        state.mutate((oldState) => ({
-          ...oldState,
-          overrides: {
-            ...oldState.overrides,
-            conversation: conversationId,
-          },
-        }));
-
-        // Push route after state is updated
-        router.push(`/chat/${conversationId}`);
-
+        
+        // Only update route if conversation ID has changed
+        if (conversationId !== interactiveConfig.overrides.conversation) {
+          // Update conversation state
+          interactiveConfig.mutate((oldState) => ({
+            ...oldState,
+            overrides: {
+              ...oldState.overrides,
+              conversation: conversationId,
+            },
+          }));
+          
+          // Push route after state is updated
+          router.push(`/chat/${conversationId}`);
+        }
+        
         // Refresh data after updating conversation
         setLoading(false);
-
+        
         // Trigger proper mutations
-        mutate(conversationSWRPath + conversationId);
+        mutateConversation();
         mutate('/conversations');
         mutate('/user');
-
+        
         if (chatCompletion?.choices[0]?.message.content.length > 0) {
           return chatCompletion.choices[0].message.content;
         } else {
@@ -577,6 +655,7 @@ export function Chat({
         throw new Error('Failed to get response from the agent');
       }
     } catch (error) {
+      console.error('Chat error:', error);
       setLoading(false);
       toast({
         title: 'Error',
@@ -588,30 +667,11 @@ export function Chat({
     }
   }
 
-  useEffect(() => {
-    mutate(conversationSWRPath + state.overrides.conversation);
-  }, [state.overrides.conversation]);
-
-  useEffect(() => {
-    if (!loading) {
-      const timer = setTimeout(() => {
-        mutate(conversationSWRPath + state.overrides.conversation);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [loading, state.overrides.conversation]);
-
-  useEffect(() => {
-    return () => {
-      setLoading(false);
-    };
-  }, []);
-
   return (
     <>
       <ChatSidebar currentConversation={currentConversation} />
       <ChatLog
-        conversation={conversation.data}
+        conversation={conversationData}
         alternateBackground={alternateBackground}
         setLoading={setLoading}
         loading={loading}
