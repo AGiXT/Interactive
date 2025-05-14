@@ -287,11 +287,9 @@ export const ImportConversation = () => {
 
   const handleImportFile = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || event.target.files.length === 0) {
-      console.log('No files selected.');
       return;
     }
     if (!interactiveConfig || !interactiveConfig.agixt) {
-        console.log('SDK not available in interactiveConfig.');
         toast({ title: 'Error', description: 'SDK not available.', variant: 'destructive'});
         return;
     }
@@ -372,20 +370,17 @@ export const ImportConversation = () => {
           setIsDialogOpen(false);
 
         } catch (error: any) {
-          console.error('Error processing imported file content:', error);
           toast({ title: 'Import Error', description: `Failed to process file: ${error.message}`, variant: 'destructive' });
         } finally {
           setIsProcessingImport(false);
         }
       };
-      reader.onerror = (error) => {
-        console.error('FileReader error:', error);
+      reader.onerror = () => {
         toast({ title: 'Import Error', description: 'Error reading file.', variant: 'destructive' });
         setIsProcessingImport(false);
       };
       reader.readAsText(file);
     } catch (error: any) {
-        console.error('Error initiating import:', error);
         toast({ title: 'Error', description: 'Failed to import conversation', variant: 'destructive' });
         setIsProcessingImport(false);
     }

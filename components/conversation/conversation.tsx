@@ -73,7 +73,6 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
         duration: 3000,
       });
     } catch (error) {
-      console.error('Delete error:', error);
       toast({
         title: 'Error',
         description: 'Failed to delete conversation',
@@ -119,7 +118,6 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
       }
       setRenaming(false);
     } catch (error) {
-      console.error('Rename error:', error);
       toast({
         title: 'Error',
         description: 'Failed to rename conversation',
@@ -167,7 +165,6 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
         duration: 3000,
       });
     } catch (error) {
-      console.error('Export error:', error);
       toast({
         title: 'Error',
         description: 'Failed to export conversation',
@@ -655,7 +652,6 @@ export function Chat({
         throw new Error('Failed to get response from the agent');
       }
     } catch (error) {
-      console.error('Chat error:', error);
       setLoading(false);
       toast({
         title: 'Error',

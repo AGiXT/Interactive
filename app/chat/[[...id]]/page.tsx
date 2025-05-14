@@ -204,7 +204,6 @@ export default function Home({ params }: { params: { id: string[] } }) {
         setIsRenameDialogOpen(false);
         toast({ title: 'Success', description: 'Conversation renamed successfully' });
       } catch (error) {
-        console.error('Error renaming conversation:', error);
         toast({ title: 'Error', description: 'Failed to rename conversation', variant: 'destructive' });
       } finally {
         setIsProcessing(false);
@@ -231,7 +230,6 @@ export default function Home({ params }: { params: { id: string[] } }) {
       toast({ title: 'Success', description: `Conversation exported as ${exportFilename}` });
       setIsActionDropdownOpen(false);
     } catch (error) {
-      console.error('Error exporting conversation:', error);
       toast({ title: 'Error', description: 'Failed to export conversation', variant: 'destructive' });
     } finally {
       setIsProcessing(false);
@@ -261,7 +259,6 @@ export default function Home({ params }: { params: { id: string[] } }) {
       toast({ title: 'Success', description: 'Conversation deleted successfully' });
       setIsActionDropdownOpen(false);
     } catch (error) {
-      console.error('Error deleting conversation:', error);
       toast({ title: 'Error', description: 'Failed to delete conversation', variant: 'destructive' });
     } finally {
       setIsProcessing(false);
