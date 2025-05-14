@@ -35,7 +35,7 @@ interface SidebarContentProps {
   title?: string;
 }
 
-// Component to set sidebar content
+// Component to set sidebar content (this is no longer used for chat page)
 export function SidebarContent({ children, title = 'Context Sidebar' }: SidebarContentProps) {
   const { setContent, setTitle } = useSidebarContent();
 
