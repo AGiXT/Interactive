@@ -1,15 +1,15 @@
 'use client';
 
-import React, { ReactNode, useContext, useState, useRef, useEffect } from 'react';
+import React, { ReactNode, useState, useRef, useEffect, useCallback } from 'react';
 import { BiCollapseVertical } from 'react-icons/bi';
-import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
+import { InteractiveConfigContext, useInteractiveConfig } from '@/components/interactive/InteractiveConfigContext';
 import { VoiceRecorder } from '@/components/conversation/input/VoiceRecorder';
 import { Textarea } from '@/components/ui/textarea';
 import { DropZone } from '@/components/conversation/input/DropZone';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { CheckCircle as LuCheckCircle, UploadCloud } from 'lucide-react';
-import { LuPaperclip, LuSend, LuArrowUp, LuLoader, LuTrash2 } from 'react-icons/lu';
+import { CheckCircle as LuCheckCircle, UploadCloud, Loader2 } from 'lucide-react';
+import { LuPaperclip, LuSend, LuArrowUp, LuLoader as LuLoaderIcon, LuTrash2 } from 'react-icons/lu';
 import { Tooltip, TooltipBasic, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +30,8 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/components/layout/toast';
 import { useRouter } from 'next/navigation';
 import { mutate } from 'swr';
+
+// Support components
 
 export function OverrideSwitch({ name, label }: { name: string; label: string }): React.JSX.Element {
   const [state, setState] = useState<boolean | null>(
@@ -73,7 +75,7 @@ export const Timer = ({ loading, timer }: { loading: boolean; timer: number }) =
     <TooltipBasic title={tooltipMessage} side='left'>
       <div className='flex items-center space-x-1'>
         <span className='text-sm'>{(timer / 10).toFixed(1)}s</span>
-        {loading ? <LuLoader className='animate-spin' /> : <LuCheckCircle className='text-green-500' />}
+        {loading ? <LuLoaderIcon className='animate-spin' /> : <LuCheckCircle className='text-green-500' />}
       </div>
     </TooltipBasic>
   );
@@ -103,7 +105,10 @@ export const OverrideSwitches = ({ showOverrideSwitches }: { showOverrideSwitche
   );
 };
 
-export const UploadFiles = ({ handleUploadFiles, message, uploadedFiles, disabled }: any) => {
+export const UploadFiles = ({ handleUploadFiles, disabled }: { 
+  handleUploadFiles: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  disabled: boolean;
+}) => {
   return (
     <TooltipProvider>
       <Tooltip>
@@ -114,6 +119,7 @@ export const UploadFiles = ({ handleUploadFiles, message, uploadedFiles, disable
               variant='ghost'
               className='rounded-full'
               onClick={() => document.getElementById('file-upload')?.click()}
+              disabled={disabled}
             >
               <LuPaperclip className='w-5 h-5 ' />
             </Button>
@@ -136,220 +142,17 @@ export const UploadFiles = ({ handleUploadFiles, message, uploadedFiles, disable
   );
 };
 
-// Import Conversation Dialog component
-export const ImportConversation = () => {
-  const state = useContext(InteractiveConfigContext);
-  const router = useRouter();
-  const [importMethod, setImportMethod] = useState<'file' | 'link'>('file');
-  const [conversationLink, setConversationLink] = useState('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  
-  const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files || event.target.files.length === 0) return;
-    
-    try {
-      const file = event.target.files[0];
-      const fileName = file.name.replace(/\.[^/.]+$/, '');
-
-      // Read the file content
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          // Parse the JSON content
-          const content = JSON.parse(e.target.result as string);
-
-          // Use the name from the JSON if available, otherwise use filename
-          const baseName = content.name || fileName;
-          const timestamp = new Date().toISOString().split('.')[0].replace(/:/g, '-');
-          const conversationName = `${baseName}_${timestamp}`;
-
-          // Format the conversation content
-          let conversationContent = [];
-          if (content.messages && Array.isArray(content.messages)) {
-            conversationContent = content.messages.map((msg) => ({
-              role: msg.role || 'user',
-              message: msg.content || msg.message || '',
-              timestamp: msg.timestamp || new Date().toISOString(),
-            }));
-          } else if (content.conversation_history && Array.isArray(content.conversation_history)) {
-            conversationContent = content.conversation_history.map((msg) => ({
-              role: msg.role || 'user',
-              message: msg.message || msg.content || '',
-              timestamp: msg.timestamp || new Date().toISOString(),
-            }));
-          }
-
-          // Check if there are any messages to import
-          if (conversationContent.length === 0) {
-            throw new Error('No valid conversation messages found in the imported file');
-          }
-
-          // Create the new conversation
-          const newConversation = await state.agixt.newConversation(state.agent, conversationName, conversationContent);
-          const newConversationID = newConversation.id || '-';
-          
-          // Update the conversation list and navigate to the new conversation
-          await mutate('/conversations');
-
-          // Set the new conversation as active
-          state.mutate((oldState) => ({
-            ...oldState,
-            overrides: { ...oldState.overrides, conversation: conversationName },
-          }));
-
-          // Navigate to the new conversation
-          router.push(`/chat/${newConversationID}`);
-
-          toast({
-            title: 'Success',
-            description: 'Conversation imported successfully',
-            duration: 3000,
-          });
-          
-          setIsDialogOpen(false);
-        } catch (error) {
-          console.error('Error processing file:', error);
-          toast({
-            title: 'Error',
-            description: `Failed to process the imported conversation file: ${error.message || 'Unknown error'}`,
-            duration: 5000,
-            variant: 'destructive',
-          });
-        }
-      };
-
-      reader.readAsText(file);
-    } catch (error) {
-      console.error('Error importing conversation:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to import conversation',
-        duration: 5000,
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleImportLink = async () => {
-    if (!conversationLink.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a valid conversation link',
-        duration: 3000,
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    try {
-      // Extract conversation ID from link
-      const urlObj = new URL(conversationLink);
-      const pathParts = urlObj.pathname.split('/');
-      const conversationId = pathParts[pathParts.length - 1];
-
-      if (!conversationId) {
-        throw new Error('Invalid conversation link');
-      }
-
-      // Navigate to the conversation
-      router.push(`/chat/${conversationId}`);
-      
-      // Update the state
-      state.mutate((oldState) => ({
-        ...oldState,
-        overrides: { ...oldState.overrides, conversation: conversationId },
-      }));
-
-      setIsDialogOpen(false);
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Invalid conversation link format',
-        duration: 3000,
-        variant: 'destructive',
-      });
-    }
-  };
-
-  return (
-    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-      <DialogTrigger asChild>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size='icon'
-                variant='ghost'
-                className='rounded-full'
-                onClick={() => setIsDialogOpen(true)}
-              >
-                <UploadCloud className='w-5 h-5' />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Import Conversation</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Import Conversation</DialogTitle>
-          <DialogDescription>
-            Import a conversation from a file
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className='flex space-x-4 my-4'>
-          <Button 
-            variant={importMethod === 'file' ? 'default' : 'outline'} 
-            onClick={() => setImportMethod('file')}
-            className='flex-1'
-          >
-            From File
-          </Button>
-          <Button 
-            variant={importMethod === 'link' ? 'default' : 'outline'} 
-            onClick={() => setImportMethod('link')}
-            className='flex-1 disabled hidden'
-          >
-            From Link
-          </Button>
-        </div>
-
-        {importMethod === 'file' ? (
-          <div className='space-y-4'>
-            <div className='grid w-full max-w-sm items-center gap-1.5'>
-              <Label htmlFor='import-file'>Choose conversation file</Label>
-              <Input 
-                id='import-file' 
-                type='file' 
-                accept='.json'
-                onChange={handleImportFile}
-              />
-            </div>
-            <p className='text-sm text-muted-foreground'>
-              Select a JSON file containing conversation data to import
-            </p>
-          </div>
-        ) : (
-          <div className='space-y-4'>
-            <div className='grid w-full max-w-sm items-center gap-1.5'>
-              <Label htmlFor='conversation-link'>Conversation Link</Label>
-              <Input 
-                id='conversation-link' 
-                placeholder='https://chat.yourdomain.com/chat/conversation-id'
-                value={conversationLink}
-                onChange={(e) => setConversationLink(e.target.value)}
-              />
-            </div>
-            <Button onClick={handleImportLink}>Import from Link</Button>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-export const SendMessage = ({ handleSend, message, uploadedFiles, disabled }: any) => {
+export const SendMessage = ({ 
+  handleSend, 
+  message, 
+  uploadedFiles, 
+  disabled 
+}: { 
+  handleSend: (message: string, uploadedFiles: { [x: string]: string }) => void;
+  message: string;
+  uploadedFiles: { [x: string]: string };
+  disabled: boolean;
+}) => {
   return (
     <TooltipBasic title='Send Message' side='left'>
       <Button
@@ -369,7 +172,24 @@ export const SendMessage = ({ handleSend, message, uploadedFiles, disabled }: an
   );
 };
 
-export const ResetConversation = ({ state, setCookie }: any) => {
+export const ResetConversation = () => { 
+  const interactiveConfig = useInteractiveConfig();
+  
+  const handleReset = useCallback(() => {
+    const uuid = crypto.randomUUID();
+    setCookie('uuid', uuid, { domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN, maxAge: 2147483647 });
+    
+    if (interactiveConfig?.mutate) {
+      interactiveConfig.mutate((oldState) => ({ 
+        ...oldState,
+        overrides: { ...oldState.overrides, conversation: '-' },
+      }));
+      
+      // Invalidate any cached conversation data
+      mutate('/conversation/-');
+    }
+  }, [interactiveConfig]);
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -383,25 +203,20 @@ export const ResetConversation = ({ state, setCookie }: any) => {
           <DialogDescription>Are you sure you want to reset the conversation? This cannot be undone.</DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button
-            onClick={() => {
-              const uuid = crypto.randomUUID();
-              setCookie('uuid', uuid, { domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN, maxAge: 2147483647 });
-              state.mutate((oldState: any) => ({
-                ...oldState,
-                overrides: { ...oldState.overrides, conversation: uuid },
-              }));
-            }}
-          >
-            Reset
-          </Button>
+          <Button onClick={handleReset}>Reset</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 };
 
-export const ListUploadedFiles = ({ uploadedFiles, setUploadedFiles }: any): ReactNode => {
+export const ListUploadedFiles = ({ 
+  uploadedFiles, 
+  setUploadedFiles 
+}: { 
+  uploadedFiles: { [x: string]: string };
+  setUploadedFiles: React.Dispatch<React.SetStateAction<{ [x: string]: string }>>;
+}): ReactNode => {
   return (
     <div className='flex flex-wrap items-center gap-2'>
       <span className='text-sm text-muted-foreground'>Uploaded Files:</span>
@@ -411,7 +226,7 @@ export const ListUploadedFiles = ({ uploadedFiles, setUploadedFiles }: any): Rea
           variant='outline'
           className='py-1 cursor-pointer bg-muted'
           onClick={() => {
-            setUploadedFiles((prevFiles: any) => {
+            setUploadedFiles((prevFiles) => {
               const newFiles = { ...prevFiles };
               delete newFiles[String(fileName)];
               return newFiles;
@@ -422,6 +237,212 @@ export const ListUploadedFiles = ({ uploadedFiles, setUploadedFiles }: any): Rea
         </Badge>
       ))}
     </div>
+  );
+};
+
+export function useDynamicInput(initialValue = '', uploadedFiles: { [x: string]: string }) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isActive, setIsActive] = useState(false);
+  const [value, setValue] = useState(initialValue);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea || !isActive) return;
+    const adjustHeight = () => {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    };
+    textarea.addEventListener('input', adjustHeight);
+    adjustHeight();
+    return () => textarea.removeEventListener('input', adjustHeight);
+  }, [isActive]);
+
+  useEffect(() => {
+    if (Object.keys(uploadedFiles).length > 0) {
+      setIsActive(true);
+    }
+  }, [uploadedFiles]);
+
+  const handleFocus = () => {
+    setIsActive(true);
+    setTimeout(() => textareaRef.current?.focus(), 0);
+  };
+  
+  const handleBlur = () => {
+    setValue('');
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'unset';
+    }
+  };
+  
+  return { textareaRef, isActive, setIsActive, handleFocus, handleBlur, value, setValue };
+}
+
+export const ImportConversation = () => {
+  const interactiveConfig = useInteractiveConfig();
+  const router = useRouter();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isProcessingImport, setIsProcessingImport] = useState(false);
+
+  const handleImportFile = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0) {
+      return;
+    }
+    if (!interactiveConfig || !interactiveConfig.agixt) {
+        toast({ title: 'Error', description: 'SDK not available.', variant: 'destructive'});
+        return;
+    }
+
+    setIsProcessingImport(true);
+    const file = event.target.files[0];
+    const fileName = file.name.replace(/\.[^/.]+$/, '');
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const fileContentString = e.target?.result as string;
+          if (!fileContentString) {
+            throw new Error("File content is empty or could not be read.");
+          }
+
+          let content;
+          try {
+            content = JSON.parse(fileContentString);
+          } catch (parseError: any) {
+            toast({ title: 'Import Error', description: `Failed to parse JSON file: ${parseError.message}`, variant: 'destructive' });
+            setIsProcessingImport(false);
+            if (event.target) event.target.value = ''; 
+            return;
+          }
+          
+          let baseNameForConv = fileName;
+          let messagesToProcess: any[] = [];
+
+          if (Array.isArray(content)) {
+            messagesToProcess = content;
+          } else if (typeof content === 'object' && content !== null) {
+            baseNameForConv = content.name || fileName;
+            if (content.messages && Array.isArray(content.messages)) {
+              messagesToProcess = content.messages;
+            } else if (content.conversation_history && Array.isArray(content.conversation_history)) {
+              messagesToProcess = content.conversation_history;
+            }
+          }
+
+          if (messagesToProcess.length === 0) {
+            throw new Error('No valid conversation messages found in the imported file.');
+          }
+
+          const timestamp = new Date().toISOString().split('.')[0].replace(/:/g, '-');
+          const uniqueConversationName = `${baseNameForConv}_imported_${timestamp}`;
+
+          const conversationContent = messagesToProcess.map((msg: any, index: number) => {
+             if (!msg || typeof msg !== 'object') {
+               return null; 
+             }
+             const role = msg.role || 'user';
+             const messageText = msg.message || msg.content || '';
+             const ts = msg.timestamp || new Date().toISOString();
+             return { role, message: messageText, timestamp: ts };
+           }).filter(msg => msg !== null);
+           
+          if (conversationContent.length === 0) {
+            throw new Error('No valid conversation messages after processing.');
+          }
+          
+          const agentName = getCookie('agixt-agent') || process.env.NEXT_PUBLIC_AGIXT_AGENT || 'AGiXT';
+          const newConversation = await interactiveConfig.agixt.newConversation(agentName, uniqueConversationName, conversationContent);
+          const newConversationID = newConversation.id || '-';
+          
+          await mutate('/conversations');
+
+          if (interactiveConfig.mutate) {
+            interactiveConfig.mutate((oldState) => ({
+              ...oldState,
+              overrides: { ...(oldState?.overrides), conversation: newConversationID },
+            }));
+          }
+          
+          router.push(`/chat/${newConversationID}`);
+          toast({ title: 'Success', description: `Conversation "${uniqueConversationName}" imported successfully.` });
+          setIsDialogOpen(false);
+
+        } catch (error: any) {
+          toast({ title: 'Import Error', description: `Failed to process file: ${error.message}`, variant: 'destructive' });
+        } finally {
+          setIsProcessingImport(false);
+        }
+      };
+      reader.onerror = () => {
+        toast({ title: 'Import Error', description: 'Error reading file.', variant: 'destructive' });
+        setIsProcessingImport(false);
+      };
+      reader.readAsText(file);
+    } catch (error: any) {
+        toast({ title: 'Error', description: 'Failed to import conversation', variant: 'destructive' });
+        setIsProcessingImport(false);
+    }
+    if (event.target) event.target.value = ''; 
+  }, [interactiveConfig, router]);
+
+  return (
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <DialogTrigger asChild>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size='icon'
+                variant='ghost'
+                className='rounded-full'
+                onClick={() => setIsDialogOpen(true)}
+                disabled={isProcessingImport}
+              >
+                <UploadCloud className='w-5 h-5' />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Import Conversation</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Import Conversation</DialogTitle>
+          <DialogDescription>
+            Import a conversation from a JSON file.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className='space-y-4 py-4'>
+          <div className='grid w-full max-w-sm items-center gap-1.5'>
+            <Label htmlFor='chat-bar-import-file'>Choose conversation file (.json)</Label>
+            <Input 
+              id='chat-bar-import-file'
+              type='file' 
+              accept='.json'
+              onChange={handleImportFile}
+              disabled={isProcessingImport}
+            />
+          </div>
+          {isProcessingImport && (
+            <div className="flex items-center justify-center text-muted-foreground">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Processing import...
+            </div>
+          )}
+          <p className='text-sm text-muted-foreground'>
+            Select a JSON file containing conversation data to import.
+          </p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isProcessingImport}>
+            Cancel
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -450,10 +471,8 @@ export function ChatBar({
   showOverrideSwitchesCSV?: string;
   isEmptyConversation?: boolean;
 }): ReactNode {
-  const state = useContext(InteractiveConfigContext);
   const [timer, setTimer] = useState<number>(-1);
   const [uploadedFiles, setUploadedFiles] = useState<{ [x: string]: string }>({});
-  const [alternativeInputActive, setAlternativeInputActive] = useState(false);
   const {
     textareaRef,
     isActive,
@@ -483,6 +502,19 @@ export function ChatBar({
     newUploadedFiles[file.name] = fileContent;
     setUploadedFiles((previous) => ({ ...previous, ...newUploadedFiles }));
   };
+  
+  const handleSendMessage = useCallback(() => {
+    if (blurOnSend) {
+      handleBlur();
+    }
+    if (message.trim().length > 0 || Object.keys(uploadedFiles).length > 0) {
+      onSend(message, uploadedFiles);
+      if (clearOnSend) {
+        setMessage('');
+        setUploadedFiles({});
+      }
+    }
+  }, [message, uploadedFiles, blurOnSend, handleBlur, onSend, clearOnSend, setMessage]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -506,7 +538,7 @@ export function ChatBar({
       )}
     >
       {isActive ? (
-        <label className='w-full' htmlFor='message'>
+        <label className='w-full' htmlFor='chat-message-input-active'>
           <div className='w-full'>
             <Textarea
               ref={textareaRef}
@@ -514,32 +546,22 @@ export function ChatBar({
               className='overflow-x-hidden overflow-y-auto border-none resize-none min-h-4 ring-0 focus-visible:ring-0 max-h-96'
               rows={1}
               name='message'
-              id='message'
+              id='chat-message-input-active'
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={async (event) => {
-                if (event.key === 'Enter' && !event.shiftKey && message) {
+                if (event.key === 'Enter' && !event.shiftKey && message.trim()) {
                   event.preventDefault();
-                  if (blurOnSend) {
-                    handleBlur();
-                  }
-
-                  await onSend(message, uploadedFiles);
-                  if (clearOnSend) {
-                    setMessage('');
-                    setUploadedFiles({});
-                  }
+                  handleSendMessage();
                 }
               }}
               disabled={disabled}
             />
           </div>
           <div className='flex items-center w-full gap-1'>
-            {enableFileUpload && !alternativeInputActive && (
+            {enableFileUpload && (
               <UploadFiles
                 handleUploadFiles={handleUploadFiles}
-                message={message}
-                uploadedFiles={uploadedFiles}
                 disabled={disabled}
               />
             )}
@@ -550,43 +572,30 @@ export function ChatBar({
             <div className='flex-grow' />
             <TooltipBasic title='Collapse Input' side='top'>
               <Button size='icon' variant='ghost' className='rounded-full' onClick={() => setIsActive(false)}>
-                <BiCollapseVertical className='w-4 h-4' />
+                <BiCollapseVertical className='w-4 w-4' />
               </Button>
             </TooltipBasic>
             {enableVoiceInput && <VoiceRecorder onSend={onSend} disabled={disabled} />}
-            {showResetConversation && <ResetConversation state={state} setCookie={setCookie} />}
-            {!alternativeInputActive && (
-              <SendMessage
-                handleSend={() => {
-                  if (blurOnSend) {
-                    handleBlur();
-                  }
-                  if (clearOnSend) {
-                    setMessage('');
-                    setUploadedFiles({});
-                  }
-                  onSend(message, uploadedFiles);
-                }}
-                message={message}
-                uploadedFiles={uploadedFiles}
-                disabled={disabled}
-              />
-            )}
+            {showResetConversation && <ResetConversation />}
+            <SendMessage
+              handleSend={handleSendMessage}
+              message={message}
+              uploadedFiles={uploadedFiles}
+              disabled={disabled}
+            />
           </div>
         </label>
       ) : (
         <>
-          {enableFileUpload && !alternativeInputActive && (
+          {enableFileUpload && (
             <UploadFiles
               handleUploadFiles={handleUploadFiles}
-              message={message}
-              uploadedFiles={uploadedFiles}
               disabled={disabled}
             />
           )}
           {isEmptyConversation && <ImportConversation />}
           <Button
-            id='message'
+            id='chat-message-input-inactive'
             size='lg'
             role='textbox'
             variant='ghost'
@@ -600,46 +609,4 @@ export function ChatBar({
       )}
     </DropZone>
   );
-}
-
-export function useDynamicInput(initialValue = '', uploadedFiles: { [x: string]: string }) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [isActive, setIsActive] = useState(false);
-  const [value, setValue] = useState(initialValue);
-
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea || !isActive) return;
-
-    const adjustHeight = () => {
-      textarea.style.height = 'auto';
-      textarea.style.height = `${textarea.scrollHeight}px`;
-    };
-
-    textarea.addEventListener('input', adjustHeight);
-    adjustHeight();
-
-    return () => textarea.removeEventListener('input', adjustHeight);
-  }, [isActive]);
-
-  useEffect(() => {
-    if (Object.keys(uploadedFiles).length > 0) {
-      setIsActive(true);
-    }
-  }, [uploadedFiles]);
-
-  const handleFocus = () => {
-    setIsActive(true);
-    setTimeout(() => textareaRef.current?.focus(), 0);
-  };
-
-  const handleBlur = () => {
-    setValue('');
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = 'unset';
-    }
-  };
-
-  return { textareaRef, isActive, setIsActive, handleFocus, handleBlur, value, setValue };
 }
