@@ -12,9 +12,11 @@ import {
   RiShoppingCartLine as ShoppingCartOutlined,
 } from 'react-icons/ri';
 import { BsTwitterX } from 'react-icons/bs';
-import { SiTesla } from 'react-icons/si';
+import { SiTesla, SiGarmin } from 'react-icons/si';
 import { FaAws, FaDiscord } from 'react-icons/fa';
 import { TbBrandWalmart } from 'react-icons/tb';
+import { MdFitbit } from 'react-icons/md';
+import { BsAlexa } from 'react-icons/bs';
 
 // Type definitions for provider data
 interface ApiProvider {
@@ -44,8 +46,13 @@ let loadingPromise: Promise<void> | null = null;
 // Icon mapping function based on provider name
 const getIconByName = (name: string): ReactNode => {
   const lowercaseName = name.toLowerCase();
-
   switch (lowercaseName) {
+    case 'alexa':
+      return <BsAlexa />;
+    case 'fitbit':
+      return <MdFitbit />;
+    case 'garmin':
+      return <SiGarmin />;
     case 'discord':
       return <FaDiscord />;
     case 'github':
