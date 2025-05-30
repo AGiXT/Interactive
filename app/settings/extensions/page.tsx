@@ -122,6 +122,12 @@ interface ConnectedService {
 }
 
 const providerDescriptions = {
+  Alexa:
+    'Connect your Amazon Alexa account to enable AI interactions with your smart home devices. Agents can help manage routines, control devices, and provide updates on your home environment.',
+  Fitbit:
+    'Link your Fitbit account to enable AI tracking of your health and fitness data. Agents can help analyze your activity, provide health insights, and manage your fitness goals.',
+  Garmin:
+    'Connect your Garmin account to enable AI assistance with your fitness and navigation data. Agents can help track workouts, analyze performance, and provide route suggestions.',
   Google:
     'Connect your Google account to enable AI interactions with Gmail and Google Calendar. This allows agents to read and send emails, manage your calendar events, and help organize your digital life.',
   Microsoft:
