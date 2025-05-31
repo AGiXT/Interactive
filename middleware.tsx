@@ -178,7 +178,21 @@ export const useAuth: MiddlewareHook = async (req) => {
       const response = await verifyJWT(jwt);
       const responseJSON = await response.json();
 
-      if (response.status === 402) {
+      if (response.status === 401 || response.status === 403) {
+        // Unauthorized/Forbidden - Clear JWT and redirect to auth page
+        toReturn.response = NextResponse.redirect(new URL(authWeb, req.url), {
+          headers: {
+            'Set-Cookie': [
+              generateCookieString('jwt', '', '0'),
+              generateCookieString('href', requestedURI, (86400).toString()),
+            ],
+          },
+        });
+        toReturn.activated = true;
+        console.error(
+          `${response.status === 401 ? 'Unauthorized' : 'Forbidden'} access, status ${response.status}, detail ${responseJSON.detail}. Clearing JWT and redirecting to auth.`,
+        );
+      } else if (response.status === 402) {
         // Payment Required
         if (!requestedURI.startsWith(`${authWeb}/subscribe`)) {
           toReturn.response = NextResponse.redirect(
@@ -190,12 +204,6 @@ export const useAuth: MiddlewareHook = async (req) => {
               }`,
             ),
           );
-          toReturn.activated = true;
-        }
-      } else if (responseJSON?.missing_requirements || response.status === 403) {
-        // Forbidden (Missing Values for User)
-        if (!requestedURI.startsWith(`${authWeb}/manage`)) {
-          toReturn.response = NextResponse.redirect(new URL(`${authWeb}/manage`));
           toReturn.activated = true;
         }
       } else if (response.status === 502) {
