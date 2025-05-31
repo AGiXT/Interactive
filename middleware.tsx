@@ -206,12 +206,6 @@ export const useAuth: MiddlewareHook = async (req) => {
           );
           toReturn.activated = true;
         }
-      } else if (responseJSON?.missing_requirements) {
-        // Forbidden (Missing Values for User)
-        if (!requestedURI.startsWith(`${authWeb}/manage`)) {
-          toReturn.response = NextResponse.redirect(new URL(`${authWeb}/manage`));
-          toReturn.activated = true;
-        }
       } else if (response.status === 502) {
         const cookieArray = [generateCookieString('href', requestedURI, (86400).toString())];
         toReturn.activated = true;
