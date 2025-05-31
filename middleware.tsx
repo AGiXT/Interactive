@@ -52,7 +52,7 @@ export const verifyJWT = async (jwt: string): Promise<Response> => {
         },
       });
 
-      if (response.status === 200 || [401, 402].includes(response.status)) {
+      if (response.status === 200 || response.status === 402) {
         if (Object.keys(responses).length > 0) {
           containerNames.sort((a, b) => {
             if (a === containerName) {
@@ -178,7 +178,19 @@ export const useAuth: MiddlewareHook = async (req) => {
       const response = await verifyJWT(jwt);
       const responseJSON = await response.json();
 
-      if (response.status === 402) {
+      if (response.status === 401) {
+        // Unauthorized - Clear JWT and redirect to auth page
+        toReturn.response = NextResponse.redirect(new URL(authWeb, req.url), {
+          headers: {
+            'Set-Cookie': [
+              generateCookieString('jwt', '', '0'),
+              generateCookieString('href', requestedURI, (86400).toString()),
+            ],
+          },
+        });
+        toReturn.activated = true;
+        console.error(`Unauthorized access, status ${response.status}, detail ${responseJSON.detail}. Clearing JWT and redirecting to auth.`);
+      } else if (response.status === 402) {
         // Payment Required
         if (!requestedURI.startsWith(`${authWeb}/subscribe`)) {
           toReturn.response = NextResponse.redirect(
