@@ -52,7 +52,7 @@ export const verifyJWT = async (jwt: string): Promise<Response> => {
         },
       });
 
-      if (response.status === 200 || response.status === 402) {
+      if (response.status === 200 || [401, 402, 403].includes(response.status)) {
         if (Object.keys(responses).length > 0) {
           containerNames.sort((a, b) => {
             if (a === containerName) {
@@ -189,7 +189,9 @@ export const useAuth: MiddlewareHook = async (req) => {
           },
         });
         toReturn.activated = true;
-        console.error(`${response.status === 401 ? 'Unauthorized' : 'Forbidden'} access, status ${response.status}, detail ${responseJSON.detail}. Clearing JWT and redirecting to auth.`);
+        console.error(
+          `${response.status === 401 ? 'Unauthorized' : 'Forbidden'} access, status ${response.status}, detail ${responseJSON.detail}. Clearing JWT and redirecting to auth.`,
+        );
       } else if (response.status === 402) {
         // Payment Required
         if (!requestedURI.startsWith(`${authWeb}/subscribe`)) {
