@@ -178,8 +178,8 @@ export const useAuth: MiddlewareHook = async (req) => {
       const response = await verifyJWT(jwt);
       const responseJSON = await response.json();
 
-      if (response.status === 401) {
-        // Unauthorized - Clear JWT and redirect to auth page
+      if (response.status === 401 || response.status === 403) {
+        // Unauthorized/Forbidden - Clear JWT and redirect to auth page
         toReturn.response = NextResponse.redirect(new URL(authWeb, req.url), {
           headers: {
             'Set-Cookie': [
@@ -189,7 +189,7 @@ export const useAuth: MiddlewareHook = async (req) => {
           },
         });
         toReturn.activated = true;
-        console.error(`Unauthorized access, status ${response.status}, detail ${responseJSON.detail}. Clearing JWT and redirecting to auth.`);
+        console.error(`${response.status === 401 ? 'Unauthorized' : 'Forbidden'} access, status ${response.status}, detail ${responseJSON.detail}. Clearing JWT and redirecting to auth.`);
       } else if (response.status === 402) {
         // Payment Required
         if (!requestedURI.startsWith(`${authWeb}/subscribe`)) {
@@ -204,18 +204,6 @@ export const useAuth: MiddlewareHook = async (req) => {
           );
           toReturn.activated = true;
         }
-      } else if (response.status === 403) {
-        // Forbidden - Clear JWT and redirect to auth page
-        toReturn.response = NextResponse.redirect(new URL(authWeb, req.url), {
-          headers: {
-            'Set-Cookie': [
-              generateCookieString('jwt', '', '0'),
-              generateCookieString('href', requestedURI, (86400).toString()),
-            ],
-          },
-        });
-        toReturn.activated = true;
-        console.error(`Forbidden access, status ${response.status}, detail ${responseJSON.detail}. Clearing JWT and redirecting to auth.`);
       } else if (responseJSON?.missing_requirements) {
         // Forbidden (Missing Values for User)
         if (!requestedURI.startsWith(`${authWeb}/manage`)) {
