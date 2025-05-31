@@ -52,7 +52,7 @@ export const verifyJWT = async (jwt: string): Promise<Response> => {
         },
       });
 
-      if (response.status === 200 || [401, 402, 403].includes(response.status)) {
+      if (response.status === 200 || [401, 402].includes(response.status)) {
         if (Object.keys(responses).length > 0) {
           containerNames.sort((a, b) => {
             if (a === containerName) {
@@ -192,7 +192,19 @@ export const useAuth: MiddlewareHook = async (req) => {
           );
           toReturn.activated = true;
         }
-      } else if (responseJSON?.missing_requirements || response.status === 403) {
+      } else if (response.status === 403) {
+        // Forbidden - Clear JWT and redirect to auth page
+        toReturn.response = NextResponse.redirect(new URL(authWeb, req.url), {
+          headers: {
+            'Set-Cookie': [
+              generateCookieString('jwt', '', '0'),
+              generateCookieString('href', requestedURI, (86400).toString()),
+            ],
+          },
+        });
+        toReturn.activated = true;
+        console.error(`Forbidden access, status ${response.status}, detail ${responseJSON.detail}. Clearing JWT and redirecting to auth.`);
+      } else if (responseJSON?.missing_requirements) {
         // Forbidden (Missing Values for User)
         if (!requestedURI.startsWith(`${authWeb}/manage`)) {
           toReturn.response = NextResponse.redirect(new URL(`${authWeb}/manage`));
