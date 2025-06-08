@@ -586,7 +586,7 @@ export function Chat({
       ],
       ...(activeCompany?.id ? { company_id: activeCompany?.id } : {}),
       ...(getCookie('agixt-create-image') ? { create_image: getCookie('agixt-create-image') } : {}),
-      ...(getCookie('agixt-tts') ? { tts: getCookie('agixt-tts') } : {}),
+      ...(activeCompany?.roleId === 4 ? { tts: 'true' } : {}),
       ...(getCookie('agixt-websearch') ? { websearch: getCookie('agixt-websearch') } : {}),
       ...(getCookie('agixt-analyze-user-input') ? { analyze_user_input: getCookie('agixt-analyze-user-input') } : {}),
     });
