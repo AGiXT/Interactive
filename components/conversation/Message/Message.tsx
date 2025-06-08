@@ -9,6 +9,7 @@ import { MessageActions } from '@/components/conversation/Message/Actions';
 import AudioPlayer from '@/components/conversation/Message/Audio';
 import TimeAgo, { FormatStyleName } from 'javascript-time-ago';
 import en from 'javascript-time-ago/locale/en';
+import { useCompany } from '@/components/interactive/useUser';
 
 TimeAgo.addDefaultLocale(en);
 
@@ -36,6 +37,7 @@ export type ChatItem = {
   };
 };
 export type MessageProps = {
+  chatItem: ChatItem;
   lastUserMessage: string;
   alternateBackground?: string;
   setLoading: (loading: boolean) => void;
@@ -57,6 +59,8 @@ const checkUserMsgJustText = (chatItem: { role: string; message: string }) => {
 
 export default function Message({ chatItem, lastUserMessage, setLoading }: MessageProps): React.JSX.Element {
   const [updatedMessage, setUpdatedMessage] = useState(chatItem.message);
+  const { data: company } = useCompany();
+  const isChild = company?.roleId === 4;
 
   const formattedMessage = useMemo(() => {
     let formatted = chatItem.message;
@@ -117,14 +121,16 @@ export default function Message({ chatItem, lastUserMessage, setLoading }: Messa
       <div className={cn('flex items-center flex-wrap', chatItem.role === 'USER' && 'flex-row-reverse')}>
         <TimeStamp chatItem={chatItem} />
 
-        <MessageActions
-          chatItem={chatItem}
-          audios={audios}
-          formattedMessage={formattedMessage}
-          lastUserMessage={lastUserMessage}
-          updatedMessage={updatedMessage}
-          setUpdatedMessage={setUpdatedMessage}
-        />
+        {!isChild && (
+          <MessageActions
+            chatItem={chatItem}
+            audios={audios}
+            formattedMessage={formattedMessage}
+            lastUserMessage={lastUserMessage}
+            updatedMessage={updatedMessage}
+            setUpdatedMessage={setUpdatedMessage}
+          />
+        )}
       </div>
     </div>
   );
