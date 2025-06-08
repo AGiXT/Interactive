@@ -42,7 +42,7 @@ export type Item = {
 
 // Function to get filtered items based on user role
 export const getFilteredItems = (userRoleId?: number): Item[] => {
-  // Special case for children (roleId 4) - show only New Chat and Documentation
+  // Special case for children (roleId 4) - show only New Chat
   if (userRoleId === 4) {
     return [
       {
@@ -51,8 +51,6 @@ export const getFilteredItems = (userRoleId?: number): Item[] => {
         icon: TbMessageCirclePlus,
         isActive: true,
       },
-      // Include Documentation since it should be accessible to everyone
-      items.find((item) => item.title === 'Documentation')!,
     ];
   }
 
