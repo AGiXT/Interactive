@@ -3,20 +3,25 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Volume2, Play, Pause, Loader2 } from 'lucide-react';
 
-const formatTime = (seconds) => {
+interface AudioPlayerProps {
+  src: string;
+  autoplay?: boolean;
+}
+
+const formatTime = (seconds: number) => {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
-export default function AudioPlayer({ src }) {
+export default function AudioPlayer({ src, autoplay = false }: AudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
-  const [audioSrc, setAudioSrc] = useState(null);
+  const [audioSrc, setAudioSrc] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [audio] = useState(new Audio());
 
   useEffect(() => {
@@ -28,7 +33,7 @@ export default function AudioPlayer({ src }) {
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
         setAudioSrc(url);
-      } catch (err) {
+      } catch (err: any) {
         setError(`Error loading audio: ${err.message}`);
         setLoading(false);
       }
@@ -39,8 +44,18 @@ export default function AudioPlayer({ src }) {
   useEffect(() => {
     if (!audioSrc) return;
 
-    const handleCanPlay = () => setLoading(false);
-    const handleError = (e) => {
+    const handleCanPlay = async () => {
+      setLoading(false);
+      if (autoplay) {
+        try {
+          await audio.play();
+          setIsPlaying(true);
+        } catch (err: any) {
+          console.warn('Autoplay blocked:', err.message);
+        }
+      }
+    };
+    const handleError = (e: any) => {
       console.error('Audio error:', e, audio.error);
       setError(`Audio error: ${audio.error?.message || 'Unknown error'}`);
       setLoading(false);
@@ -67,7 +82,7 @@ export default function AudioPlayer({ src }) {
       audio.removeEventListener('ended', handleEnded);
       URL.revokeObjectURL(audioSrc);
     };
-  }, [audio, audioSrc]);
+  }, [audio, audioSrc, autoplay]);
 
   const togglePlay = async () => {
     try {
@@ -77,18 +92,18 @@ export default function AudioPlayer({ src }) {
         await audio.play();
       }
       setIsPlaying(!isPlaying);
-    } catch (err) {
+    } catch (err: any) {
       setError(`Playback failed: ${err.message}`);
     }
   };
 
-  const handleSliderChange = (value) => {
+  const handleSliderChange = (value: number[]) => {
     const newTime = value[0];
     setCurrentTime(newTime);
     audio.currentTime = newTime;
   };
 
-  const handleVolumeChange = (value) => {
+  const handleVolumeChange = (value: number[]) => {
     const newVolume = value[0];
     setVolume(newVolume);
     audio.volume = newVolume;
