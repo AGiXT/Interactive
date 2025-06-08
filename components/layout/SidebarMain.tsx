@@ -400,10 +400,9 @@ export function NavMain() {
 
   const itemsWithActiveState = useMemo(() => {
     const hasJwt = !!getCookie('jwt');
-    const hasCompany = !!company && !companyError;
 
     // Show only Documentation when not authenticated, no company, or role ID < 4
-    if (!hasJwt || !hasCompany || (company?.roleId && company.roleId < 4)) {
+    if (!hasJwt) {
       const filteredItems = items.filter((item) => item.title === 'Documentation');
       return filteredItems.map((item) => ({
         ...item,
