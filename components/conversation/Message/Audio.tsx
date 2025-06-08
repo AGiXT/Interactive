@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Volume2, Play, Pause, Loader2 } from 'lucide-react';
+import { useAudioContext } from './AudioContext';
 
 interface AudioPlayerProps {
   src: string;
@@ -23,6 +24,18 @@ export default function AudioPlayer({ src, autoplay = false }: AudioPlayerProps)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [audio] = useState(new Audio());
+  const audioIdRef = useRef<string>(`audio-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+  
+  const { currentlyPlaying, setCurrentlyPlaying } = useAudioContext();
+
+  // Effect to handle global audio state changes
+  useEffect(() => {
+    if (currentlyPlaying && currentlyPlaying !== audioIdRef.current && isPlaying) {
+      // Another audio is playing, pause this one
+      audio.pause();
+      setIsPlaying(false);
+    }
+  }, [currentlyPlaying, isPlaying, audio]);
 
   useEffect(() => {
     const loadAudio = async () => {
@@ -48,8 +61,13 @@ export default function AudioPlayer({ src, autoplay = false }: AudioPlayerProps)
       setLoading(false);
       if (autoplay) {
         try {
+          // Pause any other currently playing audio before starting autoplay
+          if (currentlyPlaying && currentlyPlaying !== audioIdRef.current) {
+            // The global context effect will handle this
+          }
           await audio.play();
           setIsPlaying(true);
+          setCurrentlyPlaying(audioIdRef.current);
         } catch (err: any) {
           console.warn('Autoplay blocked:', err.message);
         }
@@ -63,7 +81,10 @@ export default function AudioPlayer({ src, autoplay = false }: AudioPlayerProps)
 
     const handleLoadMetadata = () => setDuration(audio.duration);
     const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
-    const handleEnded = () => setIsPlaying(false);
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setCurrentlyPlaying(null);
+    };
 
     audio.addEventListener('canplay', handleCanPlay);
     audio.addEventListener('error', handleError);
@@ -88,8 +109,14 @@ export default function AudioPlayer({ src, autoplay = false }: AudioPlayerProps)
     try {
       if (isPlaying) {
         audio.pause();
+        setCurrentlyPlaying(null);
       } else {
+        // Pause any other currently playing audio
+        if (currentlyPlaying && currentlyPlaying !== audioIdRef.current) {
+          // The context will handle pausing other audio players
+        }
         await audio.play();
+        setCurrentlyPlaying(audioIdRef.current);
       }
       setIsPlaying(!isPlaying);
     } catch (err: any) {

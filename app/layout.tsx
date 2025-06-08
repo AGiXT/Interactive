@@ -4,6 +4,7 @@ import InteractiveConfigContextWrapper from '@/components/interactive/ContextWra
 import { SidebarContentProvider } from '@/components/layout/SidebarContentManager';
 import { SidebarContext } from '@/components/layout/SidebarContext';
 import { SidebarMain } from '@/components/layout/SidebarMain';
+import { AudioProvider } from '@/components/conversation/Message/AudioContext';
 import '@/components/interactive/zod2gql';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { Toaster } from '@/components/ui/toaster';
@@ -41,20 +42,22 @@ export default function RootLayout({ children }: { children: ReactNode }): React
         />
       </head>
       <body className={cn(inter.className, theme, appearance)}>
-        <InteractiveConfigContextWrapper>
-          <CommandMenuProvider>
-            <SidebarContentProvider>
-              <SidebarProvider className='flex-1' defaultRightOpen={false}>
-                <SidebarMain side='left' />
-                {children}
-                <Toaster />
-                {/* <ThemeSetter /> */}
-                <CommandMenu />
-                <SidebarContext side='right' />
-              </SidebarProvider>
-            </SidebarContentProvider>
-          </CommandMenuProvider>
-        </InteractiveConfigContextWrapper>
+        <AudioProvider>
+          <InteractiveConfigContextWrapper>
+            <CommandMenuProvider>
+              <SidebarContentProvider>
+                <SidebarProvider className='flex-1' defaultRightOpen={false}>
+                  <SidebarMain side='left' />
+                  {children}
+                  <Toaster />
+                  {/* <ThemeSetter /> */}
+                  <CommandMenu />
+                  <SidebarContext side='right' />
+                </SidebarProvider>
+              </SidebarContentProvider>
+            </CommandMenuProvider>
+          </InteractiveConfigContextWrapper>
+        </AudioProvider>
       </body>
     </html>
   );
