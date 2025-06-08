@@ -2,6 +2,7 @@
 
 import React, { useRef } from 'react';
 import { cn } from '@/lib/utils';
+import AudioPlayer from '@/components/conversation/Message/Audio';
 // import Plyr from 'plyr-react';
 // import 'plyr-react/plyr.css';
 
@@ -59,6 +60,7 @@ const MarkdownLink: React.FC<MarkdownLinkProps> = ({ children, href, className, 
   const isExternal = href && !href.startsWith('#');
   const youtubeId = href ? getYoutubeId(href) : null;
   const isVideo = href?.match(/\.(mp4|webm|ogg)$/i);
+  const isAudio = href?.startsWith('http') && href?.match(/\.(wav|mp3|ogg|m4a|aac|flac)$/i);
 
   if (youtubeId) {
     return (
@@ -72,6 +74,14 @@ const MarkdownLink: React.FC<MarkdownLinkProps> = ({ children, href, className, 
             allowFullScreen
           />
         </div>
+      </div>
+    );
+  }
+
+  if (isAudio && href) {
+    return (
+      <div className='w-96 my-4'>
+        <AudioPlayer src={href} autoplay={true} />
       </div>
     );
   }
