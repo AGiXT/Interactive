@@ -35,34 +35,33 @@ import { useCompany } from '@/components/interactive/useUser';
 // Child-friendly voice recorder with large button
 const ChildFriendlyVoiceRecorder = ({ onSend, disabled }: { onSend: (message: string | object, uploadedFiles?: { [x: string]: string }) => Promise<void>; disabled: boolean }) => {
   return (
-    <div className="flex flex-col items-center justify-center space-y-6">
+    <div className="flex items-center justify-center space-x-4">
       <div className="text-center">
-        <h2 className="text-3xl font-bold text-primary mb-2">🎤 Talk to me!</h2>
-        <p className="text-xl text-muted-foreground">Tap the big button to start talking</p>
+        <p className="text-lg font-semibold text-primary">🎤 Tap to talk!</p>
       </div>
       
-      {/* Large microphone button */}
+      {/* Larger microphone button that fits in chat bar */}
       <div className="relative">
-        {/* Custom styling to make VoiceRecorder button larger */}
+        {/* Custom styling to make VoiceRecorder button larger but appropriate for chat bar */}
         <style jsx>{`
           :global(.child-voice-recorder button) {
-            width: 160px !important;
-            height: 160px !important;
+            width: 60px !important;
+            height: 60px !important;
             border-radius: 50% !important;
             background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%) !important;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
             transition: all 0.3s ease !important;
           }
           :global(.child-voice-recorder button:hover) {
-            transform: scale(1.05) !important;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+            transform: scale(1.1) !important;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
           }
           :global(.child-voice-recorder button:active) {
             transform: scale(0.95) !important;
           }
           :global(.child-voice-recorder button svg) {
-            width: 80px !important;
-            height: 80px !important;
+            width: 30px !important;
+            height: 30px !important;
             color: white !important;
           }
         `}</style>
@@ -584,7 +583,7 @@ export function ChatBar({
   if (isChild) {
     return (
       <div className={cn(
-        'flex absolute bg-background bottom-0 items-center justify-center left-0 right-0 max-w-[95%] px-8 py-8 m-3 mx-auto border overflow-hidden shadow-md rounded-3xl'
+        'flex absolute bg-background bottom-0 items-center justify-center left-0 right-0 max-w-[95%] px-2 py-3 m-3 mx-auto border overflow-hidden shadow-md rounded-3xl'
       )}>
         <ChildFriendlyVoiceRecorder onSend={handleVoiceSend} disabled={disabled} />
       </div>
