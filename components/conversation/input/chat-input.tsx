@@ -9,7 +9,7 @@ import { DropZone } from '@/components/conversation/input/DropZone';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { CheckCircle as LuCheckCircle, UploadCloud, Loader2 } from 'lucide-react';
-import { LuPaperclip, LuSend, LuArrowUp, LuLoader as LuLoaderIcon, LuTrash2 } from 'react-icons/lu';
+import { LuPaperclip, LuSend, LuArrowUp, LuLoader as LuLoaderIcon, LuTrash2, LuMic, LuSquare } from 'react-icons/lu';
 import { Tooltip, TooltipBasic, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
@@ -31,6 +31,169 @@ import { toast } from '@/components/layout/toast';
 import { useRouter } from 'next/navigation';
 import { mutate } from 'swr';
 import { useCompany } from '@/components/interactive/useUser';
+
+// Child-friendly voice recorder with large button
+const ChildFriendlyVoiceRecorder = ({ onSend, disabled }: { onSend: (message: string | object, uploadedFiles?: { [x: string]: string }) => Promise<void>; disabled: boolean }) => {
+  const [isRecording, setIsRecording] = useState(false);
+  const silenceTimer = useRef<NodeJS.Timeout | null>(null);
+  const audioContext = useRef<AudioContext | null>(null);
+  const analyser = useRef<AnalyserNode | null>(null);
+  const animationFrame = useRef<number>();
+  const audioChunks = useRef<Float32Array[]>([]);
+  const processorNode = useRef<ScriptProcessorNode | null>(null);
+
+  // Audio processing helper functions
+  const concatenateAudioBuffers = (buffers: Float32Array[], sampleRate: number): Float32Array => {
+    const totalLength = buffers.reduce((acc, buffer) => acc + buffer.length, 0);
+    const result = new Float32Array(totalLength);
+    let offset = 0;
+    for (const buffer of buffers) {
+      result.set(buffer, offset);
+      offset += buffer.length;
+    }
+    return result;
+  };
+
+  const createWavBlob = (audioData: Float32Array, sampleRate: number): Blob => {
+    const length = audioData.length;
+    const buffer = new ArrayBuffer(44 + length * 2);
+    const view = new DataView(buffer);
+    
+    // WAV header
+    const writeString = (offset: number, string: string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+    
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + length * 2, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeString(36, 'data');
+    view.setUint32(40, length * 2, true);
+    
+    // Convert float samples to 16-bit PCM
+    let offset = 44;
+    for (let i = 0; i < length; i++) {
+      const sample = Math.max(-1, Math.min(1, audioData[i]));
+      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+      offset += 2;
+    }
+    
+    return new Blob([buffer], { type: 'audio/wav' });
+  };
+
+  const stopRecording = useCallback(() => {
+    if (!audioContext.current || !processorNode.current) return;
+
+    // Stop recording
+    processorNode.current.disconnect();
+    analyser.current?.disconnect();
+
+    // Convert to WAV
+    const audioData = concatenateAudioBuffers(audioChunks.current, audioContext.current.sampleRate);
+    const wavBlob = createWavBlob(audioData, audioContext.current.sampleRate);
+
+    // Convert to base64 and send
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64Audio = reader.result as string;
+      onSend('', {
+        'recording.wav': base64Audio,
+      });
+    };
+    reader.readAsDataURL(wavBlob);
+
+    // Cleanup
+    audioContext.current.close();
+    audioContext.current = null;
+    audioChunks.current = [];
+    analyser.current = null;
+    processorNode.current = null;
+
+    if (animationFrame.current) {
+      cancelAnimationFrame(animationFrame.current);
+    }
+    if (silenceTimer.current) {
+      clearTimeout(silenceTimer.current);
+      silenceTimer.current = null;
+    }
+
+    setIsRecording(false);
+  }, [onSend]);
+
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioContext.current = new AudioContext();
+      const source = audioContext.current.createMediaStreamSource(stream);
+      
+      // Create analyser for silence detection
+      analyser.current = audioContext.current.createAnalyser();
+      analyser.current.fftSize = 256;
+      source.connect(analyser.current);
+      
+      // Create processor for recording
+      processorNode.current = audioContext.current.createScriptProcessor(4096, 1, 1);
+      analyser.current.connect(processorNode.current);
+      processorNode.current.connect(audioContext.current.destination);
+      
+      processorNode.current.onaudioprocess = (event) => {
+        const inputBuffer = event.inputBuffer.getChannelData(0);
+        audioChunks.current.push(new Float32Array(inputBuffer));
+      };
+      
+      setIsRecording(true);
+      
+      // Auto-stop after 30 seconds
+      setTimeout(() => {
+        if (isRecording) {
+          stopRecording();
+        }
+      }, 30000);
+      
+    } catch (error) {
+      console.error('Error starting recording:', error);
+    }
+  }, [stopRecording, isRecording]);
+
+  return (
+    <Button
+      onClick={isRecording ? stopRecording : startRecording}
+      disabled={disabled}
+      className={cn(
+        'transition-all duration-300 ease-in-out rounded-full text-white font-bold text-xl shadow-lg hover:shadow-xl',
+        'w-32 h-32 sm:w-40 sm:h-40', // Large button size
+        isRecording 
+          ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
+          : 'bg-blue-500 hover:bg-blue-600 active:scale-95'
+      )}
+      size='lg'
+    >
+      <div className="flex flex-col items-center gap-2">
+        {isRecording ? (
+          <>
+            <LuSquare className='w-12 h-12 sm:w-16 sm:h-16' />
+            <span className="text-sm sm:text-base">Stop</span>
+          </>
+        ) : (
+          <>
+            <LuMic className='w-12 h-12 sm:w-16 sm:h-16' />
+            <span className="text-sm sm:text-base">Talk</span>
+          </>
+        )}
+      </div>
+    </Button>
+  );
+};
 
 // Support components
 
@@ -542,9 +705,9 @@ export function ChatBar({
   if (isChild) {
     return (
       <div className={cn(
-        'flex absolute bg-background bottom-0 items-center justify-center left-0 right-0 max-w-[95%] px-4 py-6 m-3 mx-auto border overflow-hidden shadow-md rounded-3xl'
+        'flex absolute bg-background bottom-0 items-center justify-center left-0 right-0 max-w-[95%] px-8 py-8 m-3 mx-auto border overflow-hidden shadow-md rounded-3xl'
       )}>
-        <VoiceRecorder onSend={handleVoiceSend} disabled={disabled} />
+        <ChildFriendlyVoiceRecorder onSend={handleVoiceSend} disabled={disabled} />
       </div>
     );
   }
