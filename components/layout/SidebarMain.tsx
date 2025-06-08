@@ -402,8 +402,8 @@ export function NavMain() {
     const hasJwt = !!getCookie('jwt');
     const hasCompany = !!company && !companyError;
 
-    if (!hasJwt || !hasCompany) {
-      // Show only Documentation when not authenticated or no company
+    // Show only Documentation when not authenticated, no company, or role ID < 4
+    if (!hasJwt || !hasCompany || (company?.roleId && company.roleId < 4)) {
       const filteredItems = items.filter((item) => item.title === 'Documentation');
       return filteredItems.map((item) => ({
         ...item,
@@ -656,7 +656,9 @@ export function SidebarMain({ ...props }: React.ComponentProps<typeof Sidebar>) 
   const [hasStarted, setHasStarted] = useState(false);
   const pathname = usePathname();
   const { data: user } = useUser();
+  const { data: company } = useCompany();
   const isAuthenticated = !!user?.email;
+  const isChild = company?.roleId === 4;
 
   useEffect(() => {
     if (getCookie('agixt-has-started') === 'true') {
@@ -669,7 +671,7 @@ export function SidebarMain({ ...props }: React.ComponentProps<typeof Sidebar>) 
   return (
     <Sidebar collapsible='icon' {...props} className='hide-scrollbar'>
       <SidebarHeader>
-        {isAuthenticated ? (
+        {isAuthenticated && !isChild ? (
           <AgentSelector />
         ) : (
           <SidebarMenu>
@@ -691,7 +693,7 @@ export function SidebarMain({ ...props }: React.ComponentProps<typeof Sidebar>) 
       <SidebarFooter>
         {/* <NotificationsNavItem /> */}
         <ToggleSidebar side='left' />
-        {isAuthenticated && <NavUser />}
+        {isAuthenticated && !isChild && <NavUser />}
       </SidebarFooter>
       <SidebarRail side='left' />
     </Sidebar>
