@@ -26,7 +26,7 @@ const YoutubeEmbed: React.FC<MediaProps> = ({ href }) => (
 const VideoPlayer: React.FC<MediaProps> = ({ href }) => (
   <div className='w-96'>
     <div className='relative w-full aspect-video'>
-      <Plyr
+      {/* <Plyr
         source={{
           type: 'video',
           sources: [{ src: href, type: 'video/mp4' }],
@@ -34,7 +34,11 @@ const VideoPlayer: React.FC<MediaProps> = ({ href }) => (
         options={{
           controls: ['play', 'progress', 'current-time', 'mute', 'volume', 'fullscreen'],
         }}
-      />
+      /> */}
+      <video controls className='w-full h-full'>
+        <source src={href} type='video/mp4' />
+        Your browser does not support the video tag.
+      </video>
     </div>
   </div>
 );
