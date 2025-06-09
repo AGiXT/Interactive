@@ -52,7 +52,7 @@ export function MessageActions({
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const handleTTS = async () => {
-    if (!state.overrides.conversation) return;
+    if (!state.overrides?.conversation) return;
 
     setIsLoadingAudio(true);
     try {
@@ -62,7 +62,7 @@ export function MessageActions({
           method: 'GET',
           headers: {
             Authorization: `${getCookie('jwt')}`,
-          },
+          } as HeadersInit,
         },
       );
       if (!response.ok) throw new Error('Failed to fetch audio');
@@ -138,14 +138,16 @@ export function MessageActions({
               variant='ghost'
               size='icon'
               onClick={async () => {
+                if (!state.overrides?.conversation) return;
+                
                 try {
                   const response = await fetch(
-                    `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/conversation/fork/${state.overrides?.conversation}/${chatItem.id}`,
+                    `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/conversation/fork/${state.overrides.conversation}/${chatItem.id}`,
                     {
                       method: 'POST',
                       headers: {
-                        Authorization: getCookie('jwt'),
-                      },
+                        Authorization: `${getCookie('jwt')}`,
+                      } as HeadersInit,
                     },
                   );
 
@@ -203,65 +205,61 @@ export function MessageActions({
             </Button>
           </TooltipBasic>
           {enableMessageEditing && (
-            <TooltipProvider>
-              <Tooltip>
-                {/* TODO: Replace this with new dialog */}
-                <MessageDialog
-                  ButtonComponent={Button}
-                  ButtonProps={{
-                    variant: 'ghost',
-                    size: 'icon',
-                    children: (
-                      <TooltipBasic title='Edit Message'>
-                        <LuEdit />
-                      </TooltipBasic>
-                    ),
-                  }}
-                  title='Edit Message'
-                  onConfirm={async () => {
-                    await state.agixt.updateConversationMessage(
-                      convData?.find((item) => item.id === state.overrides.conversation).name,
-                      chatItem.id,
-                      updatedMessage,
-                    );
-                    mutate('/conversation/' + state.overrides.conversation);
-                  }}
-                  content={
-                    <Textarea
-                      value={updatedMessage}
-                      onChange={(event) => {
-                        setUpdatedMessage(event.target.value);
-                      }}
-                    />
+            <TooltipBasic title='Edit Message'>
+              <MessageDialog
+                ButtonComponent={Button}
+                ButtonProps={{
+                  variant: 'ghost',
+                  size: 'icon',
+                  children: <LuEdit />,
+                }}
+                title='Edit Message'
+                onConfirm={async () => {
+                  if (state.overrides?.conversation && convData) {
+                    const conversation = convData.find((item) => item.id === state.overrides?.conversation);
+                    if (conversation?.name) {
+                      await state.agixt.updateConversationMessage(
+                        conversation.name,
+                        chatItem.id,
+                        updatedMessage,
+                      );
+                      mutate('/conversation/' + state.overrides.conversation);
+                    }
                   }
-                  className='w-[70%] max-w-none'
-                />
-                <TooltipContent>Edit Message</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                }}
+                content={
+                  <Textarea
+                    value={updatedMessage}
+                    onChange={(event) => {
+                      setUpdatedMessage(event.target.value);
+                    }}
+                  />
+                }
+                className='w-[70%] max-w-none'
+              />
+            </TooltipBasic>
           )}
           {enableMessageDeletion && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  {/* TODO: Replace this with new dialog */}
-                  <MessageDialog
-                    ButtonComponent={Button}
-                    ButtonProps={{ variant: 'ghost', size: 'icon', children: <LuTrash2 /> }}
-                    title='Delete Message'
-                    onConfirm={async () => {
+            <TooltipBasic title='Delete Message'>
+              <MessageDialog
+                ButtonComponent={Button}
+                ButtonProps={{ variant: 'ghost', size: 'icon', children: <LuTrash2 /> }}
+                title='Delete Message'
+                onConfirm={async () => {
+                  if (state.overrides?.conversation && convData) {
+                    const conversation = convData.find((item) => item.id === state.overrides?.conversation);
+                    if (conversation?.name) {
                       await state.agixt.deleteConversationMessage(
-                        convData?.find((item) => item.id === state.overrides.conversation).name,
+                        conversation.name,
                         chatItem.id,
                       );
                       mutate('/conversation/' + state.overrides.conversation);
-                    }}
-                    content={`Are you sure you'd like to permanently delete this message from the conversation?`}
-                  />
-                </TooltipTrigger>
-                <TooltipContent>Delete Message</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                    }
+                  }
+                }}
+                content={`Are you sure you'd like to permanently delete this message from the conversation?`}
+              />
+            </TooltipBasic>
           )}
           {chatItem.rlhf && (
             <p className={cn('text-sm', chatItem.rlhf.positive ? 'text-green-500' : 'text-red-500')}>
@@ -283,24 +281,26 @@ export function MessageActions({
                 <Button
                   onClick={() => {
                     setOpen(false);
-                    if (vote === 1) {
-                      state.agixt.addConversationFeedback(
-                        true,
-                        chatItem.role,
-                        chatItem.id,
-                        lastUserMessage,
-                        feedback,
-                        state.overrides.conversation,
-                      );
-                    } else {
-                      state.agixt.addConversationFeedback(
-                        false,
-                        chatItem.role,
-                        chatItem.id,
-                        lastUserMessage,
-                        feedback,
-                        state.overrides.conversation,
-                      );
+                    if (state.overrides?.conversation) {
+                      if (vote === 1) {
+                        state.agixt.addConversationFeedback(
+                          true,
+                          chatItem.role,
+                          chatItem.id,
+                          lastUserMessage,
+                          feedback,
+                          state.overrides.conversation,
+                        );
+                      } else {
+                        state.agixt.addConversationFeedback(
+                          false,
+                          chatItem.role,
+                          chatItem.id,
+                          lastUserMessage,
+                          feedback,
+                          state.overrides.conversation,
+                        );
+                      }
                     }
                   }}
                 >
