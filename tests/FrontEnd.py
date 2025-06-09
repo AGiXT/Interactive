@@ -516,18 +516,18 @@ class FrontEndTest:
             )
             await self.test_action(
                 "By clicking in the chat bar, the user can expand it to show more options and see their entire input.",
-                lambda: self.page.click("#message"),
+                lambda: self.page.click("#chat-message-input-inactive"),
             )
             await self.test_action(
                 "The user enters an input to prompt the default agent, since no advanced settings have been configured, this will use the default A G I X T thought process.",
                 lambda: self.page.fill(
-                    "#message",
+                    "#chat-message-input-active",
                     "Can you show be a basic 'hello world' Python example?",
                 ),
             )
             await self.test_action(
                 "When the user hits send, or the enter key, the message is sent to the agent and it begins thinking.",
-                lambda: self.page.click("#send-message"),
+                lambda: self.page.press("#chat-message-input-active", "Enter"),
             )
 
             await asyncio.sleep(90)
