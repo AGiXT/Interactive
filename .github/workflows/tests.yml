@@ -138,7 +138,7 @@ jobs:
         run: |
           echo "Executing notebook with error tolerance..."
           python3 -m nbconvert --execute --allow-errors --log-level INFO --to pdf ${{ env.notebook-file }}
-      - name: Send Video to Discord
+      - name: Send Videos to Discord
         if: always()
         run: |
           # Set message based on stored test outcome
@@ -156,27 +156,57 @@ jobs:
           fi
           COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
           ESCAPED_MESSAGE="${COMMIT_MESSAGE//;/}"
+          
+          # Base message content
           if [ "${{ env.strict_status }}" != "0" ]; then
-            MESSAGE="❌ **TEST FAILURE**: **${{ inputs.report-name }}** on repository **${{ github.repository }}** branch **$BRANCH_NAME** commit '$ESCAPED_MESSAGE' (${{ github.sha }}) by ${DISCORD_NAME} "
+            BASE_MESSAGE="❌ **TEST FAILURE**: **${{ inputs.report-name }}** on repository **${{ github.repository }}** branch **$BRANCH_NAME** commit '$ESCAPED_MESSAGE' (${{ github.sha }}) by ${DISCORD_NAME}"
           else
-            MESSAGE="✅ Test passed: **${{ inputs.report-name }}** on repository **${{ github.repository }}** branch **$BRANCH_NAME** commit '$ESCAPED_MESSAGE' (${{ github.sha }}) by **${{ github.actor }}**"
+            BASE_MESSAGE="✅ Test passed: **${{ inputs.report-name }}** on repository **${{ github.repository }}** branch **$BRANCH_NAME** commit '$ESCAPED_MESSAGE' (${{ github.sha }}) by **${{ github.actor }}**"
           fi
-          FILE_TO_SEND="tests/report.mp4"
-          # If it doesn't exist, send the PDF
-          if [ ! -f $FILE_TO_SEND ]; then
-            FILE_TO_SEND="${{ env.artifact-file }}"
+          
+          # Dynamically find all .mp4 files in tests/ directory
+          VIDEO_FILES=($(find tests/ -name "*.mp4" -type f -printf "%f\n" 2>/dev/null | sort))
+          VIDEO_COUNT=${#VIDEO_FILES[@]}
+          
+          # Send videos if they exist
+          if [ $VIDEO_COUNT -gt 0 ]; then
+            echo "Found $VIDEO_COUNT video(s) to send: ${VIDEO_FILES[*]}"
+            VIDEO_INDEX=1
+            for video in "${VIDEO_FILES[@]}"; do
+              # Extract demo name from filename (remove .mp4 and format nicely)
+              DEMO_NAME=$(echo "$video" | sed 's/\.mp4$//' | sed 's/_/ /g' | sed 's/\b\w/\u&/g')
+              MESSAGE="$BASE_MESSAGE - **$DEMO_NAME** ($VIDEO_INDEX/$VIDEO_COUNT)"
+              echo "Sending Video $VIDEO_INDEX/$VIDEO_COUNT: tests/$video ($DEMO_NAME)"
+              
+              curl -H "Content-Type:multipart/form-data" \
+                    -F "file=@tests/$video" \
+                    -F "content=$MESSAGE" \
+                    "${{ secrets.DISCORD_WEBHOOK }}"
+              
+              # Small delay between uploads to avoid rate limiting
+              sleep 2
+              ((VIDEO_INDEX++))
+            done
+          else
+            # Fallback to legacy behavior - send PDF or original report.mp4
+            FILE_TO_SEND="tests/report.mp4"
+            if [ ! -f $FILE_TO_SEND ]; then
+              FILE_TO_SEND="${{ env.artifact-file }}"
+            fi
+            echo "No individual videos found, sending fallback file: $FILE_TO_SEND"
+            curl -H "Content-Type:multipart/form-data" \
+                  -F "file=@$FILE_TO_SEND" \
+                  -F "content=$BASE_MESSAGE" \
+                  "${{ secrets.DISCORD_WEBHOOK }}"
           fi
-          echo "Sending Video: $FILE_TO_SEND"
-          curl -H "Content-Type:multipart/form-data" \
-                -F "file=@$FILE_TO_SEND" \
-                -F "content=$MESSAGE" \
-                "${{ secrets.DISCORD_WEBHOOK }}"
 
       - uses: actions/upload-artifact@v4.4.3
         if: always()
         with:
           name: ${{ inputs.report-name }}
-          path: ${{ env.artifact-file }}
+          path: |
+            ${{ env.artifact-file }}
+            tests/*.mp4
 
       - name: Exit with test status
         if: env.strict_status != '0'
