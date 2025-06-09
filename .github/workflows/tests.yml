@@ -36,17 +36,16 @@ on:
     secrets:
       api-key:
         description: Optional api-key available as os.getenv('API_KEY') in your notebook
-      GHCR_PAT:
-        description: Optional GHCR_PAT available as os.getenv('GHCR_PAT') in your notebook
-        required: true
       DISCORD_WEBHOOK:
         description: Optional discord webhook available as os.getenv('DISCORD_WEBHOOK') in your notebook
       EZLOCALAI_URI:
         description: Optional ezlocalai uri available as os.getenv('EZLOCALAI_URI') in your notebook
       EZLOCALAI_API_KEY:
         description: Optional ezlocalai api key available as os.getenv('EZLOCALAI_API_KEY') in your notebook
-      DEEPSEEK_API_KEY:
-        description: Optional deepseek api key available as os.getenv('DEEPSEEK_API_KEY') in your notebook
+      GOOGLE_TEST_EMAIL:
+        description: Optional Google test email for OAuth testing
+      GOOGLE_TEST_PASSWORD:
+        description: Optional Google test password for OAuth testing
 
 jobs:
   test:
@@ -85,7 +84,6 @@ jobs:
           ALLOW_EMAIL_SIGN_IN: true
           APP_URI: http://localhost:${{ inputs.front-end-port }}
           AGIXT_SERVER: https://api.agixt.dev
-          MICROSOFT_CLIENT_ID: "22dca179-bed1-4cad-8983-6add92b06acb"
           LOG_VERBOSITY_SERVER: 3
           TZ: America/New_York
     steps:
@@ -126,6 +124,13 @@ jobs:
           features: ${{ inputs.features }}
           EZLOCALAI_URI: ${{ secrets.EZLOCALAI_URI }}
           EZLOCALAI_API_KEY: ${{ secrets.EZLOCALAI_API_KEY }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_EVENT_HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          
         run: |
           echo "Executing notebook with strict error checking..."
 
@@ -138,75 +143,11 @@ jobs:
         run: |
           echo "Executing notebook with error tolerance..."
           python3 -m nbconvert --execute --allow-errors --log-level INFO --to pdf ${{ env.notebook-file }}
-      - name: Send Videos to Discord
-        if: always()
-        run: |
-          # Set message based on stored test outcome
-          BRANCH_NAME=$(echo ${{ github.ref }} | awk -F'/' '{print $NF}')
-          if [ "${{ github.actor }}" == "Josh-XT" ]; then
-            DISCORD_NAME="<@381837595522367488>"
-          elif [ "${{ github.actor }}" == "waiscodes" ]; then
-            DISCORD_NAME="<@670762167037067304>"
-          elif [ "${{ github.actor }}" == "birdup000" ]; then
-            DISCORD_NAME="<@856308374567256074>"
-          elif [ "${{ github.actor }}" == "Nick-XT" ]; then
-            DISCORD_NAME="<@381908912951001088>"
-          else
-            DISCORD_NAME="**${{ github.actor }}**"
-          fi
-          COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
-          ESCAPED_MESSAGE="${COMMIT_MESSAGE//;/}"
-          
-          # Base message content
-          if [ "${{ env.strict_status }}" != "0" ]; then
-            BASE_MESSAGE="❌ **TEST FAILURE**: **${{ inputs.report-name }}** on repository **${{ github.repository }}** branch **$BRANCH_NAME** commit '$ESCAPED_MESSAGE' (${{ github.sha }}) by ${DISCORD_NAME}"
-          else
-            BASE_MESSAGE="✅ Test passed: **${{ inputs.report-name }}** on repository **${{ github.repository }}** branch **$BRANCH_NAME** commit '$ESCAPED_MESSAGE' (${{ github.sha }}) by **${{ github.actor }}**"
-          fi
-          
-          # Dynamically find all .mp4 files in tests/ directory
-          VIDEO_FILES=($(find tests/ -name "*.mp4" -type f -printf "%f\n" 2>/dev/null | sort))
-          VIDEO_COUNT=${#VIDEO_FILES[@]}
-          
-          # Send videos if they exist
-          if [ $VIDEO_COUNT -gt 0 ]; then
-            echo "Found $VIDEO_COUNT video(s) to send: ${VIDEO_FILES[*]}"
-            VIDEO_INDEX=1
-            for video in "${VIDEO_FILES[@]}"; do
-              # Extract demo name from filename (remove .mp4 and format nicely)
-              DEMO_NAME=$(echo "$video" | sed 's/\.mp4$//' | sed 's/_/ /g' | sed 's/\b\w/\u&/g')
-              MESSAGE="$BASE_MESSAGE - **$DEMO_NAME** ($VIDEO_INDEX/$VIDEO_COUNT)"
-              echo "Sending Video $VIDEO_INDEX/$VIDEO_COUNT: tests/$video ($DEMO_NAME)"
-              
-              curl -H "Content-Type:multipart/form-data" \
-                    -F "file=@tests/$video" \
-                    -F "content=$MESSAGE" \
-                    "${{ secrets.DISCORD_WEBHOOK }}"
-              
-              # Small delay between uploads to avoid rate limiting
-              sleep 2
-              ((VIDEO_INDEX++))
-            done
-          else
-            # Fallback to legacy behavior - send PDF or original report.mp4
-            FILE_TO_SEND="tests/report.mp4"
-            if [ ! -f $FILE_TO_SEND ]; then
-              FILE_TO_SEND="${{ env.artifact-file }}"
-            fi
-            echo "No individual videos found, sending fallback file: $FILE_TO_SEND"
-            curl -H "Content-Type:multipart/form-data" \
-                  -F "file=@$FILE_TO_SEND" \
-                  -F "content=$BASE_MESSAGE" \
-                  "${{ secrets.DISCORD_WEBHOOK }}"
-          fi
-
       - uses: actions/upload-artifact@v4.4.3
         if: always()
         with:
           name: ${{ inputs.report-name }}
-          path: |
-            ${{ env.artifact-file }}
-            tests/*.mp4
+          path: ${{ env.artifact-file }}
 
       - name: Exit with test status
         if: env.strict_status != '0'

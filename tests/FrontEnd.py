@@ -16,6 +16,7 @@ import numpy as np
 import openai
 import pyotp
 import soundfile as sf
+import requests
 from agixtsdk import AGiXTSDK
 from IPython.display import Image, display
 from playwright.async_api import async_playwright
@@ -25,7 +26,7 @@ from tqdm import tqdm
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
-openai.base_url = os.getenv("EZLOCALAI_URI", "https://api.ezlocal.ai/v1/")
+openai.base_url = os.getenv("EZLOCALAI_URI")
 openai.api_key = os.getenv("EZLOCALAI_API_KEY", "none")
 
 
@@ -110,7 +111,104 @@ class FrontEndTest:
         display(Image(filename=str(screenshot_path)))
         return screenshot_path
 
-    def create_video_report(self, max_size_mb=10):
+    def send_video_to_discord(
+        self, video_path, demo_name, test_status="✅ Test passed"
+    ):
+        """
+        Send a video to Discord with contextual information
+
+        Args:
+            video_path (str): Path to the video file
+            demo_name (str): Name of the demo/test for the message
+            test_status (str): Status prefix for the message
+        """
+        discord_webhook = os.getenv("DISCORD_WEBHOOK")
+        if not discord_webhook:
+            logging.warning(
+                "DISCORD_WEBHOOK environment variable not set, skipping Discord upload"
+            )
+            return
+
+        try:
+            # Get git information for better context
+            try:
+                branch_name = (
+                    subprocess.check_output(
+                        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                        cwd=os.getcwd(),
+                        stderr=subprocess.DEVNULL,
+                    )
+                    .decode()
+                    .strip()
+                )
+            except:
+                branch_name = os.getenv("GITHUB_REF_NAME", "unknown")
+
+            try:
+                commit_hash = (
+                    subprocess.check_output(
+                        ["git", "rev-parse", "--short", "HEAD"],
+                        cwd=os.getcwd(),
+                        stderr=subprocess.DEVNULL,
+                    )
+                    .decode()
+                    .strip()
+                )
+            except:
+                commit_hash = os.getenv("GITHUB_SHA", "unknown")[:7]
+
+            try:
+                commit_message = (
+                    subprocess.check_output(
+                        ["git", "log", "-1", "--pretty=%B"],
+                        cwd=os.getcwd(),
+                        stderr=subprocess.DEVNULL,
+                    )
+                    .decode()
+                    .strip()
+                )
+            except:
+                commit_message = os.getenv(
+                    "GITHUB_EVENT_HEAD_COMMIT_MESSAGE", "No commit message"
+                )
+
+            # Build the Discord message
+            repo_name = os.getenv("GITHUB_REPOSITORY", "Interactive")
+            actor = os.getenv("GITHUB_ACTOR", "local-user")
+
+            # Format actor with proper Discord mentions if known
+            discord_mentions = {
+                "Josh-XT": "<@381837595522367488>",
+                "waiscodes": "<@670762167037067304>",
+                "birdup000": "<@856308374567256074>",
+                "Nick-XT": "<@381908912951001088>",
+            }
+            discord_name = discord_mentions.get(actor, f"**{actor}**")
+
+            message = f"{test_status}: **{demo_name}** on repository **{repo_name}** branch **{branch_name}** commit '{commit_message}' ({commit_hash}) by {discord_name}"
+
+            # Send the video to Discord
+            with open(video_path, "rb") as video_file:
+                files = {"file": video_file}
+                data = {"content": message}
+
+                response = requests.post(
+                    discord_webhook, files=files, data=data, timeout=30
+                )
+
+                if response.status_code == 200:
+                    logging.info(f"Successfully sent {demo_name} demo video to Discord")
+                else:
+                    logging.error(
+                        f"Failed to send video to Discord. Status: {response.status_code}, Response: {response.text}"
+                    )
+
+        except Exception as e:
+            logging.error(f"Error sending video to Discord: {e}")
+
+    def create_video_report(
+        self, video_name="report", max_size_mb=10, test_status="✅ Test passed"
+    ):
         """
         Creates a video from all screenshots taken during the test run with Google TTS narration
         using OpenCV and FFMPEG for video processing. Adjusts framerate and compression if output exceeds size limit.
@@ -188,7 +286,12 @@ class FrontEndTest:
                 )
 
             # Create paths for our files
-            final_video_path = os.path.abspath(os.path.join(os.getcwd(), "report.mp4"))
+            # Use video_name to create properly named files in tests/ directory
+            tests_dir = os.path.join(os.getcwd(), "tests")
+            os.makedirs(tests_dir, exist_ok=True)
+            final_video_path = os.path.abspath(
+                os.path.join(tests_dir, f"{video_name}.mp4")
+            )
             concatenated_audio_path = os.path.join(temp_dir, "combined_audio.wav")
 
             # Lists to store audio data and durations
@@ -315,6 +418,11 @@ class FrontEndTest:
             logging.info(
                 f"Video report created successfully at: {final_video_path} (Size: {final_size_mb:.2f}MB)"
             )
+
+            # Send video to Discord immediately after creation
+            demo_name = video_name.replace("_", " ").title()
+            self.send_video_to_discord(final_video_path, demo_name, test_status)
+
             return final_video_path
 
         except Exception as e:
@@ -588,9 +696,70 @@ class FrontEndTest:
         pass
 
     async def handle_mandatory_context(self):
-        """Handle mandatory context scenario"""
-        # TODO: Implement mandatory context test
-        pass
+        """Test the mandatory context feature by setting and using a context in chat."""
+        # Navigate to Agent Management
+        await self.test_action(
+            "Navigate to Agent Management to begin mandatory context configuration",
+            lambda: self.page.click('span:has-text("Agent Management")'),
+        )
+
+        await self.take_screenshot("Agent Management drop down")
+
+        # Navigate directly to training URL
+        await self.test_action(
+            "Navigate to training settings",
+            lambda: self.page.goto(f"{self.base_uri}/settings/training?mode=user&")
+        )
+
+        # After navigating to Training section, screenshot the interface
+        await self.take_screenshot("Training section with mandatory context interface")
+
+        await self.test_action(
+            "Locate and enter mandatory context in text area",
+            lambda: self.page.fill(
+                "textarea[placeholder*='Enter mandatory context']",
+                "You are a helpful assistant who loves using the word 'wonderful' in responses.",
+            ),
+        )
+
+        await self.take_screenshot("Mandatory context has been entered into text area")
+        await asyncio.sleep(1)
+
+        await self.test_action(
+            "Save mandatory context settings",
+            lambda: self.page.click("text=Update Mandatory Context"),
+        )
+
+        await self.take_screenshot("Mandatory context update button clicked")
+
+        # Let handle_chat run the conversation with a prompt that should trigger the mandatory context
+        await self.test_action(
+            "Navigate to chat to test the mandatory context",
+            lambda: self.page.goto(f"{self.base_uri}/chat"),
+        )
+        
+        await self.test_action(
+            "Click in the chat input to expand it",
+            lambda: self.page.click("#chat-message-input-inactive"),
+        )
+        
+        await self.test_action(
+            "Enter a prompt to test mandatory context",
+            lambda: self.page.fill(
+                "#chat-message-input-active",
+                "What do you think about nature?",
+            ),
+        )
+        
+        await self.test_action(
+            "Send the message to test mandatory context",
+            lambda: self.page.press("#chat-message-input-active", "Enter"),
+        )
+
+        # Wait for the response which should include "wonderful" due to mandatory context
+        await asyncio.sleep(90)
+        
+        await self.take_screenshot("Chat response showing mandatory context influence")
 
     async def handle_email(self):
         """Handle email verification scenario"""
@@ -653,128 +822,71 @@ class FrontEndTest:
             raise Exception(f"Error during login: {str(e)}")
 
     async def handle_logout(self, email=None):
-        """Handle logout with multiple click approaches"""
+        """Handle logout by clicking user card at bottom left, then logout"""
         try:
-            # Wait for page to be fully loaded with shorter timeout
-            try:
-                await self.test_action(
-                    "Waiting for page to load for logout",
-                    lambda: self.page.wait_for_load_state(
-                        "domcontentloaded", timeout=10000
-                    ),
-                )
-            except Exception:
-                # If domcontentloaded times out, just continue - the page might be ready enough
-                logging.warning(
-                    "Page load state timeout, continuing with logout attempt"
-                )
+            # Wait for page to be fully loaded
+            await self.test_action(
+                "Waiting for page to load for logout",
+                lambda: self.page.wait_for_load_state(
+                    "domcontentloaded", timeout=10000
+                ),
+            )
 
             await self.take_screenshot("Before attempting to log out")
 
-            # Determine the email to look for
-            email_part = email if email else "@example.com"
-            logging.info(f"Targeting button containing email: {email_part}")
-
-            # First approach: Try using Playwright's click method
-            try:
-                logging.info("Trying Playwright's click method")
-                await self.test_action(
-                    "Finding user button with email",
-                    lambda: self.page.wait_for_selector(
-                        f'text="{email_part}"', state="visible"
-                    ),
-                    lambda: self.page.click(f'text="{email_part}"', force=True),
-                )
-
-                await self.page.wait_for_timeout(1500)
-                await self.take_screenshot("After Playwright click")
-
-                # Check if any menu items appeared
-                menu_items = self.page.locator('[role="menuitem"]')
-                menu_count = await menu_items.count()
-                logging.info(f"Found {menu_count} menu items after Playwright click")
-
-                if menu_count > 0:
-                    # Look for logout item
-                    for i in range(menu_count):
-                        item = menu_items.nth(i)
-                        text = await item.text_content()
-                        if (
-                            "log out" in text.lower()
-                            or "logout" in text.lower()
-                            or "sign out" in text.lower()
-                        ):
-                            logging.info(f"Found logout item: {text}")
-                            await self.test_action(
-                                "Clicking logout menu item",
-                                lambda: self.page.wait_for_selector(
-                                    f'[role="menuitem"]:has-text("{text}")',
-                                    state="visible",
-                                ),
-                                lambda: item.click(),
-                            )
-                            await self.page.wait_for_timeout(2000)
-
-                            # Check if we logged out
-                            current_url = self.page.url
-                            if (
-                                "/user" in current_url
-                                or current_url == self.base_uri
-                                or current_url.endswith("/")
-                            ):
-                                logging.info(
-                                    f"Successfully logged out - URL: {current_url}"
-                                )
-                                return
-
-                    # If we didn't find a specific logout item, try the last one
-                    if menu_count > 0:
-                        logging.info("Clicking last menu item")
-                        await self.test_action(
-                            "Clicking last menu item",
-                            lambda: self.page.wait_for_selector(
-                                '[role="menuitem"]:last-child', state="visible"
-                            ),
-                            lambda: menu_items.last.click(),
-                        )
-                        await self.page.wait_for_timeout(2000)
-
-                        # Check if we logged out
-                        current_url = self.page.url
-                        if (
-                            "/user" in current_url
-                            or current_url == self.base_uri
-                            or current_url.endswith("/")
-                        ):
-                            logging.info(
-                                f"Successfully logged out - URL: {current_url}"
-                            )
-                            return
-            except Exception as playwright_error:
-                logging.info(f"Playwright approach error: {playwright_error}")
-
-            # Final fallback: Direct navigation to logout URL
-            logging.info("Trying direct navigation to logout URL")
+            # Click the user button in the sidebar footer (bottom left)
+            logging.info("Clicking user card in sidebar footer")
             await self.test_action(
-                "Navigating to logout URL",
-                lambda: self.page.wait_for_selector("body", state="visible"),
-                lambda: self.page.goto(f"{self.base_uri}/user/logout"),
+                "Clicking user card at bottom left",
+                lambda: self.page.wait_for_selector(
+                    '[data-sidebar="footer"] button[size="lg"]', state="visible"
+                ),
+                lambda: self.page.click('[data-sidebar="footer"] button[size="lg"]'),
             )
-            await self.page.wait_for_timeout(2000)
 
-            # Check if we got logged out
+            await self.page.wait_for_timeout(1000)
+            await self.take_screenshot("After clicking user card")
+
+            # Click the logout menu item
+            logging.info("Clicking logout menu item")
+            await self.test_action(
+                "Clicking logout option",
+                lambda: self.page.wait_for_selector(
+                    '[role="menuitem"]:has-text("Log out")', state="visible"
+                ),
+                lambda: self.page.click('[role="menuitem"]:has-text("Log out")'),
+            )
+
+            await self.page.wait_for_timeout(2000)
+            await self.take_screenshot("After clicking logout")
+
+            # Verify logout was successful by checking URL
             current_url = self.page.url
             if (
                 "/user" in current_url
                 or current_url == self.base_uri
                 or current_url.endswith("/")
             ):
-                logging.info(
-                    f"Successfully logged out via direct URL - URL: {current_url}"
-                )
+                logging.info(f"Successfully logged out - URL: {current_url}")
                 return
+            else:
+                # Fallback: Direct navigation to logout URL
+                logging.info("Logout verification failed, trying direct logout URL")
+                await self.page.goto(f"{self.base_uri}/user/logout")
+                await self.page.wait_for_timeout(2000)
 
-            raise Exception("Failed to log out after multiple approaches")
+                current_url = self.page.url
+                if (
+                    "/user" in current_url
+                    or current_url == self.base_uri
+                    or current_url.endswith("/")
+                ):
+                    logging.info(
+                        f"Successfully logged out via direct URL - URL: {current_url}"
+                    )
+                    return
+                else:
+                    raise Exception("Failed to logout after all attempts")
 
         except Exception as e:
             logging.error(f"Error during logout: {e}")
@@ -1067,371 +1179,392 @@ class FrontEndTest:
         await self.page.wait_for_timeout(15000)
         await self.take_screenshot("payment was processed and subscription is active")
 
-    async def run_registration_test(self, headless=not is_desktop()):
+    async def run_registration_test(self):
         """Run registration test and create video"""
         try:
-            async with async_playwright() as self.playwright:
-                self.browser = await self.playwright.chromium.launch(headless=headless)
-                self.context = await self.browser.new_context()
-                self.page = await self.browser.new_page()
-                self.page.on("console", print_args)
-                self.page.set_default_timeout(20000)
-                await self.page.set_viewport_size({"width": 1367, "height": 924})
+            logging.info(f"Navigating to {self.base_uri}")
+            await self.page.goto(self.base_uri)
+            await self.take_screenshot(
+                "The landing page of the application is the first thing the user sees."
+            )
 
-                logging.info(f"Navigating to {self.base_uri}")
-                await self.page.goto(self.base_uri)
-                await self.take_screenshot(
-                    "The landing page of the application is the first thing the user sees."
-                )
+            logging.info("Clicking 'Register or Login' button")
+            await self.page.click('text="Login or Register"')
+            await self.take_screenshot(
+                "The user has multiple authentication options if enabled, including several o auth options such as Microsoft or Google. For this test, we will use the basic email authentication."
+            )
 
-                logging.info("Clicking 'Register or Login' button")
-                await self.page.click('text="Login or Register"')
-                await self.take_screenshot(
-                    "The user has multiple authentication options if enabled, including several o auth options such as Microsoft or Google. For this test, we will use the basic email authentication."
-                )
-
-                if "google" not in self.features:
-                    try:
-                        email, mfa_token = await self.handle_register()
-                        video_path = self.create_video_report(
-                            video_name="registration_demo"
-                        )
-                        logging.info(
-                            f"Registration test complete. Video report created at {video_path}"
-                        )
-                        return email, mfa_token
-                    except Exception as e:
-                        logging.error(f"Error registering user: {e}")
-                        await self.browser.close()
-                        raise Exception(f"Error registering user: {e}")
-                elif "google" in self.features:
-                    email = await self.handle_google()
-                    mfa_token = ""
+            if "google" not in self.features:
+                try:
+                    email, mfa_token = await self.handle_register()
                     video_path = self.create_video_report(
-                        video_name="google_oauth_demo"
+                        video_name="registration_demo"
                     )
                     logging.info(
-                        f"Google OAuth test complete. Video report created at {video_path}"
+                        f"Registration test complete. Video report created at {video_path}"
                     )
                     return email, mfa_token
+                except Exception as e:
+                    logging.error(f"Error registering user: {e}")
+                    raise Exception(f"Error registering user: {e}")
+            elif "google" in self.features:
+                email = await self.handle_google()
+                mfa_token = ""
+                video_path = self.create_video_report(video_name="google_oauth_demo")
+                logging.info(
+                    f"Google OAuth test complete. Video report created at {video_path}"
+                )
+                return email, mfa_token
 
-                await self.browser.close()
         except Exception as e:
             logging.error(f"Registration test failed: {e}")
-            if not os.path.exists(os.path.join(os.getcwd(), "registration_demo.mp4")):
-                self.create_video_report(video_name="registration_demo")
+            if not os.path.exists(
+                os.path.join(os.getcwd(), "tests", "registration_demo.mp4")
+            ):
+                self.create_video_report(
+                    video_name="registration_demo", test_status="❌ **TEST FAILURE**"
+                )
             raise e
 
-    async def run_login_test(self, email, mfa_token, headless=not is_desktop()):
+    async def run_login_test(self, email, mfa_token):
         """Run login test and create video"""
         try:
-            async with async_playwright() as self.playwright:
-                self.browser = await self.playwright.chromium.launch(headless=headless)
-                self.context = await self.browser.new_context()
-                self.page = await self.browser.new_page()
-                self.page.on("console", print_args)
-                self.page.set_default_timeout(20000)
-                await self.page.set_viewport_size({"width": 1367, "height": 924})
-
-                await self.handle_login(email, mfa_token)
-                video_path = self.create_video_report(video_name="login_demo")
-                logging.info(
-                    f"Login test complete. Video report created at {video_path}"
-                )
-                await self.browser.close()
+            await self.handle_login(email, mfa_token)
+            video_path = self.create_video_report(video_name="login_demo")
+            logging.info(f"Login test complete. Video report created at {video_path}")
         except Exception as e:
             logging.error(f"Login test failed: {e}")
-            if not os.path.exists(os.path.join(os.getcwd(), "login_demo.mp4")):
-                self.create_video_report(video_name="login_demo")
-            raise e
-
-    async def run_logout_test(self, email, headless=not is_desktop()):
-        """Run logout test and create video"""
-        try:
-            async with async_playwright() as self.playwright:
-                self.browser = await self.playwright.chromium.launch(headless=headless)
-                self.context = await self.browser.new_context()
-                self.page = await self.browser.new_page()
-                self.page.on("console", print_args)
-                self.page.set_default_timeout(20000)
-                await self.page.set_viewport_size({"width": 1367, "height": 924})
-
-                # First login to then logout
-                await self.page.goto(f"{self.base_uri}/user")
-                await self.handle_logout(email=email)
-                video_path = self.create_video_report(video_name="logout_demo")
-                logging.info(
-                    f"Logout test complete. Video report created at {video_path}"
+            if not os.path.exists(os.path.join(os.getcwd(), "tests", "login_demo.mp4")):
+                self.create_video_report(
+                    video_name="login_demo", test_status="❌ **TEST FAILURE**"
                 )
-                await self.browser.close()
-        except Exception as e:
-            logging.error(f"Logout test failed: {e}")
-            if not os.path.exists(os.path.join(os.getcwd(), "logout_demo.mp4")):
-                self.create_video_report(video_name="logout_demo")
             raise e
 
-    async def run_user_preferences_test(
-        self, email, mfa_token, headless=not is_desktop()
-    ):
+    async def run_user_preferences_test(self, email, mfa_token):
         """Run user preferences test and create video"""
         try:
-            async with async_playwright() as self.playwright:
-                self.browser = await self.playwright.chromium.launch(headless=headless)
-                self.context = await self.browser.new_context()
-                self.page = await self.browser.new_page()
-                self.page.on("console", print_args)
-                self.page.set_default_timeout(20000)
-                await self.page.set_viewport_size({"width": 1367, "height": 924})
-
-                # Login first
-                await self.handle_login(email, mfa_token)
-                await self.handle_update_user()
-                video_path = self.create_video_report(
-                    video_name="user_preferences_demo"
-                )
-                logging.info(
-                    f"User preferences test complete. Video report created at {video_path}"
-                )
-                await self.browser.close()
+            # User is already logged in from shared session
+            await self.handle_update_user()
+            video_path = self.create_video_report(video_name="user_preferences_demo")
+            logging.info(
+                f"User preferences test complete. Video report created at {video_path}"
+            )
         except Exception as e:
             logging.error(f"User preferences test failed: {e}")
             if not os.path.exists(
-                os.path.join(os.getcwd(), "user_preferences_demo.mp4")
+                os.path.join(os.getcwd(), "tests", "user_preferences_demo.mp4")
             ):
-                self.create_video_report(video_name="user_preferences_demo")
+                self.create_video_report(
+                    video_name="user_preferences_demo",
+                    test_status="❌ **TEST FAILURE**",
+                )
             raise e
 
-    async def run_team_management_test(
-        self, email, mfa_token, headless=not is_desktop()
-    ):
+    async def run_team_management_test(self, email, mfa_token):
         """Run team management test and create video"""
         try:
-            async with async_playwright() as self.playwright:
-                self.browser = await self.playwright.chromium.launch(headless=headless)
-                self.context = await self.browser.new_context()
-                self.page = await self.browser.new_page()
-                self.page.on("console", print_args)
-                self.page.set_default_timeout(20000)
-                await self.page.set_viewport_size({"width": 1367, "height": 924})
-
-                # Login first
-                await self.handle_login(email, mfa_token)
-                await self.handle_invite_user()
-                video_path = self.create_video_report(video_name="team_management_demo")
-                logging.info(
-                    f"Team management test complete. Video report created at {video_path}"
-                )
-                await self.browser.close()
+            # User is already logged in from shared session
+            await self.handle_invite_user()
+            video_path = self.create_video_report(video_name="team_management_demo")
+            logging.info(
+                f"Team management test complete. Video report created at {video_path}"
+            )
         except Exception as e:
             logging.error(f"Team management test failed: {e}")
             if not os.path.exists(
-                os.path.join(os.getcwd(), "team_management_demo.mp4")
+                os.path.join(os.getcwd(), "tests", "team_management_demo.mp4")
             ):
-                self.create_video_report(video_name="team_management_demo")
+                self.create_video_report(
+                    video_name="team_management_demo", test_status="❌ **TEST FAILURE**"
+                )
             raise e
 
-    async def run_chat_test(self, email, mfa_token, headless=not is_desktop()):
+    async def run_chat_test(self, email, mfa_token):
         """Run chat test and create video"""
         try:
-            async with async_playwright() as self.playwright:
-                self.browser = await self.playwright.chromium.launch(headless=headless)
-                self.context = await self.browser.new_context()
-                self.page = await self.browser.new_page()
-                self.page.on("console", print_args)
-                self.page.set_default_timeout(20000)
-                await self.page.set_viewport_size({"width": 1367, "height": 924})
-
-                # Login first
-                await self.handle_login(email, mfa_token)
-                await self.handle_chat()
-                video_path = self.create_video_report(video_name="chat_demo")
-                logging.info(
-                    f"Chat test complete. Video report created at {video_path}"
-                )
-                await self.browser.close()
+            # User is already logged in from shared session
+            await self.handle_chat()
+            video_path = self.create_video_report(video_name="chat_demo")
+            logging.info(f"Chat test complete. Video report created at {video_path}")
         except Exception as e:
             logging.error(f"Chat test failed: {e}")
-            if not os.path.exists(os.path.join(os.getcwd(), "chat_demo.mp4")):
-                self.create_video_report(video_name="chat_demo")
+            if not os.path.exists(os.path.join(os.getcwd(), "tests", "chat_demo.mp4")):
+                self.create_video_report(
+                    video_name="chat_demo", test_status="❌ **TEST FAILURE**"
+                )
             raise e
 
-    async def run_training_test(self, email, mfa_token, headless=not is_desktop()):
+    async def run_training_test(self, email, mfa_token):
         """Run training test and create video"""
         try:
-            async with async_playwright() as self.playwright:
-                self.browser = await self.playwright.chromium.launch(headless=headless)
-                self.context = await self.browser.new_context()
-                self.page = await self.browser.new_page()
-                self.page.on("console", print_args)
-                self.page.set_default_timeout(20000)
-                await self.page.set_viewport_size({"width": 1367, "height": 924})
-
-                # Login first
-                await self.handle_login(email, mfa_token)
-                await self.handle_train_user_agent()
-                await self.handle_train_company_agent()
-                video_path = self.create_video_report(video_name="training_demo")
-                logging.info(
-                    f"Training test complete. Video report created at {video_path}"
-                )
-                await self.browser.close()
+            # User is already logged in from shared session
+            await self.handle_train_user_agent()
+            await self.handle_train_company_agent()
+            video_path = self.create_video_report(video_name="training_demo")
+            logging.info(
+                f"Training test complete. Video report created at {video_path}"
+            )
         except Exception as e:
             logging.error(f"Training test failed: {e}")
-            if not os.path.exists(os.path.join(os.getcwd(), "training_demo.mp4")):
-                self.create_video_report(video_name="training_demo")
+            if not os.path.exists(
+                os.path.join(os.getcwd(), "tests", "training_demo.mp4")
+            ):
+                self.create_video_report(
+                    video_name="training_demo", test_status="❌ **TEST FAILURE**"
+                )
             raise e
 
-    async def run_stripe_test(self, headless=not is_desktop()):
+    async def run_stripe_test(self):
         """Run Stripe subscription test and create video"""
         try:
-            async with async_playwright() as self.playwright:
-                self.browser = await self.playwright.chromium.launch(headless=headless)
-                self.context = await self.browser.new_context()
-                self.page = await self.browser.new_page()
-                self.page.on("console", print_args)
-                self.page.set_default_timeout(20000)
-                await self.page.set_viewport_size({"width": 1367, "height": 924})
-
-                await self.handle_stripe()
-                video_path = self.create_video_report(video_name="stripe_demo")
-                logging.info(
-                    f"Stripe test complete. Video report created at {video_path}"
-                )
-                await self.browser.close()
+            await self.handle_stripe()
+            video_path = self.create_video_report(video_name="stripe_demo")
+            logging.info(f"Stripe test complete. Video report created at {video_path}")
         except Exception as e:
             logging.error(f"Stripe test failed: {e}")
-            if not os.path.exists(os.path.join(os.getcwd(), "stripe_demo.mp4")):
-                self.create_video_report(video_name="stripe_demo")
+            if not os.path.exists(
+                os.path.join(os.getcwd(), "tests", "stripe_demo.mp4")
+            ):
+                self.create_video_report(
+                    video_name="stripe_demo", test_status="❌ **TEST FAILURE**"
+                )
             raise e
 
-    async def run_abilities_test(self, email, mfa_token, headless=not is_desktop()):
+    async def run_abilities_test(self, email, mfa_token):
         """Run abilities/extensions test and create video"""
         try:
-            async with async_playwright() as self.playwright:
-                self.browser = await self.playwright.chromium.launch(headless=headless)
-                self.context = await self.browser.new_context()
-                self.page = await self.browser.new_page()
-                self.page.on("console", print_args)
-                self.page.set_default_timeout(20000)
-                await self.page.set_viewport_size({"width": 1367, "height": 924})
-
-                # Login first and navigate to abilities/extensions page
-                await self.handle_login(email, mfa_token)
-                await self.test_action(
-                    "Navigate to the abilities page to view and manage agent capabilities",
-                    lambda: self.page.goto(f"{self.base_uri}/abilities"),
-                )
-                video_path = self.create_video_report(video_name="abilities_demo")
-                logging.info(
-                    f"Abilities test complete. Video report created at {video_path}"
-                )
-                await self.browser.close()
+            # User is already logged in from shared session - navigate to abilities page
+            await self.test_action(
+                "Navigate to the abilities page to view and manage agent capabilities",
+                lambda: self.page.goto(f"{self.base_uri}/abilities"),
+            )
+            video_path = self.create_video_report(video_name="abilities_demo")
+            logging.info(
+                f"Abilities test complete. Video report created at {video_path}"
+            )
         except Exception as e:
             logging.error(f"Abilities test failed: {e}")
-            if not os.path.exists(os.path.join(os.getcwd(), "abilities_demo.mp4")):
-                self.create_video_report(video_name="abilities_demo")
+            if not os.path.exists(
+                os.path.join(os.getcwd(), "tests", "abilities_demo.mp4")
+            ):
+                self.create_video_report(
+                    video_name="abilities_demo", test_status="❌ **TEST FAILURE**"
+                )
             raise e
 
-    async def run_mandatory_context_test(
-        self, email, mfa_token, headless=not is_desktop()
-    ):
+    async def run_mandatory_context_test(self, email, mfa_token):
         """Run mandatory context/prompts test and create video"""
         try:
-            async with async_playwright() as self.playwright:
-                self.browser = await self.playwright.chromium.launch(headless=headless)
-                self.context = await self.browser.new_context()
-                self.page = await self.browser.new_page()
-                self.page.on("console", print_args)
-                self.page.set_default_timeout(20000)
-                await self.page.set_viewport_size({"width": 1367, "height": 924})
-
-                # Login first and navigate to prompts/mandatory context page
-                await self.handle_login(email, mfa_token)
-                await self.test_action(
-                    "Navigate to the prompts page to view and manage mandatory context and prompt templates",
-                    lambda: self.page.goto(f"{self.base_uri}/prompts"),
-                )
-                video_path = self.create_video_report(
-                    video_name="mandatory_context_demo"
-                )
-                logging.info(
-                    f"Mandatory context test complete. Video report created at {video_path}"
-                )
-                await self.browser.close()
+            # User is already logged in from shared session
+            # Call our handler that properly tests the mandatory context feature
+            await self.handle_mandatory_context()
+            
+            video_path = self.create_video_report(video_name="mandatory_context_demo")
+            logging.info(
+                f"Mandatory context test complete. Video report created at {video_path}"
+            )
         except Exception as e:
             logging.error(f"Mandatory context test failed: {e}")
             if not os.path.exists(
-                os.path.join(os.getcwd(), "mandatory_context_demo.mp4")
+                os.path.join(os.getcwd(), "tests", "mandatory_context_demo.mp4")
             ):
-                self.create_video_report(video_name="mandatory_context_demo")
+                self.create_video_report(
+                    video_name="mandatory_context_demo",
+                    test_status="❌ **TEST FAILURE**",
+                )
+            raise e
+
+    async def handle_provider_settings(self):
+        """Test provider settings page navigation and toggle interaction."""
+        # Navigate to Agent Management
+        await self.test_action(
+            "Navigate to Agent Management to begin extensions configuration",
+            lambda: self.page.click('span:has-text("Agent Management")'),
+        )
+        
+        await self.take_screenshot("Agent Management drop down")
+        
+        # Navigate to Settings via dropdown
+        await self.test_action(
+            "Click on Settings in the dropdown menu",
+            lambda: self.page.click('a:has-text("Settings")'),
+        )
+        
+        await self.take_screenshot("Settings page loaded")
+        
+        # Click on Providers tab if needed
+        try:
+            # Check if we need to navigate to the Providers tab
+            providers_tab_visible = await self.page.locator('button:has-text("Providers")').count() > 0
+            if providers_tab_visible:
+                await self.test_action(
+                    "Click on Providers tab to access provider settings",
+                    lambda: self.page.click('button:has-text("Providers")'),
+                )
+        except Exception as e:
+            logging.info(f"Provider tab navigation not needed: {e}")
+        
+        await self.take_screenshot("Provider settings page")
+        
+        # Click on Google provider connect button
+        await self.test_action(
+            "Click Connect button for Google provider",
+            lambda: self.page.click('button:has-text("Connect"):near(:text("Google"))'),
+        )
+        
+        await self.take_screenshot("Google provider connect dialog")
+        
+        # Input API key in the dialog
+        await self.test_action(
+            "Enter Google API key in the dialog",
+            lambda: self.page.fill('input[placeholder*="API key"]', "MOCK_GOOGLE_API_KEY_FOR_TESTING"),
+        )
+        
+        await self.take_screenshot("API key entered")
+        
+        # Click Save/Connect in the dialog
+        await self.test_action(
+            "Save Google A-P-I key configuration",
+            lambda: self.page.get_by_role('button', name='Connect Provider').click()
+        )
+        
+        await self.take_screenshot("Provider settings saved")
+        
+        # Verify the provider is now connected (status check)
+        await self.test_action(
+            "Verify provider is now connected",
+            lambda: self.page.wait_for_selector('text="Connected"', state="visible", timeout=5000),
+        )
+
+    async def run_provider_settings_test(self, email, mfa_token):
+        """Run provider settings test and create video"""
+        try:
+            # User is already logged in from shared session
+            await self.handle_provider_settings()
+            video_path = self.create_video_report(video_name="provider_settings_demo")
+            logging.info(
+                f"Provider settings test complete. Video report created at {video_path}"
+            )
+        except Exception as e:
+            logging.error(f"Provider settings test failed: {e}")
+            if not os.path.exists(
+                os.path.join(os.getcwd(), "tests", "provider_settings_demo.mp4")
+            ):
+                self.create_video_report(
+                    video_name="provider_settings_demo", 
+                    test_status="❌ **TEST FAILURE**"
+                )
             raise e
 
     async def run(self, headless=not is_desktop()):
-        """Run all tests and create individual videos"""
+        """Run all tests: registration in its own browser, then all others in a shared browser"""
+        email = None
+        mfa_token = None
+
         try:
-            # Registration test
-            email, mfa_token = await self.run_registration_test(headless)
+            # PHASE 1: Registration test in its own browser
+            logging.info("=== Starting Registration Test (Phase 1) ===")
+            async with async_playwright() as playwright:
+                browser = await playwright.chromium.launch(headless=headless)
+                context = await browser.new_context()
+                page = await context.new_page()
+                page.on("console", print_args)
+                page.set_default_timeout(20000)
+                await page.set_viewport_size({"width": 1367, "height": 924})
 
-            # Clear screenshots for next video
-            self.screenshots_with_actions = []
+                # Set browser references for registration test
+                self.playwright = playwright
+                self.browser = browser
+                self.context = context
+                self.page = page
 
-            # Logout test (after registration, user is logged in)
-            await self.run_logout_test(email, headless)
+                # Run registration test
+                email, mfa_token = await self.run_registration_test()
 
-            # Clear screenshots for next video
-            self.screenshots_with_actions = []
+                # Close registration browser
+                await browser.close()
+                logging.info("=== Registration Test Complete - Browser Closed ===")
 
-            # Login test (now test logging back in)
-            await self.run_login_test(email, mfa_token, headless)
+            # PHASE 2: All other tests in a new shared browser session
+            logging.info("=== Starting Shared Browser Session (Phase 2) ===")
+            async with async_playwright() as self.playwright:
+                self.browser = await self.playwright.chromium.launch(headless=headless)
+                self.context = await self.browser.new_context()
+                self.page = await self.browser.new_page()
+                self.page.on("console", print_args)
+                self.page.set_default_timeout(20000)
+                await self.page.set_viewport_size({"width": 1367, "height": 924})
 
-            # Clear screenshots for next video
-            self.screenshots_with_actions = []
+                # Start with login to establish session
+                # Clear screenshots for first video in shared session
+                self.screenshots_with_actions = []
 
-            # User preferences test
-            await self.run_user_preferences_test(email, mfa_token, headless)
+                # Login test (start the shared session)
+                await self.run_login_test(email, mfa_token)
+                logging.info("=== Login Complete - Continuing with other tests ===")
 
-            # Clear screenshots for next video
-            self.screenshots_with_actions = []
-
-            # Team management test
-            await self.run_team_management_test(email, mfa_token, headless)
-
-            # Clear screenshots for next video
-            self.screenshots_with_actions = []
-
-            # Chat test
-            await self.run_chat_test(email, mfa_token, headless)
-
-            # Clear screenshots for next video
-            self.screenshots_with_actions = []
-
-            # Training test
-            await self.run_training_test(email, mfa_token, headless)
-
-            # Clear screenshots for next video
-            self.screenshots_with_actions = []
-
-            # Abilities test
-            await self.run_abilities_test(email, mfa_token, headless)
-
-            # Clear screenshots for next video
-            self.screenshots_with_actions = []
-
-            # Mandatory context test
-            await self.run_mandatory_context_test(email, mfa_token, headless)
-
-            # Stripe test (if enabled)
-            if "stripe" in self.features:
                 # Clear screenshots for next video
                 self.screenshots_with_actions = []
-                await self.run_stripe_test(headless)
 
-            logging.info(
-                "All tests complete. Individual videos created for each feature area."
-            )
+                # User preferences test
+                await self.run_user_preferences_test(email, mfa_token)
+
+                # Clear screenshots for next video
+                self.screenshots_with_actions = []
+
+                # Team management test
+                await self.run_team_management_test(email, mfa_token)
+
+                # Clear screenshots for next video
+                self.screenshots_with_actions = []
+
+                # Chat test
+                await self.run_chat_test(email, mfa_token)
+
+                # Clear screenshots for next video
+                self.screenshots_with_actions = []
+
+                # Training test
+                await self.run_training_test(email, mfa_token)
+
+                # Clear screenshots for next video
+                self.screenshots_with_actions = []
+
+                # Abilities test
+                await self.run_abilities_test(email, mfa_token)
+
+                # Clear screenshots for next video
+                self.screenshots_with_actions = []
+
+                # Mandatory context test
+                await self.run_mandatory_context_test(email, mfa_token)
+
+                # Clear screenshots for next video
+                self.screenshots_with_actions = []
+                
+                # Provider settings test
+                await self.run_provider_settings_test(email, mfa_token)
+
+                # Stripe test (if enabled)
+                if "stripe" in self.features:
+                    # Clear screenshots for next video
+                    self.screenshots_with_actions = []
+                    await self.run_stripe_test()
+
+                logging.info(
+                    "=== All tests complete. Individual videos created for each feature area. ==="
+                )
+
+                # Close shared browser session
+                await self.browser.close()
 
         except Exception as e:
             logging.error(f"Test suite failed: {e}")
+            if hasattr(self, "browser") and self.browser:
+                try:
+                    await self.browser.close()
+                except:
+                    pass
             raise e
 
 
@@ -1450,38 +1583,43 @@ class TestRunner:
                     except Exception as e:
                         logging.error(f"Test execution failed: {e}")
                         # Make one final attempt to create video if it doesn't exist
-                        if not os.path.exists(os.path.join(os.getcwd(), "report.mp4")):
-                            test.create_video_report()
+                        if not os.path.exists(
+                            os.path.join(os.getcwd(), "tests", "report.mp4")
+                        ):
+                            test.create_video_report(test_status="❌ **TEST FAILURE**")
                         sys.exit(1)
                 else:
                     try:
-
                         nest_asyncio.apply()
                         asyncio.get_event_loop().run_until_complete(test.run())
                     except Exception as e:
                         logging.error(f"Test execution failed: {e}")
-                        if not os.path.exists(os.path.join(os.getcwd(), "report.mp4")):
-                            test.create_video_report()
+                        if not os.path.exists(
+                            os.path.join(os.getcwd(), "tests", "report.mp4")
+                        ):
+                            test.create_video_report(test_status="❌ **TEST FAILURE**")
                         sys.exit(1)
             else:
                 print("Windows Detected, using asyncio.ProactorEventLoop")
                 loop = asyncio.ProactorEventLoop()
                 nest_asyncio.apply(loop)
                 try:
-                    loop.run_until_complete(test.run(False))
+                    loop.run_until_complete(test.run())
                 except Exception as e:
                     logging.error(f"Test execution failed: {e}")
-                    if not os.path.exists(os.path.join(os.getcwd(), "report.mp4")):
-                        test.create_video_report()
+                    if not os.path.exists(
+                        os.path.join(os.getcwd(), "tests", "report.mp4")
+                    ):
+                        test.create_video_report(test_status="❌ **TEST FAILURE**")
                     sys.exit(1)
                 finally:
                     loop.close()
         except Exception as e:
             logging.error(f"Critical failure: {e}")
             # Try one last time to create video even in case of critical failure
-            if not os.path.exists(os.path.join(os.getcwd(), "report.mp4")):
+            if not os.path.exists(os.path.join(os.getcwd(), "tests", "report.mp4")):
                 try:
-                    test.create_video_report()
+                    test.create_video_report(test_status="❌ **CRITICAL FAILURE**")
                 except Exception as video_error:
                     logging.error(f"Failed to create video report: {video_error}")
             sys.exit(1)
