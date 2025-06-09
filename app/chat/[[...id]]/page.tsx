@@ -41,6 +41,7 @@ import {
 import { cn } from '@/lib/utils';
 import { mutate } from 'swr';
 import { getCookie } from 'cookies-next';
+import { useCompany } from '@/components/interactive/useUser';
 
 export type FormProps = {
   fieldOverrides?: { [key: string]: React.ReactNode };
@@ -115,6 +116,8 @@ export default function Home({ params }: { params: { id: string[] } }) {
   const interactiveConfig = useInteractiveConfig();
   const conversationId = params.id?.[0] || '';
   const { data: conversations = [], mutate: mutateConversations } = useConversations();
+  const { data: company } = useCompany();
+  const isChild = company?.roleId === 4;
   const conversationSWRPath = '/conversation/';
 
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
@@ -289,8 +292,8 @@ export default function Home({ params }: { params: { id: string[] } }) {
                 <Plus className="h-4 w-4" />
             </Button>
             
-            {/* Actions for existing conversations */}
-            {conversationId && (
+            {/* Actions for existing conversations - hidden for children */}
+            {conversationId && !isChild && (
               <>
                 {/* Visible buttons on larger screens */}
                 <div className="hidden sm:flex items-center gap-1 sm:gap-2">

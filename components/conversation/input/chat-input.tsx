@@ -9,7 +9,7 @@ import { DropZone } from '@/components/conversation/input/DropZone';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { CheckCircle as LuCheckCircle, UploadCloud, Loader2 } from 'lucide-react';
-import { LuPaperclip, LuSend, LuArrowUp, LuLoader as LuLoaderIcon, LuTrash2 } from 'react-icons/lu';
+import { LuPaperclip, LuSend, LuArrowUp, LuLoader as LuLoaderIcon, LuTrash2, LuMic, LuSquare } from 'react-icons/lu';
 import { Tooltip, TooltipBasic, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +30,48 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/components/layout/toast';
 import { useRouter } from 'next/navigation';
 import { mutate } from 'swr';
+import { useCompany } from '@/components/interactive/useUser';
+
+// Child-friendly voice recorder with large button
+const ChildFriendlyVoiceRecorder = ({ onSend, disabled }: { onSend: (message: string | object, uploadedFiles?: { [x: string]: string }) => Promise<void>; disabled: boolean }) => {
+  return (
+    <div className="flex items-center justify-center space-x-4">
+      <div className="text-center">
+        <p className="text-lg font-semibold text-primary">🎤 Tap to talk!</p>
+      </div>
+      
+      {/* Larger microphone button that fits in chat bar */}
+      <div className="relative">
+        {/* Custom styling to make VoiceRecorder button larger but appropriate for chat bar */}
+        <style jsx>{`
+          :global(.child-voice-recorder button) {
+            width: 60px !important;
+            height: 60px !important;
+            border-radius: 50% !important;
+            background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%) !important;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+            transition: all 0.3s ease !important;
+          }
+          :global(.child-voice-recorder button:hover) {
+            transform: scale(1.1) !important;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+          }
+          :global(.child-voice-recorder button:active) {
+            transform: scale(0.95) !important;
+          }
+          :global(.child-voice-recorder button svg) {
+            width: 30px !important;
+            height: 30px !important;
+            color: white !important;
+          }
+        `}</style>
+        <div className="child-voice-recorder">
+          <VoiceRecorder onSend={onSend} disabled={disabled} />
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Support components
 
@@ -473,6 +515,9 @@ export function ChatBar({
 }): ReactNode {
   const [timer, setTimer] = useState<number>(-1);
   const [uploadedFiles, setUploadedFiles] = useState<{ [x: string]: string }>({});
+  const { data: company } = useCompany();
+  const isChild = company?.roleId === 4;
+  
   const {
     textareaRef,
     isActive,
@@ -516,6 +561,11 @@ export function ChatBar({
     }
   }, [message, uploadedFiles, blurOnSend, handleBlur, onSend, clearOnSend, setMessage]);
 
+  // Wrapper function for VoiceRecorder compatibility
+  const handleVoiceSend = async (message: string | object, uploadedFiles?: { [x: string]: string }) => {
+    await onSend(message, uploadedFiles);
+  };
+
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (loading) {
@@ -528,6 +578,17 @@ export function ChatBar({
       clearInterval(interval);
     };
   }, [loading]);
+
+  // Simple voice-only interface for children (roleId 4)
+  if (isChild) {
+    return (
+      <div className={cn(
+        'flex absolute bg-background bottom-0 items-center justify-center left-0 right-0 max-w-[95%] px-2 py-3 m-3 mx-auto border overflow-hidden shadow-md rounded-3xl'
+      )}>
+        <ChildFriendlyVoiceRecorder onSend={handleVoiceSend} disabled={disabled} />
+      </div>
+    );
+  }
 
   return (
     <DropZone
@@ -575,7 +636,7 @@ export function ChatBar({
                 <BiCollapseVertical className='w-4 w-4' />
               </Button>
             </TooltipBasic>
-            {enableVoiceInput && <VoiceRecorder onSend={onSend} disabled={disabled} />}
+            {enableVoiceInput && <VoiceRecorder onSend={handleVoiceSend} disabled={disabled} />}
             {showResetConversation && <ResetConversation />}
             <SendMessage
               handleSend={handleSendMessage}
@@ -604,7 +665,7 @@ export function ChatBar({
           >
             <span className='font-light text-muted-foreground'>{loading ? 'Sending...' : 'Enter your message here...'}</span>
           </Button>
-          {enableVoiceInput && <VoiceRecorder onSend={onSend} disabled={disabled} />}
+          {enableVoiceInput && <VoiceRecorder onSend={handleVoiceSend} disabled={disabled} />}
         </>
       )}
     </DropZone>
