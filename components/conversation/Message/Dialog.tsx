@@ -15,9 +15,13 @@ export type DialogProps = CommonDialogProps & {
   content?: React.ReactNode | string;
   ButtonComponent?: React.FC<{ onClick: MouseEventHandler<any> }> | any;
   ButtonProps?: object;
+  className?: string;
 };
 
-const Dialog: React.FC<DialogProps> = ({
+const Dialog = React.forwardRef<
+  HTMLButtonElement,
+  DialogProps
+>(({
   onClose = (): object => ({}),
   onConfirm,
   title = 'Dialog Title',
@@ -25,8 +29,10 @@ const Dialog: React.FC<DialogProps> = ({
   ButtonComponent = Button,
   ButtonProps = {},
   sx = {},
-}) => {
+  className,
+}, ref) => {
   const [dialogOpen, setDialogOpen] = useState(false);
+  
   function handleClose(): void {
     setDialogOpen(false);
     onClose();
@@ -35,16 +41,18 @@ const Dialog: React.FC<DialogProps> = ({
   function handleCancel(): void {
     handleClose();
   }
+  
   return (
     <>
       <ButtonComponent
+        ref={ref}
         onClick={() => {
           setDialogOpen(true);
         }}
         {...ButtonProps}
       />
       <CnDialog open={dialogOpen}>
-        <DialogContent>
+        <DialogContent className={className}>
           <Button onClick={handleClose} variant='ghost' size='icon' className='absolute top-2 right-2'>
             <IoIosClose />
           </Button>
@@ -79,6 +87,8 @@ const Dialog: React.FC<DialogProps> = ({
       </CnDialog>
     </>
   );
-};
+});
+
+Dialog.displayName = 'Dialog';
 
 export default Dialog;

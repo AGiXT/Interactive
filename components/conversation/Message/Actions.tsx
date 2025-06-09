@@ -9,13 +9,23 @@ import { cn } from '@/lib/utils';
 import clipboardCopy from 'clipboard-copy';
 import { getCookie } from 'cookies-next';
 import { Loader2, Volume2 } from 'lucide-react';
-import { useContext, useRef, useState } from 'react';
+import React, { useContext, useRef, useState } from 'react';
 import { LuCopy, LuDownload, LuPen as LuEdit, LuGitFork, LuThumbsDown, LuThumbsUp, LuTrash2 } from 'react-icons/lu';
 import { mutate } from 'swr';
 import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
 import { useConversations } from '@/components/interactive/useConversation';
 import MessageDialog from '@/components/conversation/Message/Dialog';
 import { ChatItem } from '@/components/conversation/Message/Message';
+
+const ForwardedLuEdit = React.forwardRef<HTMLSpanElement, React.ComponentProps<typeof LuEdit>>((props, ref) => (
+  <span ref={ref}><LuEdit {...props} /></span>
+));
+ForwardedLuEdit.displayName = 'ForwardedLuEdit';
+
+const ForwardedLuTrash2 = React.forwardRef<HTMLSpanElement, React.ComponentProps<typeof LuTrash2>>((props, ref) => (
+  <span ref={ref}><LuTrash2 {...props} /></span>
+));
+ForwardedLuTrash2.displayName = 'ForwardedLuTrash2';
 
 export type MessageProps = {
   chatItem: { role: string; message: string; timestamp: string; rlhf?: { positive: boolean; feedback: string } };
@@ -52,7 +62,7 @@ export function MessageActions({
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const handleTTS = async () => {
-    if (!state.overrides.conversation) return;
+    if (!state.overrides?.conversation) return;
 
     setIsLoadingAudio(true);
     try {
@@ -62,7 +72,7 @@ export function MessageActions({
           method: 'GET',
           headers: {
             Authorization: `${getCookie('jwt')}`,
-          },
+          } as HeadersInit,
         },
       );
       if (!response.ok) throw new Error('Failed to fetch audio');
@@ -93,28 +103,32 @@ export function MessageActions({
           {chatItem.role !== 'USER' && process.env.NEXT_PUBLIC_AGIXT_RLHF === 'true' && (
             <>
               <TooltipBasic title='Provide Positive Feedback'>
-                <Button
-                  variant='ghost'
-                  size='icon'
-                  onClick={() => {
-                    setVote(1);
-                    setOpen(true);
-                  }}
-                >
-                  <LuThumbsUp className={cn(vote === 1 && 'text-green-500')} />
-                </Button>
+                <div className="inline-flex">
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    onClick={() => {
+                      setVote(1);
+                      setOpen(true);
+                    }}
+                  >
+                    <LuThumbsUp className={cn(vote === 1 && 'text-green-500')} />
+                  </Button>
+                </div>
               </TooltipBasic>
               <TooltipBasic title='Provide Negative Feedback'>
-                <Button
-                  variant='ghost'
-                  size='icon'
-                  onClick={() => {
-                    setVote(-1);
-                    setOpen(true);
-                  }}
-                >
-                  <LuThumbsDown className={cn(vote === -1 && 'text-red-500')} />
-                </Button>
+                <div className="inline-flex">
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    onClick={() => {
+                      setVote(-1);
+                      setOpen(true);
+                    }}
+                  >
+                    <LuThumbsDown className={cn(vote === -1 && 'text-red-500')} />
+                  </Button>
+                </div>
               </TooltipBasic>
             </>
           )}
@@ -126,142 +140,148 @@ export function MessageActions({
                 </audio>
               ) : (
                 <TooltipBasic title='Speak Message'>
-                  <Button variant='ghost' size='icon' onClick={handleTTS} disabled={isLoadingAudio}>
-                    {isLoadingAudio ? <Loader2 className='h-4 w-4 animate-spin' /> : <Volume2 className='h-4 w-4' />}
-                  </Button>
+                  <div className="inline-flex">
+                    <Button variant='ghost' size='icon' onClick={handleTTS} disabled={isLoadingAudio}>
+                      {isLoadingAudio ? <Loader2 className='h-4 w-4 animate-spin' /> : <Volume2 className='h-4 w-4' />}
+                    </Button>
+                  </div>
                 </TooltipBasic>
               )}
             </>
           )}
           <TooltipBasic title='Fork Conversation'>
-            <Button
-              variant='ghost'
-              size='icon'
-              onClick={async () => {
-                try {
-                  const response = await fetch(
-                    `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/conversation/fork/${state.overrides?.conversation}/${chatItem.id}`,
-                    {
-                      method: 'POST',
-                      headers: {
-                        Authorization: getCookie('jwt'),
+            <div className="inline-flex">
+              <Button
+                variant='ghost'
+                size='icon'
+                onClick={async () => {
+                  if (!state.overrides?.conversation) return;
+                  
+                  try {
+                    const response = await fetch(
+                      `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/conversation/fork/${state.overrides.conversation}/${chatItem.id}`,
+                      {
+                        method: 'POST',
+                        headers: {
+                          Authorization: `${getCookie('jwt')}`,
+                        } as HeadersInit,
                       },
-                    },
-                  );
+                    );
 
-                  if (!response.ok) throw new Error('Failed to fork conversation');
+                    if (!response.ok) throw new Error('Failed to fork conversation');
 
-                  const data = await response.json();
-                  toast({
-                    title: 'Conversation Forked',
-                    description: `New conversation created: ${data.message}`,
-                  });
-                  mutate('/conversations');
-                } catch (error) {
-                  toast({
-                    title: 'Error',
-                    description: 'Failed to fork conversation',
-                    variant: 'destructive',
-                  });
-                }
-              }}
-            >
-              <LuGitFork />
-            </Button>
+                    const data = await response.json();
+                    toast({
+                      title: 'Conversation Forked',
+                      description: `New conversation created: ${data.message}`,
+                    });
+                    mutate('/conversations');
+                  } catch (error) {
+                    toast({
+                      title: 'Error',
+                      description: 'Failed to fork conversation',
+                      variant: 'destructive',
+                    });
+                  }
+                }}
+              >
+                <LuGitFork />
+              </Button>
+            </div>
           </TooltipBasic>
           <TooltipBasic title='Copy Message'>
-            <Button
-              variant='ghost'
-              size='icon'
-              onClick={() => {
-                clipboardCopy(formattedMessage);
-                toast({
-                  title: 'Message Copied',
-                  description: 'Message has been copied to your clipboard.',
-                });
-              }}
-            >
-              <LuCopy />
-            </Button>
+            <div className="inline-flex">
+              <Button
+                variant='ghost'
+                size='icon'
+                onClick={() => {
+                  clipboardCopy(formattedMessage);
+                  toast({
+                    title: 'Message Copied',
+                    description: 'Message has been copied to your clipboard.',
+                  });
+                }}
+              >
+                <LuCopy />
+              </Button>
+            </div>
           </TooltipBasic>
           <TooltipBasic title='Download Message'>
-            <Button
-              variant='ghost'
-              size='icon'
-              onClick={() => {
-                const element = document.createElement('a');
-                const file = new Blob([formattedMessage], {
-                  type: 'text/plain;charset=utf-8',
-                });
-                element.href = URL.createObjectURL(file);
-                element.download = `${chatItem.role}-${chatItem.timestamp}.md`;
-                document.body.appendChild(element);
-                element.click();
-              }}
-            >
-              <LuDownload />
-            </Button>
+            <div className="inline-flex">
+              <Button
+                variant='ghost'
+                size='icon'
+                onClick={() => {
+                  const element = document.createElement('a');
+                  const file = new Blob([formattedMessage], {
+                    type: 'text/plain;charset=utf-8',
+                  });
+                  element.href = URL.createObjectURL(file);
+                  element.download = `${chatItem.role}-${chatItem.timestamp}.md`;
+                  document.body.appendChild(element);
+                  element.click();
+                }}
+              >
+                <LuDownload />
+              </Button>
+            </div>
           </TooltipBasic>
           {enableMessageEditing && (
-            <TooltipProvider>
-              <Tooltip>
-                {/* TODO: Replace this with new dialog */}
-                <MessageDialog
-                  ButtonComponent={Button}
-                  ButtonProps={{
-                    variant: 'ghost',
-                    size: 'icon',
-                    children: (
-                      <TooltipBasic title='Edit Message'>
-                        <LuEdit />
-                      </TooltipBasic>
-                    ),
-                  }}
-                  title='Edit Message'
-                  onConfirm={async () => {
-                    await state.agixt.updateConversationMessage(
-                      convData?.find((item) => item.id === state.overrides.conversation).name,
-                      chatItem.id,
-                      updatedMessage,
-                    );
-                    mutate('/conversation/' + state.overrides.conversation);
-                  }}
-                  content={
-                    <Textarea
-                      value={updatedMessage}
-                      onChange={(event) => {
-                        setUpdatedMessage(event.target.value);
-                      }}
-                    />
+            <TooltipBasic title='Edit Message'>
+              <MessageDialog
+                ButtonComponent={Button}
+                ButtonProps={{
+                  variant: 'ghost',
+                  size: 'icon',
+                  children: <ForwardedLuEdit />,
+                }}
+                title='Edit Message'
+                onConfirm={async () => {
+                  if (state.overrides?.conversation && convData) {
+                    const conversation = convData.find((item) => item.id === state.overrides?.conversation);
+                    if (conversation?.name) {
+                      await state.agixt.updateConversationMessage(
+                        conversation.name,
+                        chatItem.id,
+                        updatedMessage,
+                      );
+                      mutate('/conversation/' + state.overrides.conversation);
+                    }
                   }
-                  className='w-[70%] max-w-none'
-                />
-                <TooltipContent>Edit Message</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                }}
+                content={
+                  <Textarea
+                    value={updatedMessage}
+                    onChange={(event) => {
+                      setUpdatedMessage(event.target.value);
+                    }}
+                  />
+                }
+                className='w-[70%] max-w-none'
+              />
+            </TooltipBasic>
           )}
           {enableMessageDeletion && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  {/* TODO: Replace this with new dialog */}
-                  <MessageDialog
-                    ButtonComponent={Button}
-                    ButtonProps={{ variant: 'ghost', size: 'icon', children: <LuTrash2 /> }}
-                    title='Delete Message'
-                    onConfirm={async () => {
+            <TooltipBasic title='Delete Message'>
+              <MessageDialog
+                ButtonComponent={Button}
+                ButtonProps={{ variant: 'ghost', size: 'icon', children: <ForwardedLuTrash2 /> }}
+                title='Delete Message'
+                onConfirm={async () => {
+                  if (state.overrides?.conversation && convData) {
+                    const conversation = convData.find((item) => item.id === state.overrides?.conversation);
+                    if (conversation?.name) {
                       await state.agixt.deleteConversationMessage(
-                        convData?.find((item) => item.id === state.overrides.conversation).name,
+                        conversation.name,
                         chatItem.id,
                       );
                       mutate('/conversation/' + state.overrides.conversation);
-                    }}
-                    content={`Are you sure you'd like to permanently delete this message from the conversation?`}
-                  />
-                </TooltipTrigger>
-                <TooltipContent>Delete Message</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                    }
+                  }
+                }}
+                content={`Are you sure you'd like to permanently delete this message from the conversation?`}
+              />
+            </TooltipBasic>
           )}
           {chatItem.rlhf && (
             <p className={cn('text-sm', chatItem.rlhf.positive ? 'text-green-500' : 'text-red-500')}>
@@ -283,24 +303,26 @@ export function MessageActions({
                 <Button
                   onClick={() => {
                     setOpen(false);
-                    if (vote === 1) {
-                      state.agixt.addConversationFeedback(
-                        true,
-                        chatItem.role,
-                        chatItem.id,
-                        lastUserMessage,
-                        feedback,
-                        state.overrides.conversation,
-                      );
-                    } else {
-                      state.agixt.addConversationFeedback(
-                        false,
-                        chatItem.role,
-                        chatItem.id,
-                        lastUserMessage,
-                        feedback,
-                        state.overrides.conversation,
-                      );
+                    if (state.overrides?.conversation) {
+                      if (vote === 1) {
+                        state.agixt.addConversationFeedback(
+                          true,
+                          chatItem.role,
+                          chatItem.id,
+                          lastUserMessage,
+                          feedback,
+                          state.overrides.conversation,
+                        );
+                      } else {
+                        state.agixt.addConversationFeedback(
+                          false,
+                          chatItem.role,
+                          chatItem.id,
+                          lastUserMessage,
+                          feedback,
+                          state.overrides.conversation,
+                        );
+                      }
                     }
                   }}
                 >
