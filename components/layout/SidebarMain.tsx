@@ -66,14 +66,14 @@ export function AgentSelector() {
 
   // Initialize agent selection when user data is loaded
   useEffect(() => {
-    if (!user?.companies?.length || isInitialized) return;
+    if (!user?.companies?.length) return;
 
     const agentName = getCookie('agixt-agent');
     const jwtToken = getCookie('jwt');
     
     if (!jwtToken) return;
 
-    // If no agent is selected, select the primary company's default agent
+    // Always ensure we have an agent selected
     if (!agentName) {
       const primaryCompany = user.companies.find(c => c.primary);
       if (primaryCompany?.agents?.length) {
@@ -85,15 +85,17 @@ export function AgentSelector() {
           setCookie('agixt-company', primaryCompany.id, {
             domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
           });
-          // Trigger data refetch
-          mutateActiveAgent();
-          mutateActiveCompany();
         }
       }
     }
     
-    setIsInitialized(true);
-  }, [user, isInitialized, mutateActiveAgent, mutateActiveCompany]);
+    // Always trigger refetch to ensure data is loaded
+    if (!isInitialized) {
+      mutateActiveAgent();
+      mutateActiveCompany();
+      setIsInitialized(true);
+    }
+  }, [user, mutateActiveAgent, mutateActiveCompany, isInitialized]);
 
   // Handle data fetch errors more gracefully
   useEffect(() => {
@@ -167,6 +169,48 @@ export function AgentSelector() {
   const isLoading = (!activeAgent || !activeCompany || isSwitching) && !hasError;
   const showLoadingState = !user?.companies?.length || !isInitialized;
 
+  // Get fallback agent name from cookies or user data
+  const getDisplayAgentName = () => {
+    if (activeAgent?.agent?.name) {
+      return activeAgent.agent.name;
+    }
+    
+    // Try to get from cookie
+    const cookieAgentName = getCookie('agixt-agent');
+    if (cookieAgentName) {
+      return cookieAgentName;
+    }
+    
+    // Try to get default from user companies
+    if (user?.companies?.length) {
+      const primaryCompany = user.companies.find(c => c.primary);
+      if (primaryCompany?.agents?.length) {
+        const defaultAgent = primaryCompany.agents.find(a => a.default) || primaryCompany.agents[0];
+        if (defaultAgent) {
+          return defaultAgent.name;
+        }
+      }
+    }
+    
+    return 'Loading...';
+  };
+
+  const getDisplayCompanyName = () => {
+    if (activeCompany?.name) {
+      return activeCompany.name;
+    }
+    
+    // Try to get from user data
+    if (user?.companies?.length) {
+      const primaryCompany = user.companies.find(c => c.primary);
+      if (primaryCompany) {
+        return primaryCompany.name;
+      }
+    }
+    
+    return 'Loading...';
+  };
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -182,7 +226,7 @@ export function AgentSelector() {
                 <FaRobot className='size-4' />
               </div>
               <div className='grid flex-1 text-sm leading-tight text-left'>
-                {showLoadingState || isLoading ? (
+                {showLoadingState ? (
                   <>
                     <span className='font-semibold truncate'>Loading...</span>
                     <span className='text-xs truncate'>Please wait</span>
@@ -194,8 +238,8 @@ export function AgentSelector() {
                   </>
                 ) : (
                   <>
-                    <span className='font-semibold truncate'>{activeAgent?.agent?.name || 'No Agent'}</span>
-                    <span className='text-xs truncate'>{activeCompany?.name || 'No Company'}</span>
+                    <span className='font-semibold truncate'>{getDisplayAgentName()}</span>
+                    <span className='text-xs truncate'>{getDisplayCompanyName()}</span>
                   </>
                 )}
               </div>
