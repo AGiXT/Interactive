@@ -623,10 +623,9 @@ class FrontEndTest:
 
     async def handle_chat(self):
         try:
-            await self.test_action(
-                "After the user logs in, the chat interface is loaded and ready for their first basic interaction.",
-                lambda: self.page.click("text=Chat"),
-            )
+            # Start at chat screen first for consistent navigation
+            await self.navigate_to_chat_first("After the user logs in, they start at the chat interface which is ready for their first basic interaction.")
+            
             await self.test_action(
                 "By clicking in the chat bar, the user can expand it to show more options and see their entire input.",
                 lambda: self.page.click("#chat-message-input-inactive"),
@@ -697,11 +696,17 @@ class FrontEndTest:
 
     async def handle_commands_workflow(self):
         """Handle commands workflow scenario"""
-        # TODO: Implement commands workflow test
+        # Start at chat screen first for consistent navigation
+        await self.navigate_to_chat_first("Starting from the chat interface to demonstrate command workflow capabilities")
+        
+        # TODO: Implement commands workflow test - navigate from chat to commands configuration
         pass
 
     async def handle_mandatory_context(self):
         """Test the mandatory context feature by setting and using a context in chat."""
+        # Start at chat screen first for consistent navigation
+        await self.navigate_to_chat_first("Starting from the chat interface, the user will navigate to configure mandatory context settings")
+        
         # Navigate to Agent Management
         await self.test_action(
             "Navigate to Agent Management to begin mandatory context configuration",
@@ -869,7 +874,10 @@ class FrontEndTest:
 
     async def handle_email(self):
         """Handle email verification scenario"""
-        # TODO: Handle email verification workflow
+        # Start at chat screen first for consistent navigation
+        await self.navigate_to_chat_first("Starting from the chat interface to demonstrate email verification workflow")
+        
+        # TODO: Handle email verification workflow - navigate from chat to email settings
         pass
 
     async def handle_login(self, email, mfa_token):
@@ -1002,6 +1010,9 @@ class FrontEndTest:
     async def handle_update_user(self):
         """Handle user update scenario by changing last name and timezone"""
         try:
+            # Start at chat screen first for consistent navigation
+            await self.navigate_to_chat_first("Starting from the chat interface, the user will navigate to account management to update their profile")
+            
             # Navigate to user management page
             await self.test_action(
                 "The user navigates to the account management page",
@@ -1125,6 +1136,9 @@ class FrontEndTest:
     async def handle_invite_user(self):
         """Handle user invite scenario by inviting a user to the team"""
         try:
+            # Start at chat screen first for consistent navigation
+            await self.navigate_to_chat_first("Starting from the chat interface, the user will navigate to team management to invite new members")
+            
             # Navigate to team page
             await self.test_action(
                 "The user navigates to the team management page",
@@ -1224,16 +1238,31 @@ class FrontEndTest:
 
     async def handle_train_user_agent(self):
         """Handle training user agent scenario"""
-        # TODO: Handle training user agent workflow
+        # Start at chat screen first for consistent navigation
+        await self.navigate_to_chat_first("Starting from the chat interface to demonstrate user agent training capabilities")
+        
+        # TODO: Handle training user agent workflow - navigate from chat to training settings
         pass
 
     async def handle_train_company_agent(self):
         """Handle training company agent scenario"""
-        # TODO: Handle training company agent workflow
+        # Start at chat screen first for consistent navigation
+        await self.navigate_to_chat_first("Starting from the chat interface to demonstrate company agent training capabilities")
+        
+        # TODO: Handle training company agent workflow - navigate from chat to company training settings
         pass
 
     async def handle_stripe(self):
         """Handle Stripe subscription scenario"""
+        # Start at chat screen first for consistent navigation
+        await self.navigate_to_chat_first("Starting from the chat interface to demonstrate subscription management capabilities")
+        
+        # Navigate to subscription page
+        await self.test_action(
+            "Navigate to subscription page to view available plans",
+            lambda: self.page.goto(f"{self.base_uri}/subscription"),
+        )
+        
         await self.take_screenshot("subscription page is loaded with available plans")
         await self.test_action(
             "Stripe checkout page is open",
@@ -1493,6 +1522,9 @@ class FrontEndTest:
 
     async def handle_provider_settings(self):
         """Test provider settings page navigation and toggle interaction."""
+        # Start at chat screen first for consistent navigation
+        await self.navigate_to_chat_first("Starting from the chat interface to demonstrate provider settings configuration")
+        
         # Navigate to Agent Management
         await self.test_action(
             "Navigate to Agent Management to begin extensions configuration",
@@ -1578,6 +1610,19 @@ class FrontEndTest:
                     test_status="❌ **TEST FAILURE**",
                 )
             raise e
+
+    async def navigate_to_chat_first(self, description="Navigate to chat screen to begin feature demonstration"):
+        """Helper method to standardize starting each test at the chat screen"""
+        await self.test_action(
+            description,
+            lambda: self.page.goto(f"{self.base_uri}/chat"),
+            lambda: self.page.wait_for_load_state("networkidle", timeout=60000),
+        )
+        
+        await self.test_action(
+            "The chat interface loads, showing the conversation history and input area",
+            lambda: self.page.wait_for_selector("#chat-message-input-inactive", state="visible", timeout=30000),
+        )
 
     async def run(self, headless=not is_desktop()):
         """Run all tests: registration in its own browser, then all others in a shared browser"""
