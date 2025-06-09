@@ -1823,24 +1823,24 @@ class FrontEndTest:
         )
 
         # Toggle the "Run Data Analysis" command - focus on finding the actual toggle/checkbox
-        # Try multiple possible selectors for the toggle element (not the text)
+        # Based on the abilities page structure, look for Switch components next to specific text
         toggle_selectors = [
-            # Look for checkbox elements within containers that have the text
-            'tr:has-text("Run Data Analysis") input[type="checkbox"]',
-            'div:has-text("Run Data Analysis") input[type="checkbox"]',
-            'label:has-text("Run Data Analysis") input[type="checkbox"]',
-            # Look for switch/toggle elements
-            'tr:has-text("Run Data Analysis") button[role="switch"]',
-            'div:has-text("Run Data Analysis") button[role="switch"]',
-            # Look for toggle elements with specific classes
-            'tr:has-text("Run Data Analysis") .toggle',
-            'div:has-text("Run Data Analysis") .toggle',
-            # Look for any clickable element near the text
-            'tr:has-text("Run Data Analysis") button',
-            'div:has-text("Run Data Analysis") button',
-            # Look for elements with toggle-related attributes
-            'tr:has-text("Run Data Analysis") [aria-checked]',
-            'div:has-text("Run Data Analysis") [aria-checked]',
+            # Look for Switch elements next to "Data Analysis" text (from OVERRIDE_EXTENSIONS)
+            'h4:has-text("Data Analysis") ~ button[role="switch"]',
+            'h4:has-text("Data Analysis") + * button[role="switch"]', 
+            '*:has-text("Data Analysis") button[role="switch"]:not(#show-enabled-only)',
+            # Look for Switch elements next to "Run Data Analysis" text
+            'h4:has-text("Run Data Analysis") ~ button[role="switch"]',
+            'h4:has-text("Run Data Analysis") + * button[role="switch"]',
+            '*:has-text("Run Data Analysis") button[role="switch"]:not(#show-enabled-only)',
+            # Look for generic switch elements in cards, but exclude the "Show Enabled Only" switch
+            'div.grid div:has-text("Data Analysis") button[role="switch"]:not(#show-enabled-only)',
+            'div.grid div:has-text("Run Data Analysis") button[role="switch"]:not(#show-enabled-only)',
+            # Look for switch elements in Card components containing the text
+            '[class*="card"]:has-text("Data Analysis") button[role="switch"]',
+            '[class*="card"]:has-text("Run Data Analysis") button[role="switch"]',
+            # Fallback to any switch that's not the "Show Enabled Only" one
+            'button[role="switch"]:not(#show-enabled-only)',
         ]
 
         toggle_found = False
@@ -1861,37 +1861,46 @@ class FrontEndTest:
                 continue
 
         if not toggle_found:
-            # Use JavaScript to find and click the toggle next to "Run Data Analysis" text
+            # Use JavaScript to find and click the switch next to Data Analysis text
             await self.test_action(
-                "Use JavaScript to locate and click the toggle next to Run Data Analysis",
+                "Use JavaScript to locate and click the switch next to Data Analysis",
                 lambda: self.page.evaluate("""() => {
-                    // Find all elements containing "Run Data Analysis" text
-                    const allElements = Array.from(document.querySelectorAll('*'));
-                    for (const el of allElements) {
-                        if (el.textContent && el.textContent.includes('Run Data Analysis')) {
-                            // Look for clickable elements (checkbox, button, switch) in the same row/container
-                            const container = el.closest('tr, div, label');
+                    // Find all h4 elements that contain "Data Analysis" or "Run Data Analysis"
+                    const headings = Array.from(document.querySelectorAll('h4'));
+                    for (const heading of headings) {
+                        const text = heading.textContent || '';
+                        if (text.includes('Data Analysis') || text.includes('Run Data Analysis')) {
+                            // Look for a switch (button with role="switch") in the same container
+                            const container = heading.closest('div');
                             if (container) {
-                                const toggles = container.querySelectorAll('input[type="checkbox"], button[role="switch"], button, .toggle, [aria-checked]');
-                                for (const toggle of toggles) {
-                                    if (toggle !== el && (toggle.type === 'checkbox' || toggle.role === 'switch' || toggle.hasAttribute('aria-checked'))) {
-                                        toggle.click();
+                                const switches = container.querySelectorAll('button[role="switch"]');
+                                for (const switchEl of switches) {
+                                    // Make sure it's not the "Show Enabled Only" switch
+                                    if (switchEl.id !== 'show-enabled-only') {
+                                        switchEl.click();
                                         return true;
                                     }
                                 }
-                                // If no specific toggle found, try any button in the container
-                                const buttons = container.querySelectorAll('button');
-                                if (buttons.length > 0) {
-                                    buttons[0].click();
-                                    return true;
-                                }
+                            }
+                        }
+                    }
+                    
+                    // Fallback: find any switch that's not the "Show Enabled Only" one
+                    const allSwitches = Array.from(document.querySelectorAll('button[role="switch"]'));
+                    for (const switchEl of allSwitches) {
+                        if (switchEl.id !== 'show-enabled-only') {
+                            // Check if this switch is in a card with Data Analysis text
+                            const card = switchEl.closest('[class*="card"], .card');
+                            if (card && (card.textContent.includes('Data Analysis') || card.textContent.includes('Run Data Analysis'))) {
+                                switchEl.click();
+                                return true;
                             }
                         }
                     }
                     return false;
                 }"""),
             )
-            await self.take_screenshot("Attempted to toggle Run Data Analysis using JavaScript")
+            await self.take_screenshot("Attempted to toggle Data Analysis using JavaScript")
 
         # Navigate to new chat to test the capability
         await self.test_action(
