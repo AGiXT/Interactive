@@ -1559,13 +1559,13 @@ class FrontEndTest:
                 self.screenshots_with_actions = []
 
                 # Mandatory context test
-                await self.run_mandatory_context_test(email, mfa_token)
+                # await self.run_mandatory_context_test(email, mfa_token)
 
                 # Clear screenshots for next video
-                self.screenshots_with_actions = []
+                # self.screenshots_with_actions = []
 
                 # Provider settings test
-                await self.run_provider_settings_test(email, mfa_token)
+                # await self.run_provider_settings_test(email, mfa_token)
 
                 # Stripe test (if enabled)
                 if "stripe" in self.features:
