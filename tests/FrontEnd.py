@@ -655,11 +655,15 @@ class FrontEndTest:
     async def handle_logout(self, email=None):
         """Handle logout with multiple click approaches"""
         try:
-            # Wait for page to be fully loaded
-            await self.test_action(
-                "Waiting for page to load for logout",
-                lambda: self.page.wait_for_load_state("networkidle"),
-            )
+            # Wait for page to be fully loaded with shorter timeout
+            try:
+                await self.test_action(
+                    "Waiting for page to load for logout",
+                    lambda: self.page.wait_for_load_state("domcontentloaded", timeout=10000),
+                )
+            except Exception:
+                # If domcontentloaded times out, just continue - the page might be ready enough
+                logging.warning("Page load state timeout, continuing with logout attempt")
 
             await self.take_screenshot("Before attempting to log out")
 
@@ -744,190 +748,6 @@ class FrontEndTest:
                             return
             except Exception as playwright_error:
                 logging.info(f"Playwright approach error: {playwright_error}")
-
-            # Second approach: Try using a full user action sequence
-            try:
-                logging.info("Trying full user action sequence")
-
-                # Find the button with more specific selector
-                user_details = await self.test_action(
-                    "Finding user button with specific details",
-                    lambda: self.page.wait_for_selector("body", state="visible"),
-                    lambda: self.page.evaluate(
-                        f"""() => {{
-                        const allButtons = Array.from(document.querySelectorAll('button'));
-                        const userButton = allButtons.find(button => 
-                            button.textContent.includes('{email_part}') && 
-                            button.querySelector('[data-size="lg"]') !== null
-                        );
-                        
-                        if (userButton) {{
-                            // Get position for mouse click
-                            const rect = userButton.getBoundingClientRect();
-                            return {{
-                                found: true,
-                                id: userButton.id,
-                                x: rect.left + rect.width / 2,
-                                y: rect.top + rect.height / 2
-                            }};
-                        }}
-                        
-                        return {{ found: false }};
-                    }}"""
-                    ),
-                )
-
-                logging.info(f"User button details: {user_details}")
-
-                if user_details.get("found"):
-                    # Use mouse action to click at the center of the button
-                    await self.test_action(
-                        "Clicking user button using mouse coordinates",
-                        lambda: self.page.wait_for_selector("body", state="visible"),
-                        lambda: self.page.mouse.click(
-                            user_details.get("x", 0), user_details.get("y", 0)
-                        ),
-                    )
-                    await self.page.wait_for_timeout(1500)
-                    await self.take_screenshot("After mouse click")
-
-                    # Check for menu items again
-                    menu_appeared = await self.test_action(
-                        "Checking for menu items after mouse click",
-                        lambda: self.page.wait_for_selector(
-                            '[role="menuitem"]', state="visible", timeout=5000
-                        ),
-                        lambda: self.page.evaluate(
-                            """() => {
-                            const menuItems = document.querySelectorAll('[role="menuitem"]');
-                            console.log('Menu items after mouse click:', menuItems.length);
-                            
-                            if (menuItems.length > 0) {
-                                // Try to find logout item
-                                for (const item of menuItems) {
-                                    const text = item.textContent.toLowerCase();
-                                    if (text.includes('log out') || text.includes('logout') || text.includes('sign out')) {
-                                        console.log('Found logout item, clicking');
-                                        item.click();
-                                        return { clicked: true, text };
-                                    }
-                                }
-                                
-                                // If no logout item found, click the last one
-                                console.log('Clicking last menu item');
-                                menuItems[menuItems.length - 1].click();
-                                return { clicked: true, lastItem: true };
-                            }
-                            
-                            return { clicked: false };
-                        }"""
-                        ),
-                    )
-
-                    logging.info(f"Menu interaction results: {menu_appeared}")
-
-                    if menu_appeared.get("clicked"):
-                        await self.page.wait_for_timeout(2000)
-
-                        # Check if we logged out
-                        current_url = self.page.url
-                        if (
-                            "/user" in current_url
-                            or current_url == self.base_uri
-                            or current_url.endswith("/")
-                        ):
-                            logging.info(
-                                f"Successfully logged out - URL: {current_url}"
-                            )
-                            return
-            except Exception as mouse_error:
-                logging.info(f"Mouse action approach error: {mouse_error}")
-
-            # Third approach: Try using keyboard shortcuts
-            logging.info("Trying keyboard shortcut approach")
-            try:
-                # Find and focus the button first
-                focused = await self.test_action(
-                    "Finding and focusing user button",
-                    lambda: self.page.wait_for_selector("body", state="visible"),
-                    lambda: self.page.evaluate(
-                        f"""() => {{
-                        const userButton = Array.from(document.querySelectorAll('button')).find(
-                            button => button.textContent.includes('{email_part}')
-                        );
-                        
-                        if (userButton) {{
-                            userButton.focus();
-                            return true;
-                        }}
-                        return false;
-                    }}"""
-                    ),
-                )
-
-                if focused:
-                    # Press Enter to activate the button
-                    await self.test_action(
-                        "Pressing Enter to activate user button",
-                        lambda: self.page.wait_for_selector(
-                            "button:focus", state="visible"
-                        ),
-                        lambda: self.page.keyboard.press("Enter"),
-                    )
-                    await self.page.wait_for_timeout(1500)
-                    await self.take_screenshot("After keyboard Enter")
-
-                    # Check if dropdown opened
-                    dropdown_visible = await self.test_action(
-                        "Checking for menu items after keyboard Enter",
-                        lambda: self.page.wait_for_selector(
-                            '[role="menuitem"]', state="visible", timeout=5000
-                        ),
-                        lambda: self.page.evaluate(
-                            """() => {
-                            return document.querySelectorAll('[role="menuitem"]').length > 0;
-                        }"""
-                        ),
-                    )
-
-                    if dropdown_visible:
-                        # Press Down to get to the logout item (often the last one)
-                        for _ in range(
-                            5
-                        ):  # Try a few Down keys to navigate to the bottom
-                            await self.test_action(
-                                "Navigating menu with arrow down",
-                                lambda: self.page.wait_for_selector(
-                                    '[role="menuitem"]', state="visible"
-                                ),
-                                lambda: self.page.keyboard.press("ArrowDown"),
-                            )
-                            await self.page.wait_for_timeout(300)
-
-                        # Press Enter to select
-                        await self.test_action(
-                            "Pressing Enter to select logout menu item",
-                            lambda: self.page.wait_for_selector(
-                                '[role="menuitem"][data-selected="true"]',
-                                state="visible",
-                            ),
-                            lambda: self.page.keyboard.press("Enter"),
-                        )
-                        await self.page.wait_for_timeout(2000)
-
-                        # Check if we logged out
-                        current_url = self.page.url
-                        if (
-                            "/user" in current_url
-                            or current_url == self.base_uri
-                            or current_url.endswith("/")
-                        ):
-                            logging.info(
-                                f"Successfully logged out via keyboard - URL: {current_url}"
-                            )
-                            return
-            except Exception as keyboard_error:
-                logging.info(f"Keyboard approach error: {keyboard_error}")
 
             # Final fallback: Direct navigation to logout URL
             logging.info("Trying direct navigation to logout URL")
