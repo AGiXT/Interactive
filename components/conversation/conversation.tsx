@@ -1,6 +1,6 @@
 'use client';
 
-import { useContext, useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { useContext, useEffect, useState, useRef, useCallback } from 'react';
 import useSWR, { mutate } from 'swr';
 import { getCookie } from 'cookies-next';
 import axios from 'axios';
@@ -59,13 +59,13 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
       const agentName = getCookie('agixt-agent') || process.env.NEXT_PUBLIC_AGIXT_AGENT || 'AGiXT';
       await interactiveConfig.agixt.deleteConversation(currentConversation?.id || '-', agentName);
 
-      // Properly invalidate both the conversation list and the specific conversation
+      // Properly invalidate both the conversation list and the specific conversation cache
       await mutate('/conversations');
-      await mutate(conversationSWRPath + (interactiveConfig?.overrides?.conversation || ''));
+      await mutate(conversationSWRPath + interactiveConfig.overrides.conversation);
 
       // Update the state to a new conversation
-      if (interactiveConfig?.mutate) {
-        interactiveConfig.mutate((oldState: any) => ({
+      if (interactiveConfig.mutate) {
+        interactiveConfig.mutate((oldState) => ({
           ...oldState,
           overrides: { ...oldState.overrides, conversation: '-' },
         }));
@@ -110,7 +110,7 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
 
       // Properly invalidate both the conversation list and the specific conversation
       await mutate('/conversations');
-      await mutate(conversationSWRPath + (interactiveConfig?.overrides?.conversation || ''));
+      await mutate(conversationSWRPath + interactiveConfig.overrides.conversation);
 
       toast({
         title: 'Success',
@@ -147,7 +147,7 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
         name: currentConversation?.name || 'Conversation',
         id: currentConversation?.id || '-',
         created_at: currentConversation?.createdAt || new Date().toISOString(),
-        messages: conversationContent.map((msg: any) => ({
+        messages: conversationContent.map((msg) => ({
           role: msg.role,
           content: msg.message,
           timestamp: msg.timestamp,
@@ -188,26 +188,50 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
     if (renaming) {
       setNewName(currentConversation?.name || '');
     }
-  }, [renaming, currentConversation?.name]);
+  }, [renaming, currentConversation]);
 
-  const handleRenameClick = useCallback(() => {
+  // Clean up loading state on unmount
+  useEffect(() => {
+    return () => {
+      setLoading(false);
+    };
+  }, []);
+
+  const handleRenameClick = () => {
+    // First ensure the sidebar is open
     if (!open) {
+      // Track that we expanded the sidebar
       setWasExpanded(true);
       setOpen(true);
+      // Allow time for sidebar animation before enabling rename mode
+      setTimeout(() => {
+        setRenaming(true);
+        setNewName(currentConversation?.name || '');
+      }, 300);
+    } else {
+      // Sidebar is already open, directly enter rename mode
+      setRenaming(true);
+      setNewName(currentConversation?.name || '');
     }
-    setRenaming(true);
-  }, [open, setOpen]);
+  };
+
+  // Don't show sidebar content if no conversation exists
+  if (!currentConversation || currentConversation.id === '-') {
+    return null;
+  }
 
   return (
-    <SidebarGroup>
-      <SidebarContent className='p-2 space-y-4'>
-        {currentConversation && (
-          <div>
+    <SidebarContent title='Conversation'>
+      <SidebarGroup>
+        {
+          <div className='w-full group-data-[collapsible=icon]:hidden'>
             {renaming ? (
-              <div className='space-y-2'>
+              <div className='flex items-center gap-2'>
                 <Input
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
+                  className='w-full'
+                  autoFocus
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       handleRenameConversation(newName);
@@ -215,10 +239,8 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
                       setRenaming(false);
                     }
                   }}
-                  className='text-sm'
-                  autoFocus
                 />
-                <Button size='sm' onClick={() => handleRenameConversation(newName)} disabled={loading} className='w-full'>
+                <Button variant='ghost' size='icon' onClick={() => handleRenameConversation(newName)} disabled={loading}>
                   <Check className='h-4 w-4' />
                 </Button>
               </div>
@@ -232,7 +254,7 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
               </Badge>
             )}
           </div>
-        )}
+        }
         <SidebarGroupLabel>Conversation Actions</SidebarGroupLabel>
         <SidebarMenu>
           {[
@@ -241,13 +263,13 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
               icon: Plus,
               func: () => {
                 if (interactiveConfig?.mutate) {
-                  interactiveConfig.mutate((oldState: any) => ({
+                  interactiveConfig.mutate((oldState) => ({
                     ...oldState,
                     overrides: { ...oldState.overrides, conversation: '-' },
                   }));
 
                   // Force an invalidation of any existing conversation data
-                  mutate(conversationSWRPath + (interactiveConfig?.overrides?.conversation || ''));
+                  mutate(conversationSWRPath + interactiveConfig.overrides.conversation);
                 }
                 router.push('/chat');
               },
@@ -280,7 +302,7 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
-      </SidebarContent>
+      </SidebarGroup>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -292,16 +314,23 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant='outline' onClick={() => setDeleteDialogOpen(false)}>
+            <Button variant='outline' onClick={() => setDeleteDialogOpen(false)} disabled={loading}>
               Cancel
             </Button>
-            <Button variant='destructive' onClick={handleDeleteConversation} disabled={loading}>
-              Delete
+            <Button
+              variant='destructive'
+              onClick={() => {
+                handleDeleteConversation();
+                setDeleteDialogOpen(false);
+              }}
+              disabled={loading}
+            >
+              {loading ? 'Deleting...' : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </SidebarGroup>
+    </SidebarContent>
   );
 }
 
@@ -375,7 +404,7 @@ export function ChatLog({
             ) : (
               <Message
                 key={chatItem.timestamp + '-' + messageBody}
-                chatItem={{ ...chatItem, id: chatItem.timestamp }}
+                chatItem={chatItem}
                 lastUserMessage={lastUserMessage}
                 setLoading={setLoading}
               />
@@ -401,7 +430,7 @@ export function ChatLog({
 }
 
 // Helper function to format the conversation data from the API
-export async function getAndFormatConversation(state: any): Promise<any[]> {
+export async function getAndFormatConversation(state): Promise<any[]> {
   // For empty/new conversations, return empty array
   if (!state.overrides.conversation || state.overrides.conversation === '-') {
     return [];
@@ -410,11 +439,11 @@ export async function getAndFormatConversation(state: any): Promise<any[]> {
   const rawConversation = await state.agixt.getConversation('', state.overrides.conversation, 100, 1);
 
   // Create a map of activity messages for faster lookups
-  const activityMessages: { [key: string]: any } = {};
-  const formattedConversation: any[] = [];
+  const activityMessages = {};
+  const formattedConversation = [];
 
   // First pass: identify and store all main activities
-  rawConversation.forEach((message: any) => {
+  rawConversation.forEach((message) => {
     const messageType = message.message.split(' ')[0];
     if (!messageType.startsWith('[SUBACTIVITY]')) {
       formattedConversation.push({ ...message, children: [] });
@@ -423,7 +452,7 @@ export async function getAndFormatConversation(state: any): Promise<any[]> {
   });
 
   // Second pass: handle subactivities
-  rawConversation.forEach((currentMessage: any) => {
+  rawConversation.forEach((currentMessage) => {
     const messageType = currentMessage.message.split(' ')[0];
     if (messageType.startsWith('[SUBACTIVITY]')) {
       try {
@@ -438,7 +467,7 @@ export async function getAndFormatConversation(state: any): Promise<any[]> {
         } else {
           // If no exact match, try to find it in children
           for (const activity of formattedConversation) {
-            const targetInChildren = activity.children.find((child: any) => child.id === parent);
+            const targetInChildren = activity.children.find((child) => child.id === parent);
             if (targetInChildren) {
               targetInChildren.children.push({ ...currentMessage, children: [] });
               foundParent = true;
@@ -468,30 +497,6 @@ export async function getAndFormatConversation(state: any): Promise<any[]> {
   return formattedConversation;
 }
 
-// Memoized conversation formatter to prevent unnecessary recalculations
-const useFormattedConversation = (interactiveConfig: any) => {
-  return useMemo(() => {
-    const fetcher = async () => {
-      return await getAndFormatConversation(interactiveConfig);
-    };
-    return fetcher;
-  }, [interactiveConfig?.overrides?.conversation]);
-};
-
-// Deep comparison function for conversation data
-const compareConversationData = (a: any[] | undefined, b: any[] | undefined): boolean => {
-  if (!a || !b) return false;
-  if (a.length !== b.length) return false;
-
-  // Compare timestamps and message content as a quick check
-  for (let i = 0; i < a.length; i++) {
-    if (a[i]?.timestamp !== b[i]?.timestamp || a[i]?.message !== b[i]?.message) {
-      return false;
-    }
-  }
-  return true;
-};
-
 export function Chat({
   alternateBackground,
   enableFileUpload,
@@ -505,22 +510,18 @@ export function Chat({
   const router = useRouter();
 
   // Find the current conversation
-  const currentConversation = conversations?.find((conv) => conv.id === interactiveConfig?.overrides?.conversation);
+  const currentConversation = conversations?.find((conv) => conv.id === interactiveConfig.overrides.conversation);
 
-  // Memoized fetcher function to prevent unnecessary re-fetches
-  const conversationFetcher = useFormattedConversation(interactiveConfig);
-
-  // Fetch conversation data with SWR - optimized to prevent constant re-renders
+  // Fetch conversation data with SWR
   const { data: conversationData = [], mutate: mutateConversation } = useSWR(
-    interactiveConfig?.overrides?.conversation ? conversationSWRPath + interactiveConfig.overrides.conversation : null,
-    conversationFetcher,
+    conversationSWRPath + interactiveConfig.overrides.conversation,
+    async () => {
+      return await getAndFormatConversation(interactiveConfig);
+    },
     {
       fallbackData: [],
-      refreshInterval: 0, // Remove automatic refresh to prevent constant re-renders
+      refreshInterval: loading ? 1000 : 0,
       revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      dedupingInterval: 2000, // Dedupe requests for 2 seconds
-      compare: compareConversationData, // Use our custom comparison function
     },
   );
 
@@ -532,28 +533,21 @@ export function Chat({
 
   // Handle array-type conversation ID in state (shouldn't happen, but as precaution)
   useEffect(() => {
-    if (Array.isArray(interactiveConfig?.overrides?.conversation)) {
-      interactiveConfig?.mutate?.((oldState: any) => ({
+    if (Array.isArray(interactiveConfig.overrides.conversation)) {
+      interactiveConfig.mutate((oldState) => ({
         ...oldState,
         overrides: { ...oldState.overrides, conversation: oldState.overrides.conversation[0] },
       }));
     }
   }, [interactiveConfig]);
 
-  // Only refresh conversation data when conversation ID actually changes
-  const conversationId = interactiveConfig?.overrides?.conversation;
-  const previousConversationId = useRef(conversationId);
+  // Refresh conversation data when conversation ID changes or loading state changes
+  useEffect(() => {
+    mutateConversation();
+  }, [interactiveConfig.overrides.conversation, mutateConversation]);
 
   useEffect(() => {
-    if (conversationId !== previousConversationId.current) {
-      previousConversationId.current = conversationId;
-      mutateConversation();
-    }
-  }, [conversationId, mutateConversation]);
-
-  // Only refresh during loading state, with debounced updates
-  useEffect(() => {
-    if (loading) {
+    if (!loading) {
       const timer = setTimeout(() => {
         mutateConversation();
       }, 1000);
@@ -569,10 +563,7 @@ export function Chat({
   }, []);
 
   // Handler for sending messages
-  async function chat(message: string | object, uploadedFiles?: { [key: string]: string }): Promise<string> {
-    const messageTextBody = typeof message === 'string' ? message : JSON.stringify(message);
-    const messageAttachedFiles = uploadedFiles || {};
-
+  async function chat(messageTextBody, messageAttachedFiles): Promise<string> {
     // Don't send empty messages
     if (!messageTextBody.trim() && Object.keys(messageAttachedFiles).length === 0) {
       return '';
@@ -583,7 +574,7 @@ export function Chat({
       role: 'user',
       content: [
         { type: 'text', text: messageTextBody },
-        ...Object.entries(messageAttachedFiles).map(([fileName, fileContent]) => ({
+        ...Object.entries(messageAttachedFiles).map(([fileName, fileContent]: [string, string]) => ({
           type: `${fileContent.split(':')[1].split('/')[0]}_url`,
           file_name: fileName,
           [`${fileContent.split(':')[1].split('/')[0]}_url`]: {
@@ -593,7 +584,7 @@ export function Chat({
       ],
       ...(activeCompany?.id ? { company_id: activeCompany?.id } : {}),
       ...(getCookie('agixt-create-image') ? { create_image: getCookie('agixt-create-image') } : {}),
-      ...(activeCompany?.roleId === 4 ? { tts: 'true' } : {}),
+      ...(getCookie('agixt-tts') ? { tts: getCookie('agixt-tts') } : {}),
       ...(getCookie('agixt-websearch') ? { websearch: getCookie('agixt-websearch') } : {}),
       ...(getCookie('agixt-analyze-user-input') ? { analyze_user_input: getCookie('agixt-analyze-user-input') } : {}),
     });
@@ -612,7 +603,7 @@ export function Chat({
         {
           messages: messages,
           model: getCookie('agixt-agent'),
-          user: interactiveConfig?.overrides?.conversation,
+          user: interactiveConfig.overrides.conversation,
         },
         {
           headers: {
@@ -628,9 +619,9 @@ export function Chat({
         const conversationId = chatCompletion.id;
 
         // Only update route if conversation ID has changed
-        if (conversationId !== interactiveConfig?.overrides?.conversation) {
+        if (conversationId !== interactiveConfig.overrides.conversation) {
           // Update conversation state
-          interactiveConfig?.mutate?.((oldState: any) => ({
+          interactiveConfig.mutate((oldState) => ({
             ...oldState,
             overrides: {
               ...oldState.overrides,
