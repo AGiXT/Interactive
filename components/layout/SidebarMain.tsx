@@ -402,7 +402,7 @@ export function NavMain() {
     const hasJwt = !!getCookie('jwt');
 
     // Show only Documentation when not authenticated, no company, or role ID < 4
-    if (!hasJwt) {
+    if (!hasJwt || !company) {
       const filteredItems = items.filter((item) => item.title === 'Documentation');
       return filteredItems.map((item) => ({
         ...item,
