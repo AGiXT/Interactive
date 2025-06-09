@@ -1648,120 +1648,7 @@ class FrontEndTest:
             ),
         )
 
-    async def run(self, headless=not is_desktop()):
-        """Run all tests: registration in its own browser, then all others in a shared browser"""
-        email = None
-        mfa_token = None
-
-        try:
-            # PHASE 1: Registration test in its own browser
-            logging.info("=== Starting Registration Test (Phase 1) ===")
-            async with async_playwright() as playwright:
-                browser = await playwright.chromium.launch(headless=headless)
-                context = await browser.new_context()
-                page = await context.new_page()
-                page.on("console", print_args)
-                page.set_default_timeout(60000)  # Increase to 60 seconds
-                await page.set_viewport_size({"width": 1367, "height": 924})
-
-                # Set browser references for registration test
-                self.playwright = playwright
-                self.browser = browser
-                self.context = context
-                self.page = page
-
-                # Run registration test
-                email, mfa_token = await self.run_registration_test()
-
-                # Close registration browser
-                await browser.close()
-                logging.info("=== Registration Test Complete - Browser Closed ===")
-
-            # PHASE 2: All other tests in a new shared browser session
-            logging.info("=== Starting Shared Browser Session (Phase 2) ===")
-            async with async_playwright() as self.playwright:
-                self.browser = await self.playwright.chromium.launch(headless=headless)
-                self.context = await self.browser.new_context()
-                self.page = await self.browser.new_page()
-                self.page.on("console", print_args)
-                self.page.set_default_timeout(60000)  # Increase to 60 seconds
-                await self.page.set_viewport_size({"width": 1367, "height": 924})
-
-                # Start with login to establish session
-                # Clear screenshots for first video in shared session
-                self.screenshots_with_actions = []
-
-                # Login test (start the shared session)
-                await self.run_login_test(email, mfa_token)
-                logging.info("=== Login Complete - Continuing with other tests ===")
-
-                # Clear screenshots for next video
-                self.screenshots_with_actions = []
-
-                # User preferences test
-                # await self.run_user_preferences_test(email, mfa_token)
-
-                # Clear screenshots for next video
-                # self.screenshots_with_actions = []
-
-                # Team management test
-                await self.run_team_management_test(email, mfa_token)
-
-                # Clear screenshots for next video
-                self.screenshots_with_actions = []
-
-                # Mandatory context test
-                await self.run_mandatory_context_test(email, mfa_token)
-
-                # Clear screenshots for next video
-                self.screenshots_with_actions = []
-
-                # Chat test
-                await self.run_chat_test(email, mfa_token)
-
-                # Clear screenshots for next video
-                self.screenshots_with_actions = []
-
-                # Training test
-                # await self.run_training_test(email, mfa_token)
-
-                # Clear screenshots for next video
-                # self.screenshots_with_actions = []
-
-                # Abilities test
-                # await self.run_abilities_test(email, mfa_token)
-
-                # Clear screenshots for next video
-                # self.screenshots_with_actions = []
-
-                # Provider settings test
-                # await self.run_provider_settings_test(email, mfa_token)
-
-                # Stripe test (if enabled)
-                if "stripe" in self.features:
-                    # Clear screenshots for next video
-                    self.screenshots_with_actions = []
-                    await self.run_stripe_test()
-
-                # Clear screenshots for extensions demo test
-                self.screenshots_with_actions = []
-                await self.run_extensions_demo_test(email, mfa_token)
-
-                logging.info(
-                    "=== All tests complete. Individual videos created for each feature area. ==="
-                )
-
-                # Close shared browser session
-                await self.browser.close()
-
-        except Exception as e:
-            logging.error(f"Test suite failed: {e}")
-            if hasattr(self, "browser") and self.browser:
-                try:
-                    await self.browser.close()
-                except:
-                    pass
-            raise e
+    # Removed duplicate run method - see the correct one at the end of the class
 
     async def handle_extensions_demo(self):
         """Handle extensions demo scenario: Agent Management → Extensions → Abilities → Toggle Command → New Chat → Test Message"""
@@ -1813,9 +1700,7 @@ class FrontEndTest:
         # Scroll down to make the "Run Data Analysis" option visible
         await self.test_action(
             "Scroll down to view more capabilities including Run Data Analysis",
-            lambda: self.page.evaluate(
-                "window.scrollBy(0, window.innerHeight * 0.5)"
-            ),
+            lambda: self.page.evaluate("window.scrollBy(0, window.innerHeight * 0.5)"),
         )
 
         await self.take_screenshot(
@@ -1827,7 +1712,7 @@ class FrontEndTest:
         toggle_selectors = [
             # Look for Switch elements next to "Data Analysis" text (from OVERRIDE_EXTENSIONS)
             'h4:has-text("Data Analysis") ~ button[role="switch"]',
-            'h4:has-text("Data Analysis") + * button[role="switch"]', 
+            'h4:has-text("Data Analysis") + * button[role="switch"]',
             '*:has-text("Data Analysis") button[role="switch"]:not(#show-enabled-only)',
             # Look for Switch elements next to "Run Data Analysis" text
             'h4:has-text("Run Data Analysis") ~ button[role="switch"]',
@@ -1864,7 +1749,8 @@ class FrontEndTest:
             # Use JavaScript to find and click the switch next to Data Analysis text
             await self.test_action(
                 "Use JavaScript to locate and click the switch next to Data Analysis",
-                lambda: self.page.evaluate("""() => {
+                lambda: self.page.evaluate(
+                    """() => {
                     // Find all h4 elements that contain "Data Analysis" or "Run Data Analysis"
                     const headings = Array.from(document.querySelectorAll('h4'));
                     for (const heading of headings) {
@@ -1898,9 +1784,12 @@ class FrontEndTest:
                         }
                     }
                     return false;
-                }"""),
+                }"""
+                ),
             )
-            await self.take_screenshot("Attempted to toggle Data Analysis using JavaScript")
+            await self.take_screenshot(
+                "Attempted to toggle Data Analysis using JavaScript"
+            )
 
         # Navigate to new chat to test the capability
         await self.test_action(
@@ -1975,9 +1864,12 @@ class FrontEndTest:
             await self.test_action(
                 "Attempt to find and click any expandable activities section",
                 lambda: self.page.wait_for_selector(
-                    "button, div[role='button'], [aria-expanded]", state="visible", timeout=10000
+                    "button, div[role='button'], [aria-expanded]",
+                    state="visible",
+                    timeout=10000,
                 ),
-                lambda: self.page.evaluate("""() => {
+                lambda: self.page.evaluate(
+                    """() => {
                     // Look for elements containing "completed" or "activities" text
                     const elements = Array.from(document.querySelectorAll('*'));
                     for (const el of elements) {
@@ -1988,7 +1880,8 @@ class FrontEndTest:
                         }
                     }
                     return false;
-                }"""),
+                }"""
+                ),
             )
 
         await self.take_screenshot(
