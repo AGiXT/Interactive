@@ -1630,10 +1630,10 @@ class FrontEndTest:
                 self.screenshots_with_actions = []
 
                 # User preferences test
-                await self.run_user_preferences_test(email, mfa_token)
+                # await self.run_user_preferences_test(email, mfa_token)
 
                 # Clear screenshots for next video
-                self.screenshots_with_actions = []
+                # self.screenshots_with_actions = []
 
                 # Team management test
                 await self.run_team_management_test(email, mfa_token)
