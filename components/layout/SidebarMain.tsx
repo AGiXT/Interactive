@@ -55,12 +55,45 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 
 export function AgentSelector() {
   const { isMobile } = useSidebar('left');
+  const { data: user } = useUser();
   const { data: activeAgent, mutate: mutateActiveAgent, error: agentError } = useAgent();
   const { data: activeCompany, mutate: mutateActiveCompany, error: companyError } = useCompany();
   const { data: agentsData } = useAgents();
   const router = useRouter();
   const [isSwitching, setIsSwitching] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Initialize agent selection when user data is loaded
+  useEffect(() => {
+    if (!user?.companies?.length || isInitialized) return;
+
+    const agentName = getCookie('agixt-agent');
+    const jwtToken = getCookie('jwt');
+    
+    if (!jwtToken) return;
+
+    // If no agent is selected, select the primary company's default agent
+    if (!agentName) {
+      const primaryCompany = user.companies.find(c => c.primary);
+      if (primaryCompany?.agents?.length) {
+        const defaultAgent = primaryCompany.agents.find(a => a.default) || primaryCompany.agents[0];
+        if (defaultAgent) {
+          setCookie('agixt-agent', defaultAgent.name, {
+            domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
+          });
+          setCookie('agixt-company', primaryCompany.id, {
+            domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
+          });
+          // Trigger data refetch
+          mutateActiveAgent();
+          mutateActiveCompany();
+        }
+      }
+    }
+    
+    setIsInitialized(true);
+  }, [user, isInitialized, mutateActiveAgent, mutateActiveCompany]);
 
   // Handle data fetch errors more gracefully
   useEffect(() => {
@@ -104,6 +137,16 @@ export function AgentSelector() {
         domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
       });
 
+      // Set the company cookie based on the agent's company
+      const agentCompany = user?.companies?.find(c => 
+        c.agents.some(a => a.id === agent.id)
+      );
+      if (agentCompany) {
+        setCookie('agixt-company', agentCompany.id, {
+          domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
+        });
+      }
+
       // Update company state first (since agent depends on it)
       await mutateActiveCompany();
 
@@ -120,8 +163,9 @@ export function AgentSelector() {
   };
 
   // Determine if we're in a loading or error state
-  const isLoading = !activeAgent || !activeCompany || isSwitching;
   const hasError = (agentError || companyError) && retryCount >= 3;
+  const isLoading = (!activeAgent || !activeCompany || isSwitching) && !hasError;
+  const showLoadingState = !user?.companies?.length || !isInitialized;
 
   return (
     <SidebarMenu>
@@ -138,7 +182,7 @@ export function AgentSelector() {
                 <FaRobot className='size-4' />
               </div>
               <div className='grid flex-1 text-sm leading-tight text-left'>
-                {isLoading ? (
+                {showLoadingState || isLoading ? (
                   <>
                     <span className='font-semibold truncate'>Loading...</span>
                     <span className='text-xs truncate'>Please wait</span>
@@ -150,8 +194,8 @@ export function AgentSelector() {
                   </>
                 ) : (
                   <>
-                    <span className='font-semibold truncate'>{activeAgent?.agent?.name}</span>
-                    <span className='text-xs truncate'>{activeCompany?.name}</span>
+                    <span className='font-semibold truncate'>{activeAgent?.agent?.name || 'No Agent'}</span>
+                    <span className='text-xs truncate'>{activeCompany?.name || 'No Company'}</span>
                   </>
                 )}
               </div>
@@ -169,7 +213,9 @@ export function AgentSelector() {
             sideOffset={4}
           >
             <DropdownMenuLabel className='text-xs text-muted-foreground'>Agents</DropdownMenuLabel>
-            {agentsData && agentsData.length > 0 ? (
+            {showLoadingState ? (
+              <div className='py-2 px-2 text-sm text-muted-foreground'>Loading agents...</div>
+            ) : agentsData && agentsData.length > 0 ? (
               agentsData.map((agent) => (
                 <DropdownMenuItem
                   key={agent.id}
@@ -179,7 +225,7 @@ export function AgentSelector() {
                 >
                   <div className='flex flex-col'>
                     <span>{agent.name}</span>
-                    <span className='text-xs text-muted-foreground'>{agent.companyName}</span>
+                    <span className='text-xs text-muted-foreground'>{(agent as any).companyName || 'Unknown Company'}</span>
                   </div>
                   {activeAgent?.agent?.id === agent.id && <Check className='w-4 h-4 ml-2' />}
                 </DropdownMenuItem>
