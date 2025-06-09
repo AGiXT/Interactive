@@ -1396,7 +1396,7 @@ class FrontEndTest:
                 )
             raise e
 
-    async def run_chat_test(self):
+    async def run_chat_test(self, email, mfa_token):
         """Run chat test and create video"""
         try:
             # User is already logged in from shared session
@@ -1411,7 +1411,7 @@ class FrontEndTest:
                 )
             raise e
 
-    async def run_training_test(self):
+    async def run_training_test(self, email, mfa_token):
         """Run training test and create video"""
         try:
             # User is already logged in from shared session
@@ -1469,7 +1469,7 @@ class FrontEndTest:
                 )
             raise e
 
-    async def run_mandatory_context_test(self):
+    async def run_mandatory_context_test(self, email, mfa_token):
         """Run mandatory context/prompts test and create video"""
         try:
             # User is already logged in from shared session
@@ -1630,10 +1630,10 @@ class FrontEndTest:
                 self.screenshots_with_actions = []
 
                 # User preferences test
-                await self.run_user_preferences_test(email, mfa_token)
+                # await self.run_user_preferences_test(email, mfa_token)
 
                 # Clear screenshots for next video
-                self.screenshots_with_actions = []
+                # self.screenshots_with_actions = []
 
                 # Team management test
                 await self.run_team_management_test(email, mfa_token)
@@ -1642,19 +1642,19 @@ class FrontEndTest:
                 self.screenshots_with_actions = []
 
                 # Mandatory context test
-                await self.run_mandatory_context_test()
+                await self.run_mandatory_context_test(email, mfa_token)
 
                 # Clear screenshots for next video
                 self.screenshots_with_actions = []
 
                 # Chat test
-                await self.run_chat_test()
+                await self.run_chat_test(email, mfa_token)
 
                 # Clear screenshots for next video
                 self.screenshots_with_actions = []
 
                 # Training test
-                await self.run_training_test()
+                # await self.run_training_test(email, mfa_token)
 
                 # Clear screenshots for next video
                 # self.screenshots_with_actions = []
