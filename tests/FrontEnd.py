@@ -1885,6 +1885,26 @@ class FrontEndTest:
             "Chat response showing the Run Data Analysis capability in action"
         )
 
+        # Click "Completed activities" to see what commands were executed
+        await self.test_action(
+            "Click on 'Completed activities' to view the commands that were executed by the agent",
+            lambda: self.page.click('text="Completed activities"'),
+        )
+
+        await self.take_screenshot(
+            "Completed activities section is now visible showing executed commands"
+        )
+
+        # Scroll down to see more of the completed activities
+        await self.test_action(
+            "Scroll down to view more details of the completed activities and command execution",
+            lambda: self.page.evaluate("window.scrollBy(0, window.innerHeight * 0.5)"),
+        )
+
+        await self.take_screenshot(
+            "Extension demo complete - showing the data analysis commands that were executed"
+        )
+
     async def run_extensions_demo_test(self, email, mfa_token):
         """Run extensions demo test and create video"""
         try:
