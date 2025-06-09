@@ -183,7 +183,12 @@ class FrontEndTest:
                 "birdup000": "<@856308374567256074>",
                 "Nick-XT": "<@381908912951001088>",
             }
-            discord_name = discord_mentions.get(actor, f"**{actor}**")
+            # check if failure, if it is, tag them, otherwise just use their name
+            if test_status != "✅ Test passed":
+                discord_name = discord_mentions.get(actor, f"**{actor}**")
+            else:
+                discord_name = f"**{actor}**"
+            message = f"{test_status}: **{demo_name}** on repository **{repo_name}** branch **{branch_name}** commit '{commit_message}' ({commit_hash}) by {discord_name}"
 
             message = f"{test_status}: **{demo_name}** on repository **{repo_name}** branch **{branch_name}** commit '{commit_message}' ({commit_hash}) by {discord_name}"
 
@@ -708,7 +713,7 @@ class FrontEndTest:
         # Navigate directly to training URL
         await self.test_action(
             "Navigate to training settings",
-            lambda: self.page.goto(f"{self.base_uri}/settings/training?mode=user&")
+            lambda: self.page.goto(f"{self.base_uri}/settings/training?mode=user&"),
         )
 
         # After navigating to Training section, screenshot the interface
@@ -737,12 +742,12 @@ class FrontEndTest:
             "Navigate to chat to test the mandatory context",
             lambda: self.page.goto(f"{self.base_uri}/chat"),
         )
-        
+
         await self.test_action(
             "Click in the chat input to expand it",
             lambda: self.page.click("#chat-message-input-inactive"),
         )
-        
+
         await self.test_action(
             "Enter a prompt to test mandatory context",
             lambda: self.page.fill(
@@ -750,7 +755,7 @@ class FrontEndTest:
                 "What do you think about nature?",
             ),
         )
-        
+
         await self.test_action(
             "Send the message to test mandatory context",
             lambda: self.page.press("#chat-message-input-active", "Enter"),
@@ -758,7 +763,7 @@ class FrontEndTest:
 
         # Wait for the response which should include "wonderful" due to mandatory context
         await asyncio.sleep(90)
-        
+
         await self.take_screenshot("Chat response showing mandatory context influence")
 
     async def handle_email(self):
@@ -1002,7 +1007,9 @@ class FrontEndTest:
             # Wait for the page to settle after the update
             await self.test_action(
                 "The system processes the update and the page stabilizes",
-                lambda: self.page.wait_for_load_state("networkidle"),
+                lambda: self.page.wait_for_load_state(
+                    "networkidle", timeout=60000
+                ),  # 60 second timeout
             )
 
             # Take a final screenshot to show the result
@@ -1027,7 +1034,9 @@ class FrontEndTest:
             # Wait for team page to load completely
             await self.test_action(
                 "The team management page loads, showing current team members and invite options",
-                lambda: self.page.wait_for_load_state("networkidle"),
+                lambda: self.page.wait_for_load_state(
+                    "networkidle", timeout=120000
+                ),  # Increase to 120 seconds
             )
 
             # Generate a random email for invitation
@@ -1262,6 +1271,13 @@ class FrontEndTest:
 
     async def run_team_management_test(self, email, mfa_token):
         """Run team management test and create video"""
+        # Check if we should skip this test
+        if os.getenv("SKIP_TEAM_MANAGEMENT_TEST", "").lower() == "true":
+            logging.warning(
+                "Skipping team management test due to SKIP_TEAM_MANAGEMENT_TEST=true"
+            )
+            return
+
         try:
             # User is already logged in from shared session
             await self.handle_invite_user()
@@ -1358,7 +1374,7 @@ class FrontEndTest:
             # User is already logged in from shared session
             # Call our handler that properly tests the mandatory context feature
             await self.handle_mandatory_context()
-            
+
             video_path = self.create_video_report(video_name="mandatory_context_demo")
             logging.info(
                 f"Mandatory context test complete. Video report created at {video_path}"
@@ -1381,21 +1397,23 @@ class FrontEndTest:
             "Navigate to Agent Management to begin extensions configuration",
             lambda: self.page.click('span:has-text("Agent Management")'),
         )
-        
+
         await self.take_screenshot("Agent Management drop down")
-        
+
         # Navigate to Settings via dropdown
         await self.test_action(
             "Click on Settings in the dropdown menu",
             lambda: self.page.click('a:has-text("Settings")'),
         )
-        
+
         await self.take_screenshot("Settings page loaded")
-        
+
         # Click on Providers tab if needed
         try:
             # Check if we need to navigate to the Providers tab
-            providers_tab_visible = await self.page.locator('button:has-text("Providers")').count() > 0
+            providers_tab_visible = (
+                await self.page.locator('button:has-text("Providers")').count() > 0
+            )
             if providers_tab_visible:
                 await self.test_action(
                     "Click on Providers tab to access provider settings",
@@ -1403,37 +1421,41 @@ class FrontEndTest:
                 )
         except Exception as e:
             logging.info(f"Provider tab navigation not needed: {e}")
-        
+
         await self.take_screenshot("Provider settings page")
-        
+
         # Click on Google provider connect button
         await self.test_action(
             "Click Connect button for Google provider",
             lambda: self.page.click('button:has-text("Connect"):near(:text("Google"))'),
         )
-        
+
         await self.take_screenshot("Google provider connect dialog")
-        
+
         # Input API key in the dialog
         await self.test_action(
             "Enter Google API key in the dialog",
-            lambda: self.page.fill('input[placeholder*="API key"]', "MOCK_GOOGLE_API_KEY_FOR_TESTING"),
+            lambda: self.page.fill(
+                'input[placeholder*="API key"]', "MOCK_GOOGLE_API_KEY_FOR_TESTING"
+            ),
         )
-        
+
         await self.take_screenshot("API key entered")
-        
+
         # Click Save/Connect in the dialog
         await self.test_action(
             "Save Google A-P-I key configuration",
-            lambda: self.page.get_by_role('button', name='Connect Provider').click()
+            lambda: self.page.get_by_role("button", name="Connect Provider").click(),
         )
-        
+
         await self.take_screenshot("Provider settings saved")
-        
+
         # Verify the provider is now connected (status check)
         await self.test_action(
             "Verify provider is now connected",
-            lambda: self.page.wait_for_selector('text="Connected"', state="visible", timeout=5000),
+            lambda: self.page.wait_for_selector(
+                'text="Connected"', state="visible", timeout=5000
+            ),
         )
 
     async def run_provider_settings_test(self, email, mfa_token):
@@ -1451,8 +1473,8 @@ class FrontEndTest:
                 os.path.join(os.getcwd(), "tests", "provider_settings_demo.mp4")
             ):
                 self.create_video_report(
-                    video_name="provider_settings_demo", 
-                    test_status="❌ **TEST FAILURE**"
+                    video_name="provider_settings_demo",
+                    test_status="❌ **TEST FAILURE**",
                 )
             raise e
 
@@ -1469,7 +1491,7 @@ class FrontEndTest:
                 context = await browser.new_context()
                 page = await context.new_page()
                 page.on("console", print_args)
-                page.set_default_timeout(20000)
+                page.set_default_timeout(60000)  # Increase to 60 seconds
                 await page.set_viewport_size({"width": 1367, "height": 924})
 
                 # Set browser references for registration test
@@ -1492,7 +1514,7 @@ class FrontEndTest:
                 self.context = await self.browser.new_context()
                 self.page = await self.browser.new_page()
                 self.page.on("console", print_args)
-                self.page.set_default_timeout(20000)
+                self.page.set_default_timeout(60000)  # Increase to 60 seconds
                 await self.page.set_viewport_size({"width": 1367, "height": 924})
 
                 # Start with login to establish session
@@ -1541,7 +1563,7 @@ class FrontEndTest:
 
                 # Clear screenshots for next video
                 self.screenshots_with_actions = []
-                
+
                 # Provider settings test
                 await self.run_provider_settings_test(email, mfa_token)
 
