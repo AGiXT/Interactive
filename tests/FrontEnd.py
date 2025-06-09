@@ -1810,15 +1810,37 @@ class FrontEndTest:
             "Abilities page loaded with available agent capabilities"
         )
 
-        # Toggle the "Run Data Analysis" command
-        # Try multiple possible selectors for the toggle
+        # Scroll down to make the "Run Data Analysis" option visible
+        await self.test_action(
+            "Scroll down to view more capabilities including Run Data Analysis",
+            lambda: self.page.evaluate(
+                "window.scrollBy(0, window.innerHeight * 0.5)"
+            ),
+        )
+
+        await self.take_screenshot(
+            "Scrolled down to reveal Run Data Analysis capability"
+        )
+
+        # Toggle the "Run Data Analysis" command - focus on finding the actual toggle/checkbox
+        # Try multiple possible selectors for the toggle element (not the text)
         toggle_selectors = [
-            'label:has-text("Run Data Analysis") input[type="checkbox"]',
-            'input[type="checkbox"]:near(text="Run Data Analysis")',
-            'label:has-text("Run Data Analysis")',
-            'text="Run Data Analysis"',
-            'div:has-text("Run Data Analysis") input[type="checkbox"]',
+            # Look for checkbox elements within containers that have the text
             'tr:has-text("Run Data Analysis") input[type="checkbox"]',
+            'div:has-text("Run Data Analysis") input[type="checkbox"]',
+            'label:has-text("Run Data Analysis") input[type="checkbox"]',
+            # Look for switch/toggle elements
+            'tr:has-text("Run Data Analysis") button[role="switch"]',
+            'div:has-text("Run Data Analysis") button[role="switch"]',
+            # Look for toggle elements with specific classes
+            'tr:has-text("Run Data Analysis") .toggle',
+            'div:has-text("Run Data Analysis") .toggle',
+            # Look for any clickable element near the text
+            'tr:has-text("Run Data Analysis") button',
+            'div:has-text("Run Data Analysis") button',
+            # Look for elements with toggle-related attributes
+            'tr:has-text("Run Data Analysis") [aria-checked]',
+            'div:has-text("Run Data Analysis") [aria-checked]',
         ]
 
         toggle_found = False
@@ -1839,15 +1861,37 @@ class FrontEndTest:
                 continue
 
         if not toggle_found:
-            # If specific selectors didn't work, try to find any checkbox near the text
+            # Use JavaScript to find and click the toggle next to "Run Data Analysis" text
             await self.test_action(
-                "Attempt to locate and toggle Run Data Analysis capability",
-                lambda: self.page.wait_for_selector(
-                    "input[type='checkbox']", state="visible", timeout=10000
-                ),
-                lambda: self.page.locator("input[type='checkbox']").first.click(),
+                "Use JavaScript to locate and click the toggle next to Run Data Analysis",
+                lambda: self.page.evaluate("""() => {
+                    // Find all elements containing "Run Data Analysis" text
+                    const allElements = Array.from(document.querySelectorAll('*'));
+                    for (const el of allElements) {
+                        if (el.textContent && el.textContent.includes('Run Data Analysis')) {
+                            // Look for clickable elements (checkbox, button, switch) in the same row/container
+                            const container = el.closest('tr, div, label');
+                            if (container) {
+                                const toggles = container.querySelectorAll('input[type="checkbox"], button[role="switch"], button, .toggle, [aria-checked]');
+                                for (const toggle of toggles) {
+                                    if (toggle !== el && (toggle.type === 'checkbox' || toggle.role === 'switch' || toggle.hasAttribute('aria-checked'))) {
+                                        toggle.click();
+                                        return true;
+                                    }
+                                }
+                                // If no specific toggle found, try any button in the container
+                                const buttons = container.querySelectorAll('button');
+                                if (buttons.length > 0) {
+                                    buttons[0].click();
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                    return false;
+                }"""),
             )
-            await self.take_screenshot("Attempted to toggle data analysis capability")
+            await self.take_screenshot("Attempted to toggle Run Data Analysis using JavaScript")
 
         # Navigate to new chat to test the capability
         await self.test_action(
