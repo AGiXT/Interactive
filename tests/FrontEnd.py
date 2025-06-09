@@ -333,7 +333,7 @@ class FrontEndTest:
                     with open(audio_path, "wb") as audio_file:
                         audio_file.write(audio_content)
 
-                    # Read the audio and get its original sample rate
+                    # Reopen the audio file with soundfile to ensure it's in the correct format
                     audio_data, sample_rate = sf.read(audio_path)
 
                     # Add small silence padding at the end (0.5 seconds)
@@ -624,8 +624,10 @@ class FrontEndTest:
     async def handle_chat(self):
         try:
             # Start at chat screen first for consistent navigation
-            await self.navigate_to_chat_first("After the user logs in, they start at the chat interface which is ready for their first basic interaction.")
-            
+            await self.navigate_to_chat_first(
+                "After the user logs in, they start at the chat interface which is ready for their first basic interaction."
+            )
+
             await self.test_action(
                 "By clicking in the chat bar, the user can expand it to show more options and see their entire input.",
                 lambda: self.page.click("#chat-message-input-inactive"),
@@ -697,16 +699,20 @@ class FrontEndTest:
     async def handle_commands_workflow(self):
         """Handle commands workflow scenario"""
         # Start at chat screen first for consistent navigation
-        await self.navigate_to_chat_first("Starting from the chat interface to demonstrate command workflow capabilities")
-        
+        await self.navigate_to_chat_first(
+            "Starting from the chat interface to demonstrate command workflow capabilities"
+        )
+
         # TODO: Implement commands workflow test - navigate from chat to commands configuration
         pass
 
     async def handle_mandatory_context(self):
         """Test the mandatory context feature by setting and using a context in chat."""
         # Start at chat screen first for consistent navigation
-        await self.navigate_to_chat_first("Starting from the chat interface, the user will navigate to configure mandatory context settings")
-        
+        await self.navigate_to_chat_first(
+            "Starting from the chat interface, the user will navigate to configure mandatory context settings"
+        )
+
         # Navigate to Agent Management
         await self.test_action(
             "Navigate to Agent Management to begin mandatory context configuration",
@@ -875,8 +881,10 @@ class FrontEndTest:
     async def handle_email(self):
         """Handle email verification scenario"""
         # Start at chat screen first for consistent navigation
-        await self.navigate_to_chat_first("Starting from the chat interface to demonstrate email verification workflow")
-        
+        await self.navigate_to_chat_first(
+            "Starting from the chat interface to demonstrate email verification workflow"
+        )
+
         # TODO: Handle email verification workflow - navigate from chat to email settings
         pass
 
@@ -1011,8 +1019,10 @@ class FrontEndTest:
         """Handle user update scenario by changing last name and timezone"""
         try:
             # Start at chat screen first for consistent navigation
-            await self.navigate_to_chat_first("Starting from the chat interface, the user will navigate to account management to update their profile")
-            
+            await self.navigate_to_chat_first(
+                "Starting from the chat interface, the user will navigate to account management to update their profile"
+            )
+
             # Navigate to user management page
             await self.test_action(
                 "The user navigates to the account management page",
@@ -1137,8 +1147,10 @@ class FrontEndTest:
         """Handle user invite scenario by inviting a user to the team"""
         try:
             # Start at chat screen first for consistent navigation
-            await self.navigate_to_chat_first("Starting from the chat interface, the user will navigate to team management to invite new members")
-            
+            await self.navigate_to_chat_first(
+                "Starting from the chat interface, the user will navigate to team management to invite new members"
+            )
+
             # Navigate to team page
             await self.test_action(
                 "The user navigates to the team management page",
@@ -1239,30 +1251,36 @@ class FrontEndTest:
     async def handle_train_user_agent(self):
         """Handle training user agent scenario"""
         # Start at chat screen first for consistent navigation
-        await self.navigate_to_chat_first("Starting from the chat interface to demonstrate user agent training capabilities")
-        
+        await self.navigate_to_chat_first(
+            "Starting from the chat interface to demonstrate user agent training capabilities"
+        )
+
         # TODO: Handle training user agent workflow - navigate from chat to training settings
         pass
 
     async def handle_train_company_agent(self):
         """Handle training company agent scenario"""
         # Start at chat screen first for consistent navigation
-        await self.navigate_to_chat_first("Starting from the chat interface to demonstrate company agent training capabilities")
-        
+        await self.navigate_to_chat_first(
+            "Starting from the chat interface to demonstrate company agent training capabilities"
+        )
+
         # TODO: Handle training company agent workflow - navigate from chat to company training settings
         pass
 
     async def handle_stripe(self):
         """Handle Stripe subscription scenario"""
         # Start at chat screen first for consistent navigation
-        await self.navigate_to_chat_first("Starting from the chat interface to demonstrate subscription management capabilities")
-        
+        await self.navigate_to_chat_first(
+            "Starting from the chat interface to demonstrate subscription management capabilities"
+        )
+
         # Navigate to subscription page
         await self.test_action(
             "Navigate to subscription page to view available plans",
             lambda: self.page.goto(f"{self.base_uri}/subscription"),
         )
-        
+
         await self.take_screenshot("subscription page is loaded with available plans")
         await self.test_action(
             "Stripe checkout page is open",
@@ -1523,8 +1541,10 @@ class FrontEndTest:
     async def handle_provider_settings(self):
         """Test provider settings page navigation and toggle interaction."""
         # Start at chat screen first for consistent navigation
-        await self.navigate_to_chat_first("Starting from the chat interface to demonstrate provider settings configuration")
-        
+        await self.navigate_to_chat_first(
+            "Starting from the chat interface to demonstrate provider settings configuration"
+        )
+
         # Navigate to Agent Management
         await self.test_action(
             "Navigate to Agent Management to begin extensions configuration",
@@ -1611,17 +1631,21 @@ class FrontEndTest:
                 )
             raise e
 
-    async def navigate_to_chat_first(self, description="Navigate to chat screen to begin feature demonstration"):
+    async def navigate_to_chat_first(
+        self, description="Navigate to chat screen to begin feature demonstration"
+    ):
         """Helper method to standardize starting each test at the chat screen"""
         await self.test_action(
             description,
             lambda: self.page.goto(f"{self.base_uri}/chat"),
             lambda: self.page.wait_for_load_state("networkidle", timeout=60000),
         )
-        
+
         await self.test_action(
             "The chat interface loads, showing the conversation history and input area",
-            lambda: self.page.wait_for_selector("#chat-message-input-inactive", state="visible", timeout=30000),
+            lambda: self.page.wait_for_selector(
+                "#chat-message-input-inactive", state="visible", timeout=30000
+            ),
         )
 
     async def run(self, headless=not is_desktop()):
@@ -1706,6 +1730,257 @@ class FrontEndTest:
 
                 # Abilities test
                 # await self.run_abilities_test(email, mfa_token)
+
+                # Clear screenshots for next video
+                # self.screenshots_with_actions = []
+
+                # Provider settings test
+                # await self.run_provider_settings_test(email, mfa_token)
+
+                # Stripe test (if enabled)
+                if "stripe" in self.features:
+                    # Clear screenshots for next video
+                    self.screenshots_with_actions = []
+                    await self.run_stripe_test()
+
+                # Clear screenshots for extensions demo test
+                self.screenshots_with_actions = []
+                await self.run_extensions_demo_test(email, mfa_token)
+
+                logging.info(
+                    "=== All tests complete. Individual videos created for each feature area. ==="
+                )
+
+                # Close shared browser session
+                await self.browser.close()
+
+        except Exception as e:
+            logging.error(f"Test suite failed: {e}")
+            if hasattr(self, "browser") and self.browser:
+                try:
+                    await self.browser.close()
+                except:
+                    pass
+            raise e
+
+    async def handle_extensions_demo(self):
+        """Handle extensions demo scenario: Agent Management → Extensions → Abilities → Toggle Command → New Chat → Test Message"""
+        # Start at chat screen first for consistent navigation
+        await self.navigate_to_chat_first(
+            "Starting from the chat interface to demonstrate the extensions and abilities feature configuration"
+        )
+
+        # Navigate to Agent Management
+        await self.test_action(
+            "Navigate to Agent Management to access extensions and abilities settings",
+            lambda: self.page.click('span:has-text("Agent Management")'),
+        )
+
+        await self.take_screenshot("Agent Management dropdown menu is visible")
+
+        # Navigate to Extensions from the dropdown
+        await self.test_action(
+            "Click on Extensions in the Agent Management dropdown to view available extensions",
+            lambda: self.page.click('a:has-text("Extensions")'),
+        )
+
+        # Wait for the extensions page to load completely
+        await self.test_action(
+            "Wait for the extensions page to load with available extensions",
+            lambda: self.page.wait_for_load_state("networkidle", timeout=60000),
+        )
+
+        await self.take_screenshot(
+            "Extensions page loaded showing available extensions"
+        )
+
+        # Navigate to Abilities
+        await self.test_action(
+            "Navigate to the Abilities section to view and configure agent capabilities",
+            lambda: self.page.click('a:has-text("Abilities")'),
+        )
+
+        # Wait for the abilities page to load
+        await self.test_action(
+            "Wait for the abilities page to load with configurable capabilities",
+            lambda: self.page.wait_for_load_state("networkidle", timeout=60000),
+        )
+
+        await self.take_screenshot(
+            "Abilities page loaded with available agent capabilities"
+        )
+
+        # Toggle the "Run Data Analysis" command
+        # Try multiple possible selectors for the toggle
+        toggle_selectors = [
+            'label:has-text("Run Data Analysis") input[type="checkbox"]',
+            'input[type="checkbox"]:near(text="Run Data Analysis")',
+            'label:has-text("Run Data Analysis")',
+            'text="Run Data Analysis"',
+            'div:has-text("Run Data Analysis") input[type="checkbox"]',
+            'tr:has-text("Run Data Analysis") input[type="checkbox"]',
+        ]
+
+        toggle_found = False
+        for selector in toggle_selectors:
+            try:
+                await self.test_action(
+                    f"Toggle the 'Run Data Analysis' command using selector: {selector}",
+                    lambda s=selector: self.page.wait_for_selector(
+                        s, state="visible", timeout=10000
+                    ),
+                    lambda s=selector: self.page.click(s),
+                )
+                toggle_found = True
+                await self.take_screenshot("Run Data Analysis command has been toggled")
+                break
+            except Exception as e:
+                logging.info(f"Toggle selector {selector} failed: {e}")
+                continue
+
+        if not toggle_found:
+            # If specific selectors didn't work, try to find any checkbox near the text
+            await self.test_action(
+                "Attempt to locate and toggle Run Data Analysis capability",
+                lambda: self.page.wait_for_selector(
+                    "input[type='checkbox']", state="visible", timeout=10000
+                ),
+                lambda: self.page.locator("input[type='checkbox']").first.click(),
+            )
+            await self.take_screenshot("Attempted to toggle data analysis capability")
+
+        # Navigate to new chat to test the capability
+        await self.test_action(
+            "Navigate to chat to test the newly enabled Run Data Analysis capability",
+            lambda: self.page.goto(f"{self.base_uri}/chat"),
+        )
+
+        await self.test_action(
+            "Wait for chat page to load completely",
+            lambda: self.page.wait_for_load_state("networkidle", timeout=60000),
+        )
+
+        await self.test_action(
+            "Click in the chat input to expand it for message entry",
+            lambda: self.page.click("#chat-message-input-inactive"),
+        )
+
+        await self.test_action(
+            "Enter a message to test the Run Data Analysis capability with letter counting",
+            lambda: self.page.fill(
+                "#chat-message-input-active",
+                "How many of the letter 'r' is in the word 'strawberry'",
+            ),
+        )
+
+        await self.test_action(
+            "Send the message to test the data analysis capability",
+            lambda: self.page.press("#chat-message-input-active", "Enter"),
+        )
+
+        # Wait for the response which should demonstrate the data analysis capability
+        await asyncio.sleep(90)
+
+        await self.take_screenshot(
+            "Chat response showing the Run Data Analysis capability in action"
+        )
+
+    async def run_extensions_demo_test(self, email, mfa_token):
+        """Run extensions demo test and create video"""
+        try:
+            # User is already logged in from shared session
+            await self.handle_extensions_demo()
+            video_path = self.create_video_report(video_name="extensions_demo")
+            logging.info(
+                f"Extensions demo test complete. Video report created at {video_path}"
+            )
+        except Exception as e:
+            logging.error(f"Extensions demo test failed: {e}")
+            if not os.path.exists(
+                os.path.join(os.getcwd(), "tests", "extensions_demo.mp4")
+            ):
+                self.create_video_report(
+                    video_name="extensions_demo", test_status="❌ **TEST FAILURE**"
+                )
+            raise e
+
+    async def run(self, headless=not is_desktop()):
+        """Run all tests: registration in its own browser, then all others in a shared browser"""
+        email = None
+        mfa_token = None
+
+        try:
+            # PHASE 1: Registration test in its own browser
+            logging.info("=== Starting Registration Test (Phase 1) ===")
+            async with async_playwright() as playwright:
+                browser = await playwright.chromium.launch(headless=headless)
+                context = await browser.new_context()
+                page = await context.new_page()
+                page.on("console", print_args)
+                page.set_default_timeout(60000)  # Increase to 60 seconds
+                await page.set_viewport_size({"width": 1367, "height": 924})
+
+                # Set browser references for registration test
+                self.playwright = playwright
+                self.browser = browser
+                self.context = context
+                self.page = page
+
+                # Run registration test
+                email, mfa_token = await self.run_registration_test()
+
+                # Close registration browser
+                await browser.close()
+                logging.info("=== Registration Test Complete - Browser Closed ===")
+
+            # PHASE 2: All other tests in a new shared browser session
+            logging.info("=== Starting Shared Browser Session (Phase 2) ===")
+            async with async_playwright() as self.playwright:
+                self.browser = await self.playwright.chromium.launch(headless=headless)
+                self.context = await self.browser.new_context()
+                self.page = await self.browser.new_page()
+                self.page.on("console", print_args)
+                self.page.set_default_timeout(60000)  # Increase to 60 seconds
+                await self.page.set_viewport_size({"width": 1367, "height": 924})
+
+                # Start with login to establish session
+                # Clear screenshots for first video in shared session
+                self.screenshots_with_actions = []
+
+                # Login test (start the shared session)
+                await self.run_login_test(email, mfa_token)
+                logging.info("=== Login Complete - Continuing with other tests ===")
+
+                # Clear screenshots for next video
+                self.screenshots_with_actions = []
+
+                # Extensions test
+                await self.run_extensions_demo_test(email, mfa_token)
+                self.screenshots_with_actions = []
+
+                # Mandatory context test
+                await self.run_mandatory_context_test(email, mfa_token)
+
+                # Clear screenshots for next video
+                self.screenshots_with_actions = []
+
+                # Chat test
+                await self.run_chat_test(email, mfa_token)
+
+                # Clear screenshots for next video
+                self.screenshots_with_actions = []
+
+                # User preferences test
+                await self.run_user_preferences_test(email, mfa_token)
+
+                # Clear screenshots for next video
+                self.screenshots_with_actions = []
+
+                # Team management test
+                await self.run_team_management_test(email, mfa_token)
+
+                # Training test
+                # await self.run_training_test(email, mfa_token)
 
                 # Clear screenshots for next video
                 # self.screenshots_with_actions = []
