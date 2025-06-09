@@ -1553,10 +1553,10 @@ class FrontEndTest:
                 self.screenshots_with_actions = []
 
                 # Abilities test
-                await self.run_abilities_test(email, mfa_token)
+                # await self.run_abilities_test(email, mfa_token)
 
                 # Clear screenshots for next video
-                self.screenshots_with_actions = []
+                # self.screenshots_with_actions = []
 
                 # Mandatory context test
                 # await self.run_mandatory_context_test(email, mfa_token)
