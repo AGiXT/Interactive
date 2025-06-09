@@ -152,35 +152,30 @@ export const UploadFiles = ({ handleUploadFiles, disabled }: {
   disabled: boolean;
 }) => {
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <>
-            <Button
-              size='icon'
-              variant='ghost'
-              className='rounded-full'
-              onClick={() => document.getElementById('file-upload')?.click()}
-              disabled={disabled}
-            >
-              <LuPaperclip className='w-5 h-5 ' />
-            </Button>
-            <label id='trigger-file-upload' htmlFor='file-upload' className='hidden'>
-              Upload files
-            </label>
-            <input
-              id='file-upload'
-              type='file'
-              multiple
-              className='hidden'
-              onChange={handleUploadFiles}
-              disabled={disabled}
-            />
-          </>
-        </TooltipTrigger>
-        <TooltipContent>Upload Files</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <TooltipBasic title="Upload Files">
+      <div className="inline-flex">
+        <Button
+          size='icon'
+          variant='ghost'
+          className='rounded-full'
+          onClick={() => document.getElementById('file-upload')?.click()}
+          disabled={disabled}
+        >
+          <LuPaperclip className='w-5 h-5 ' />
+        </Button>
+        <label id='trigger-file-upload' htmlFor='file-upload' className='hidden'>
+          Upload files
+        </label>
+        <input
+          id='file-upload'
+          type='file'
+          multiple
+          className='hidden'
+          onChange={handleUploadFiles}
+          disabled={disabled}
+        />
+      </div>
+    </TooltipBasic>
   );
 };
 
@@ -197,19 +192,21 @@ export const SendMessage = ({
 }) => {
   return (
     <TooltipBasic title='Send Message' side='left'>
-      <Button
-        id='send-message'
-        onClick={(event) => {
-          event.preventDefault();
-          handleSend(message, uploadedFiles);
-        }}
-        disabled={(message.trim().length === 0 && Object.keys(uploadedFiles).length === 0) || disabled}
-        size='icon'
-        variant='ghost'
-        className='rounded-full'
-      >
-        <LuSend className='w-5 h-5' />
-      </Button>
+      <div className="inline-flex">
+        <Button
+          id='send-message'
+          onClick={(event) => {
+            event.preventDefault();
+            handleSend(message, uploadedFiles);
+          }}
+          disabled={(message.trim().length === 0 && Object.keys(uploadedFiles).length === 0) || disabled}
+          size='icon'
+          variant='ghost'
+          className='rounded-full'
+        >
+          <LuSend className='w-5 h-5' />
+        </Button>
+      </div>
     </TooltipBasic>
   );
 };
@@ -222,7 +219,7 @@ export const ResetConversation = () => {
     setCookie('uuid', uuid, { domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN, maxAge: 2147483647 });
     
     if (interactiveConfig?.mutate) {
-      interactiveConfig.mutate((oldState) => ({ 
+      interactiveConfig.mutate((oldState: any) => ({ 
         ...oldState,
         overrides: { ...oldState.overrides, conversation: '-' },
       }));
@@ -321,7 +318,10 @@ export function useDynamicInput(initialValue = '', uploadedFiles: { [x: string]:
   return { textareaRef, isActive, setIsActive, handleFocus, handleBlur, value, setValue };
 }
 
-export const ImportConversation = () => {
+export const ImportConversation = React.forwardRef<
+  HTMLButtonElement,
+  React.ComponentPropsWithoutRef<typeof Button>
+>((props, ref) => {
   const interactiveConfig = useInteractiveConfig();
   const router = useRouter();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -332,8 +332,8 @@ export const ImportConversation = () => {
       return;
     }
     if (!interactiveConfig || !interactiveConfig.agixt) {
-        toast({ title: 'Error', description: 'SDK not available.', variant: 'destructive'});
-        return;
+      toast({ title: 'Error', description: 'SDK not available.', variant: 'destructive'});
+      return;
     }
 
     setIsProcessingImport(true);
@@ -401,7 +401,7 @@ export const ImportConversation = () => {
           await mutate('/conversations');
 
           if (interactiveConfig.mutate) {
-            interactiveConfig.mutate((oldState) => ({
+            interactiveConfig.mutate((oldState: any) => ({
               ...oldState,
               overrides: { ...(oldState?.overrides), conversation: newConversationID },
             }));
@@ -432,22 +432,21 @@ export const ImportConversation = () => {
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size='icon'
-                variant='ghost'
-                className='rounded-full'
-                onClick={() => setIsDialogOpen(true)}
-                disabled={isProcessingImport}
-              >
-                <UploadCloud className='w-5 h-5' />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Import Conversation</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <TooltipBasic title="Import Conversation">
+          <div className="inline-flex">
+            <Button
+              ref={ref}
+              size='icon'
+              variant='ghost'
+              className='rounded-full'
+              onClick={() => setIsDialogOpen(true)}
+              disabled={isProcessingImport}
+              {...props}
+            >
+              <UploadCloud className='w-5 h-5' />
+            </Button>
+          </div>
+        </TooltipBasic>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -486,7 +485,9 @@ export const ImportConversation = () => {
       </DialogContent>
     </Dialog>
   );
-};
+});
+
+ImportConversation.displayName = 'ImportConversation';
 
 export function ChatBar({
   onSend,

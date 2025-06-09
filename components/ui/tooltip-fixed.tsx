@@ -39,21 +39,24 @@ type TooltipBasicProps = React.PropsWithChildren & {
   side?: 'top' | 'right' | 'bottom' | 'left';
 };
 
-// This version of TooltipBasic wraps the children in a span 
-// to avoid ref forwarding hydration issues
-const TooltipBasic: React.FC<TooltipBasicProps> = ({ title, side, children }) => {
+const TooltipBasic = React.forwardRef<HTMLElement, TooltipBasicProps>(({ title, side, children }, ref) => {
+  const Fragment = React.Fragment;
+
   return (
     <TooltipProvider>
       <Tooltip delayDuration={600}>
         <TooltipTrigger asChild>
-          {/* Use a wrapper element instead of forwarding refs */}
-          <span className="inline-block">{children}</span>
+          {React.isValidElement(children) && children.type !== Fragment ? (
+            React.cloneElement(children as React.ReactElement<any>, { ref })
+          ) : (
+            <span ref={ref}>{children}</span>
+          )}
         </TooltipTrigger>
         <TooltipContent side={side}>{title}</TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
-};
+});
 TooltipBasic.displayName = 'TooltipBasic';
 
 export { Tooltip, TooltipBasic, TooltipTrigger, TooltipContent, TooltipProvider };
