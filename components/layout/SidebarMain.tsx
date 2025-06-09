@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { getCookie } from 'cookies-next';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
-import { items, Item, SubItem } from '@/app/NavMenuItems';
+import { items, getFilteredItems, Item, SubItem } from '@/app/NavMenuItems';
 import { NavUser } from '@/components/layout/NavUser';
 import { useUser } from '@/components/interactive/useUser';
 import { ViewVerticalIcon } from '@radix-ui/react-icons';
@@ -61,20 +61,20 @@ export function AgentSelector() {
   const router = useRouter();
   const [isSwitching, setIsSwitching] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  
+
   // Handle data fetch errors more gracefully
   useEffect(() => {
     if (agentError || companyError) {
       console.error({ agentError, companyError });
-      
+
       // Retry fetching if we have errors and haven't exceeded max retries
       if (retryCount < 3) {
         const timer = setTimeout(() => {
-          setRetryCount(prev => prev + 1);
+          setRetryCount((prev) => prev + 1);
           mutateActiveAgent();
           mutateActiveCompany();
         }, 1000); // Wait 1 second before retrying
-        
+
         return () => clearTimeout(timer);
       }
     }
@@ -83,14 +83,14 @@ export function AgentSelector() {
   // Ensure agent and company data stay in sync
   useEffect(() => {
     const agentName = getCookie('agixt-agent');
-    
+
     // Check if activeAgent exists but doesn't match the cookie
     if (activeAgent?.agent && agentName && activeAgent.agent.name !== agentName) {
       mutateActiveAgent();
     }
-    
+
     // Check if we have an activeAgent but no company or mismatched company
-    if (activeAgent?.agent && (!activeCompany || !activeCompany.agents.some(a => a.id === activeAgent.agent?.id))) {
+    if (activeAgent?.agent && (!activeCompany || !activeCompany.agents.some((a) => a.id === activeAgent.agent?.id))) {
       mutateActiveCompany();
     }
   }, [activeAgent, activeCompany, mutateActiveAgent, mutateActiveCompany]);
@@ -98,18 +98,18 @@ export function AgentSelector() {
   const switchAgents = async (agent: Agent) => {
     try {
       setIsSwitching(true);
-      
+
       // Set the cookie first
       setCookie('agixt-agent', agent.name, {
         domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
       });
-      
+
       // Update company state first (since agent depends on it)
       await mutateActiveCompany();
-      
+
       // Then update agent state
       await mutateActiveAgent();
-      
+
       // Reset retry counter on successful switch
       setRetryCount(0);
     } catch (error) {
@@ -377,7 +377,7 @@ export function NavMain() {
         setLoadingTimeout(true);
       }
     }, 5000);
-    
+
     return () => clearTimeout(timer);
   }, [isCompanyLoading, company]);
 
@@ -385,10 +385,10 @@ export function NavMain() {
   useEffect(() => {
     if (companyError && retryCount < 3) {
       const timer = setTimeout(() => {
-        setRetryCount(prev => prev + 1);
+        setRetryCount((prev) => prev + 1);
         mutateCompany();
       }, 1000);
-      
+
       return () => clearTimeout(timer);
     }
   }, [companyError, mutateCompany, retryCount]);
@@ -399,15 +399,28 @@ export function NavMain() {
   }, []);
 
   const itemsWithActiveState = useMemo(() => {
-    const filteredItems = items.filter((item) => {
-      const hasJwt = !!getCookie('jwt');
-      const hasCompany = !!company && !companyError;
-      const meetsRoleThreshold = !item.roleThreshold || (hasCompany && company.roleId <= item.roleThreshold);
-      if (!hasJwt || !hasCompany) {
-        return item.title === 'Documentation';
-      }
-      return meetsRoleThreshold;
-    });
+    const hasJwt = !!getCookie('jwt');
+
+    // Show only Documentation when not authenticated, no company, or role ID < 4
+    if (!hasJwt || !company) {
+      const filteredItems = items.filter((item) => item.title === 'Documentation');
+      return filteredItems.map((item) => ({
+        ...item,
+        isActive: true, // Force Documentation to be active/expanded when it's alone
+      }));
+    }
+
+    // Get filtered items based on user role (special handling for children with roleId 4)
+    const baseItems = getFilteredItems(company.roleId);
+
+    // Apply additional role threshold filtering for non-child users
+    const filteredItems =
+      company.roleId === 4
+        ? baseItems // Children get pre-filtered items, no additional filtering needed
+        : baseItems.filter((item) => {
+            const meetsRoleThreshold = !item.roleThreshold || company.roleId <= item.roleThreshold;
+            return meetsRoleThreshold;
+          });
 
     // Auto-expand Documentation if it's the only item
     if (filteredItems.length === 1 && filteredItems[0].title === 'Documentation') {
@@ -425,7 +438,7 @@ export function NavMain() {
 
   // Show loading state until all data is ready (with timeout)
   const isLoading = (!isJwtLoaded || isCompanyLoading) && !loadingTimeout;
-  
+
   // If timeout occurred or we've retried and still have an error, show a partial UI
   if (loadingTimeout || (companyError && retryCount >= 3)) {
     return (
@@ -433,7 +446,7 @@ export function NavMain() {
         <SidebarGroupLabel>Pages</SidebarGroupLabel>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton 
+            <SidebarMenuButton
               side='left'
               className='text-destructive'
               onClick={() => {
@@ -452,7 +465,7 @@ export function NavMain() {
               <CollapsibleTrigger asChild>
                 <SidebarMenuButton
                   side='left'
-                  tooltip="Documentation"
+                  tooltip='Documentation'
                   onClick={() => {
                     if (!open) toggleSidebar();
                     router.push('/docs');
@@ -642,7 +655,9 @@ export function SidebarMain({ ...props }: React.ComponentProps<typeof Sidebar>) 
   const [hasStarted, setHasStarted] = useState(false);
   const pathname = usePathname();
   const { data: user } = useUser();
+  const { data: company } = useCompany();
   const isAuthenticated = !!user?.email;
+  const isChild = company?.roleId === 4;
 
   useEffect(() => {
     if (getCookie('agixt-has-started') === 'true') {
@@ -655,7 +670,7 @@ export function SidebarMain({ ...props }: React.ComponentProps<typeof Sidebar>) 
   return (
     <Sidebar collapsible='icon' {...props} className='hide-scrollbar'>
       <SidebarHeader>
-        {isAuthenticated ? (
+        {isAuthenticated && !isChild ? (
           <AgentSelector />
         ) : (
           <SidebarMenu>
@@ -677,7 +692,7 @@ export function SidebarMain({ ...props }: React.ComponentProps<typeof Sidebar>) 
       <SidebarFooter>
         {/* <NotificationsNavItem /> */}
         <ToggleSidebar side='left' />
-        {isAuthenticated && <NavUser />}
+        {isAuthenticated && !isChild && <NavUser />}
       </SidebarFooter>
       <SidebarRail side='left' />
     </Sidebar>

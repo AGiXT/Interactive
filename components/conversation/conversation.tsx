@@ -20,7 +20,14 @@ import { Badge, Paperclip, Pencil, Plus, Check, Download, Trash2 } from 'lucide-
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/ui/sidebar';
+import {
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from '@/components/ui/sidebar';
 
 export type UIProps = {
   showSelectorsCSV?: string;
@@ -44,7 +51,7 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  
+
   // Function to handle conversation deletion
   const handleDeleteConversation = async (): Promise<void> => {
     try {
@@ -97,7 +104,7 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
         });
         return;
       }
-      
+
       const agentName = getCookie('agixt-agent') || process.env.NEXT_PUBLIC_AGIXT_AGENT || 'AGiXT';
       await interactiveConfig.agixt.renameConversation(agentName, currentConversation?.id || '-', newName);
 
@@ -158,7 +165,7 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
       element.click();
       document.body.removeChild(element);
       URL.revokeObjectURL(element.href);
-      
+
       toast({
         title: 'Success',
         description: 'Conversation exported successfully',
@@ -175,7 +182,7 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
       setLoading(false);
     }
   };
-  
+
   // Initialize the rename value when renaming state changes
   useEffect(() => {
     if (renaming) {
@@ -207,22 +214,22 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
       setNewName(currentConversation?.name || '');
     }
   };
-  
+
   // Don't show sidebar content if no conversation exists
   if (!currentConversation || currentConversation.id === '-') {
     return null;
   }
 
   return (
-    <SidebarContent title="Conversation">
+    <SidebarContent title='Conversation'>
       <SidebarGroup>
         {
           <div className='w-full group-data-[collapsible=icon]:hidden'>
             {renaming ? (
-              <div className="flex items-center gap-2">
-                <Input 
-                  value={newName} 
-                  onChange={(e) => setNewName(e.target.value)} 
+              <div className='flex items-center gap-2'>
+                <Input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
                   className='w-full'
                   autoFocus
                   onKeyDown={(e) => {
@@ -233,17 +240,12 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
                     }
                   }}
                 />
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => handleRenameConversation(newName)}
-                  disabled={loading}
-                >
-                  <Check className="h-4 w-4" />
+                <Button variant='ghost' size='icon' onClick={() => handleRenameConversation(newName)} disabled={loading}>
+                  <Check className='h-4 w-4' />
                 </Button>
               </div>
             ) : (
-              <h4 className="text-lg font-medium mb-2">{currentConversation?.name || 'Conversation'}</h4>
+              <h4 className='text-lg font-medium mb-2'>{currentConversation?.name || 'Conversation'}</h4>
             )}
             {currentConversation && currentConversation.attachmentCount > 0 && (
               <Badge className='gap-1 mb-2'>
@@ -265,7 +267,7 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
                     ...oldState,
                     overrides: { ...oldState.overrides, conversation: '-' },
                   }));
-                  
+
                   // Force an invalidation of any existing conversation data
                   mutate(conversationSWRPath + interactiveConfig.overrides.conversation);
                 }
@@ -276,9 +278,7 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
             {
               title: renaming ? 'Save Name' : 'Rename Conversation',
               icon: renaming ? Check : Pencil,
-              func: renaming
-                ? () => handleRenameConversation(newName)
-                : handleRenameClick,
+              func: renaming ? () => handleRenameConversation(newName) : handleRenameClick,
               disabled: loading,
             },
             {
@@ -293,19 +293,17 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
               func: () => setDeleteDialogOpen(true),
               disabled: loading || renaming || !currentConversation?.id || currentConversation?.id === '-',
             },
-          ].map(
-            (item) => (
-              <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton side='right' tooltip={item.title} onClick={item.func} disabled={item.disabled}>
-                  {item.icon && <item.icon className="h-4 w-4" />}
-                  <span>{item.title}</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ),
-          )}
+          ].map((item) => (
+            <SidebarMenuItem key={item.title}>
+              <SidebarMenuButton side='right' tooltip={item.title} onClick={item.func} disabled={item.disabled}>
+                {item.icon && <item.icon className='h-4 w-4' />}
+                <span>{item.title}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
         </SidebarMenu>
       </SidebarGroup>
-      
+
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
@@ -316,11 +314,11 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={loading}>
+            <Button variant='outline' onClick={() => setDeleteDialogOpen(false)} disabled={loading}>
               Cancel
             </Button>
-            <Button 
-              variant="destructive"
+            <Button
+              variant='destructive'
               onClick={() => {
                 handleDeleteConversation();
                 setDeleteDialogOpen(false);
@@ -380,7 +378,7 @@ export function ChatLog({
             const messageBody = validTypes.some((x) => messageType.includes(x))
               ? chatItem.message.substring(chatItem.message.indexOf(' '))
               : chatItem.message;
-            
+
             return validTypes.includes(messageType) ? (
               <ChatActivity
                 key={chatItem.timestamp + '-' + messageBody}
@@ -513,7 +511,7 @@ export function Chat({
 
   // Find the current conversation
   const currentConversation = conversations?.find((conv) => conv.id === interactiveConfig.overrides.conversation);
-  
+
   // Fetch conversation data with SWR
   const { data: conversationData = [], mutate: mutateConversation } = useSWR(
     conversationSWRPath + interactiveConfig.overrides.conversation,
@@ -526,13 +524,13 @@ export function Chat({
       revalidateOnFocus: false,
     },
   );
-  
+
   // Check if the conversation is empty
   const isEmptyConversation = !conversationData?.length;
-  
+
   // Get company info for API calls
   const { data: activeCompany } = useCompany();
-  
+
   // Handle array-type conversation ID in state (shouldn't happen, but as precaution)
   useEffect(() => {
     if (Array.isArray(interactiveConfig.overrides.conversation)) {
@@ -542,7 +540,7 @@ export function Chat({
       }));
     }
   }, [interactiveConfig]);
-  
+
   // Refresh conversation data when conversation ID changes or loading state changes
   useEffect(() => {
     mutateConversation();
@@ -592,13 +590,13 @@ export function Chat({
     });
 
     setLoading(true);
-    
+
     // Slight delay to allow UI to update
     await new Promise((resolve) => setTimeout(resolve, 100));
-    
+
     // Refresh conversation data immediately to show the message
     mutateConversation();
-    
+
     try {
       const completionResponse = await axios.post(
         `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/chat/completions`,
@@ -613,13 +611,13 @@ export function Chat({
           },
         },
       );
-      
+
       if (completionResponse.status === 200) {
         const chatCompletion = completionResponse.data;
-        
+
         // Store conversation ID
         const conversationId = chatCompletion.id;
-        
+
         // Only update route if conversation ID has changed
         if (conversationId !== interactiveConfig.overrides.conversation) {
           // Update conversation state
@@ -630,19 +628,19 @@ export function Chat({
               conversation: conversationId,
             },
           }));
-          
+
           // Push route after state is updated
           router.push(`/chat/${conversationId}`);
         }
-        
+
         // Refresh data after updating conversation
         setLoading(false);
-        
+
         // Trigger proper mutations
         mutateConversation();
         mutate('/conversations');
         mutate('/user');
-        
+
         if (chatCompletion?.choices[0]?.message.content.length > 0) {
           return chatCompletion.choices[0].message.content;
         } else {

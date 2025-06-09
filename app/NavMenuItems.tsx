@@ -40,6 +40,24 @@ export type Item = {
   roleThreshold?: number;
 };
 
+// Function to get filtered items based on user role
+export const getFilteredItems = (userRoleId?: number): Item[] => {
+  // Special case for children (roleId 4) - show only New Chat
+  if (userRoleId === 4) {
+    return [
+      {
+        title: 'New Chat',
+        url: '/chat',
+        icon: TbMessageCirclePlus,
+        isActive: true,
+      },
+    ];
+  }
+
+  // Return all items for other roles (existing behavior)
+  return items;
+};
+
 export const items: Item[] = [
   {
     title: 'New Chat',
@@ -67,6 +85,7 @@ export const items: Item[] = [
         url: '/tasks',
       },
     ],
+    roleThreshold: 3, // Hide from children (roleId 4)
   },
   {
     title: 'Agent Management',
@@ -102,6 +121,7 @@ export const items: Item[] = [
         url: '/settings',
       },
     ],
+    roleThreshold: 3, // Hide from children (roleId 4)
   },
   {
     title: 'Team',
