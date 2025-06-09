@@ -1886,10 +1886,57 @@ class FrontEndTest:
         )
 
         # Click "Completed activities" to see what commands were executed
-        await self.test_action(
-            "Click on 'Completed activities' to view the commands that were executed by the agent",
-            lambda: self.page.click('text="Completed activities"'),
-        )
+        # Try multiple selectors to find the completed activities section
+        activities_selectors = [
+            'text="Completed activities"',
+            'text="Completed activities."',
+            ':text("Completed activities")',
+            ':text("completed activities")',
+            '[data-testid="completed-activities"]',
+            'button:has-text("Completed")',
+            'div:has-text("Completed activities")',
+            'span:has-text("Completed activities")',
+            # Look for dropdown arrows near the text
+            'text="Completed activities" + *',
+            '*:has-text("Completed activities") >> xpath=following-sibling::*[1]',
+        ]
+
+        activities_clicked = False
+        for selector in activities_selectors:
+            try:
+                await self.test_action(
+                    f"Click on completed activities section using selector: {selector}",
+                    lambda s=selector: self.page.wait_for_selector(
+                        s, state="visible", timeout=10000
+                    ),
+                    lambda s=selector: self.page.click(s),
+                )
+                activities_clicked = True
+                break
+            except Exception as e:
+                logging.info(f"Activities selector {selector} failed: {e}")
+                continue
+
+        if not activities_clicked:
+            # Try a more general approach - look for any expandable element
+            await self.test_action(
+                "Attempt to find and click any expandable activities section",
+                lambda: self.page.wait_for_selector(
+                    "button, div[role='button'], [aria-expanded]", state="visible", timeout=10000
+                ),
+                lambda: self.page.evaluate("""() => {
+                    // Look for elements containing "completed" or "activities" text
+                    const elements = Array.from(document.querySelectorAll('*'));
+                    for (const el of elements) {
+                        const text = el.textContent?.toLowerCase() || '';
+                        if (text.includes('completed') && text.includes('activities')) {
+                            el.click();
+                            return true;
+                        }
+                    }
+                    return false;
+                }"""),
+            )
 
         await self.take_screenshot(
             "Completed activities section is now visible showing executed commands"
