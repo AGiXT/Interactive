@@ -1677,9 +1677,11 @@ class FrontEndTest:
         """Helper method to standardize starting each test at the chat screen"""
         await self.test_action(
             description,
-            lambda: self.page.goto(f"{self.base_uri}/chat"),
-            lambda: self.page.wait_for_load_state("networkidle", timeout=60000),
+            lambda: self.page.click('text="New Chat"'),
         )
+
+        # Wait a couple seconds for the chat interface to settle
+        await asyncio.sleep(3)
 
         await self.test_action(
             "The chat interface loads, showing the conversation history and input area",
