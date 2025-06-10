@@ -1798,42 +1798,115 @@ class FrontEndTest:
                 continue
 
         if not toggle_found:
-            # JavaScript fallback with enhanced targeting using switch index approach
+            # JavaScript fallback with comprehensive switch validation and targeting
             await self.test_action(
-                "Using JavaScript fallback to find and click the exact 'Run Data Analysis' switch by index",
+                "Using JavaScript fallback to find and click the exact 'Run Data Analysis' switch with validation",
                 lambda: self.page.evaluate(
                     """() => {
-                        console.log('Starting enhanced JavaScript fallback for Run Data Analysis switch');
+                        console.log('Starting comprehensive JavaScript fallback for Run Data Analysis switch');
                         
-                        // Get all switches on the page (excluding show-enabled-only)
-                        const allSwitches = Array.from(document.querySelectorAll('button[role="switch"]:not(#show-enabled-only)'));
-                        console.log(`Found ${allSwitches.length} total switches (excluding show-enabled-only)`);
+                        // Get ALL switches and analyze their card context
+                        const allSwitches = Array.from(document.querySelectorAll('button[role="switch"]'));
+                        console.log(`Found ${allSwitches.length} total switches`);
                         
-                        // Get all h4 elements to map commands to switch indices
-                        const h4Elements = Array.from(document.querySelectorAll('h4'));
-                        const commandTexts = h4Elements.map(h4 => h4.textContent.trim()).filter(text => text !== 'Show Enabled Only');
-                        console.log('Command texts found:', commandTexts);
+                        let runDataAnalysisSwitch = null;
+                        let runDataAnalysisIndex = -1;
                         
-                        // Find the index of "Run Data Analysis" in the command list
-                        const targetIndex = commandTexts.findIndex(text => text === 'Run Data Analysis');
-                        console.log(`"Run Data Analysis" found at command index: ${targetIndex}`);
-                        
-                        if (targetIndex >= 0 && targetIndex < allSwitches.length) {
-                            const targetSwitch = allSwitches[targetIndex];
-                            console.log(`Clicking switch at index ${targetIndex} for "Run Data Analysis"`);
+                        // Find the switch that belongs to "Run Data Analysis" by checking its card context
+                        for (let i = 0; i < allSwitches.length; i++) {
+                            const switchEl = allSwitches[i];
                             
-                            // Scroll the switch into view first
-                            targetSwitch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            // Skip the "Show Enabled Only" switch by ID
+                            if (switchEl.id === 'show-enabled-only') {
+                                console.log(`Skipping switch ${i}: show-enabled-only filter`);
+                                continue;
+                            }
                             
-                            // Wait a moment for scroll to complete, then click
+                            // Find the card/container this switch belongs to
+                            const possibleContainers = [
+                                switchEl.closest('[class*="card"]'),
+                                switchEl.closest('div[class*="border"]'),
+                                switchEl.closest('div[class*="rounded"]'),
+                                switchEl.parentElement,
+                                switchEl.parentElement?.parentElement
+                            ].filter(Boolean);
+                            
+                            for (const container of possibleContainers) {
+                                if (!container) continue;
+                                
+                                // Look for h4 elements within this container
+                                const h4Elements = container.querySelectorAll('h4');
+                                for (const h4 of h4Elements) {
+                                    const h4Text = (h4.textContent || '').trim();
+                                    
+                                    if (h4Text === 'Run Data Analysis') {
+                                        console.log(`FOUND "Run Data Analysis" switch at index ${i}`);
+                                        console.log(`H4 text: "${h4Text}"`);
+                                        console.log(`Container:`, container);
+                                        
+                                        runDataAnalysisSwitch = switchEl;
+                                        runDataAnalysisIndex = i;
+                                        break;
+                                    }
+                                }
+                                
+                                if (runDataAnalysisSwitch) break;
+                            }
+                            
+                            if (runDataAnalysisSwitch) break;
+                        }
+                        
+                        if (runDataAnalysisSwitch) {
+                            console.log(`About to click "Run Data Analysis" switch at index ${runDataAnalysisIndex}`);
+                            
+                            // Get initial state
+                            const initialState = runDataAnalysisSwitch.getAttribute('aria-checked');
+                            console.log(`Initial switch state: ${initialState}`);
+                            
+                            // Scroll into view and click
+                            runDataAnalysisSwitch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            
+                            // Add a small delay to ensure scroll completes, then click
                             setTimeout(() => {
-                                targetSwitch.click();
-                                console.log('Successfully clicked Run Data Analysis switch');
-                            }, 500);
+                                runDataAnalysisSwitch.click();
+                                console.log('Clicked Run Data Analysis switch');
+                                
+                                // Check state after click
+                                setTimeout(() => {
+                                    const newState = runDataAnalysisSwitch.getAttribute('aria-checked');
+                                    console.log(`Switch state after click: ${newState}`);
+                                    console.log(`State changed: ${initialState !== newState}`);
+                                }, 100);
+                            }, 300);
                             
                             return true;
                         } else {
-                            console.log(`Invalid index ${targetIndex} for switches array length ${allSwitches.length}`);
+                            console.log('ERROR: Could not find "Run Data Analysis" switch');
+                            
+                            // Fallback: log all available h4 texts for debugging
+                            const allH4s = Array.from(document.querySelectorAll('h4'));
+                            const h4Texts = allH4s.map(h4 => h4.textContent?.trim()).filter(Boolean);
+                            console.log('Available h4 texts:', h4Texts);
+                            
+                            // Try fallback with "Data Analysis" (OVERRIDE_EXTENSIONS name)
+                            for (let i = 0; i < allSwitches.length; i++) {
+                                const switchEl = allSwitches[i];
+                                if (switchEl.id === 'show-enabled-only') continue;
+                                
+                                const container = switchEl.closest('div');
+                                if (container) {
+                                    const h4 = container.querySelector('h4');
+                                    const h4Text = h4 ? h4.textContent.trim() : '';
+                                    
+                                    if (h4Text === 'Data Analysis') {
+                                        console.log(`FALLBACK: Found "Data Analysis" switch at index ${i}`);
+                                        switchEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                        setTimeout(() => switchEl.click(), 300);
+                                        return true;
+                                    }
+                                }
+                            }
+                            
                             return false;
                         }
                     }"""
