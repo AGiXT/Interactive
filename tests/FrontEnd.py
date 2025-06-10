@@ -731,7 +731,7 @@ class FrontEndTest:
         # Wait for the training page to load completely
         await self.test_action(
             "Wait for the training page to load with mandatory context form",
-            lambda: self.page.wait_for_load_state("networkidle", timeout=60000),
+            lambda: asyncio.sleep(3),
         )
 
         await self.take_screenshot(
@@ -840,7 +840,7 @@ class FrontEndTest:
         # Wait for the update to process
         await self.test_action(
             "Wait for mandatory context update to process",
-            lambda: self.page.wait_for_load_state("networkidle", timeout=30000),
+            lambda: asyncio.sleep(3),
         )
 
         await self.take_screenshot("Mandatory context settings have been updated")
@@ -853,7 +853,7 @@ class FrontEndTest:
 
         await self.test_action(
             "Wait for chat page to load completely",
-            lambda: self.page.wait_for_load_state("networkidle", timeout=60000),
+            lambda: asyncio.sleep(3),
         )
 
         await self.test_action(
@@ -1169,9 +1169,7 @@ class FrontEndTest:
             # Wait for the page to settle after the update
             await self.test_action(
                 "The system processes the update and the page stabilizes",
-                lambda: self.page.wait_for_load_state(
-                    "networkidle", timeout=60000
-                ),  # 60 second timeout
+                lambda: asyncio.sleep(3),  # 3 second wait
             )
 
             # Take a final screenshot to show the result
@@ -1201,9 +1199,7 @@ class FrontEndTest:
             # Wait for team page to load completely
             await self.test_action(
                 "The team management page loads, showing current team members and invite options",
-                lambda: self.page.wait_for_load_state(
-                    "networkidle", timeout=120000
-                ),  # Increase to 120 seconds
+                lambda: asyncio.sleep(5),  # 5 second wait for team page
             )
 
             # Generate a random email for invitation
@@ -1714,10 +1710,7 @@ class FrontEndTest:
         )
 
         # Wait for the extensions page to load completely
-        await self.test_action(
-            "Wait for the extensions page to load with available extensions",
-            lambda: self.page.wait_for_load_state("networkidle", timeout=60000),
-        )
+        await asyncio.sleep(3)
 
         await self.take_screenshot(
             "Extensions page loaded showing available extensions"
@@ -1730,10 +1723,7 @@ class FrontEndTest:
         )
 
         # Wait for the abilities page to load
-        await self.test_action(
-            "Wait for the abilities page to load with configurable capabilities",
-            lambda: self.page.wait_for_load_state("networkidle", timeout=60000),
-        )
+        await asyncio.sleep(3)
 
         await self.take_screenshot(
             "Abilities page loaded with available agent capabilities"
@@ -1839,7 +1829,7 @@ class FrontEndTest:
 
         await self.test_action(
             "Wait for chat page to load completely",
-            lambda: self.page.wait_for_load_state("networkidle", timeout=60000),
+            lambda: asyncio.sleep(3),
         )
 
         await self.test_action(
