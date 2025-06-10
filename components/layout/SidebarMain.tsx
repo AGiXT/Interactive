@@ -30,7 +30,7 @@ import { getTimeDifference } from '@/components/conversation/activity';
 import { cn } from '@/lib/utils';
 import { DotsHorizontalIcon } from '@radix-ui/react-icons';
 import dayjs from 'dayjs';
-import { useContext } from 'react';
+import { useContext, useCallback } from 'react';
 import { Command, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Conversation, useConversations } from '@/components/interactive/useConversation';
@@ -52,6 +52,7 @@ import { useMemo } from 'react';
 import { ChevronRightIcon } from '@radix-ui/react-icons';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { TbMessageCirclePlus } from 'react-icons/tb';
 
 export function AgentSelector() {
   const { isMobile } = useSidebar('left');
@@ -66,14 +67,14 @@ export function AgentSelector() {
 
   // Initialize agent selection when user data is loaded
   useEffect(() => {
-    if (!user?.companies?.length || isInitialized) return;
+    if (!user?.companies?.length) return;
 
     const agentName = getCookie('agixt-agent');
     const jwtToken = getCookie('jwt');
     
     if (!jwtToken) return;
 
-    // If no agent is selected, select the primary company's default agent
+    // Always ensure we have an agent selected
     if (!agentName) {
       const primaryCompany = user.companies.find(c => c.primary);
       if (primaryCompany?.agents?.length) {
@@ -85,15 +86,17 @@ export function AgentSelector() {
           setCookie('agixt-company', primaryCompany.id, {
             domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
           });
-          // Trigger data refetch
-          mutateActiveAgent();
-          mutateActiveCompany();
         }
       }
     }
     
-    setIsInitialized(true);
-  }, [user, isInitialized, mutateActiveAgent, mutateActiveCompany]);
+    // Always trigger refetch to ensure data is loaded
+    if (!isInitialized) {
+      mutateActiveAgent();
+      mutateActiveCompany();
+      setIsInitialized(true);
+    }
+  }, [user, mutateActiveAgent, mutateActiveCompany, isInitialized]);
 
   // Handle data fetch errors more gracefully
   useEffect(() => {
@@ -167,6 +170,48 @@ export function AgentSelector() {
   const isLoading = (!activeAgent || !activeCompany || isSwitching) && !hasError;
   const showLoadingState = !user?.companies?.length || !isInitialized;
 
+  // Get fallback agent name from cookies or user data
+  const getDisplayAgentName = () => {
+    if (activeAgent?.agent?.name) {
+      return activeAgent.agent.name;
+    }
+    
+    // Try to get from cookie
+    const cookieAgentName = getCookie('agixt-agent');
+    if (cookieAgentName) {
+      return cookieAgentName;
+    }
+    
+    // Try to get default from user companies
+    if (user?.companies?.length) {
+      const primaryCompany = user.companies.find(c => c.primary);
+      if (primaryCompany?.agents?.length) {
+        const defaultAgent = primaryCompany.agents.find(a => a.default) || primaryCompany.agents[0];
+        if (defaultAgent) {
+          return defaultAgent.name;
+        }
+      }
+    }
+    
+    return 'Loading...';
+  };
+
+  const getDisplayCompanyName = () => {
+    if (activeCompany?.name) {
+      return activeCompany.name;
+    }
+    
+    // Try to get from user data
+    if (user?.companies?.length) {
+      const primaryCompany = user.companies.find(c => c.primary);
+      if (primaryCompany) {
+        return primaryCompany.name;
+      }
+    }
+    
+    return 'Loading...';
+  };
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -182,7 +227,7 @@ export function AgentSelector() {
                 <FaRobot className='size-4' />
               </div>
               <div className='grid flex-1 text-sm leading-tight text-left'>
-                {showLoadingState || isLoading ? (
+                {showLoadingState ? (
                   <>
                     <span className='font-semibold truncate'>Loading...</span>
                     <span className='text-xs truncate'>Please wait</span>
@@ -194,8 +239,8 @@ export function AgentSelector() {
                   </>
                 ) : (
                   <>
-                    <span className='font-semibold truncate'>{activeAgent?.agent?.name || 'No Agent'}</span>
-                    <span className='text-xs truncate'>{activeCompany?.name || 'No Company'}</span>
+                    <span className='font-semibold truncate'>{getDisplayAgentName()}</span>
+                    <span className='text-xs truncate'>{getDisplayCompanyName()}</span>
                   </>
                 )}
               </div>
@@ -411,92 +456,111 @@ export function NavMain() {
   const queryParams = useSearchParams();
   const { data: company, error: companyError, isLoading: isCompanyLoading, mutate: mutateCompany } = useCompany();
   const { toggleSidebar, open } = useSidebar('left');
-  const [isJwtLoaded, setIsJwtLoaded] = useState(false);
-  const [loadingTimeout, setLoadingTimeout] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
 
-  // Handle loading timeout
+  // Enhanced retry logic with quick retries for better UX
   useEffect(() => {
-    // Set a timeout to force loading to end after 5 seconds
-    const timer = setTimeout(() => {
-      if (isCompanyLoading && !company) {
-        setLoadingTimeout(true);
-      }
-    }, 5000);
-
-    return () => clearTimeout(timer);
-  }, [isCompanyLoading, company]);
-
-  // Add retry logic for failed loading
-  useEffect(() => {
-    if (companyError && retryCount < 3) {
+    if (companyError && retryCount < 5) {
+      // Quick retry intervals: 500ms, 1s, 1.5s, 2s, 2s
+      const retryDelay = Math.min(500 + (retryCount * 500), 2000); // Max 2 seconds
       const timer = setTimeout(() => {
         setRetryCount((prev) => prev + 1);
         mutateCompany();
-      }, 1000);
+      }, retryDelay);
 
       return () => clearTimeout(timer);
     }
   }, [companyError, mutateCompany, retryCount]);
 
-  // Check JWT existence once component mounts
+  // Track when we've initially loaded to prevent flickering
   useEffect(() => {
-    setIsJwtLoaded(true);
-  }, []);
+    if (!hasInitiallyLoaded && (company || companyError)) {
+      setHasInitiallyLoaded(true);
+    }
+  }, [company, companyError, hasInitiallyLoaded]);
+
+  // Reset retry count on successful load
+  useEffect(() => {
+    if (company && retryCount > 0) {
+      setRetryCount(0);
+    }
+  }, [company, retryCount]);
+
+  const getBaseNavigationItems = useCallback(() => {
+    // Always show basic navigation items, starting with Documentation
+    const baseItems = [
+      {
+        title: 'New Chat',
+        url: '/chat',
+        icon: TbMessageCirclePlus,
+        isActive: pathname.includes('/chat'),
+      },
+      {
+        title: 'Documentation',
+        icon: BookOpen,
+        items: items.find((item) => item.title === 'Documentation')?.items || [],
+        isActive: pathname.includes('/docs'),
+      },
+    ];
+
+    return baseItems;
+  }, [pathname]);
 
   const itemsWithActiveState = useMemo(() => {
     const hasJwt = !!getCookie('jwt');
 
-    // Show only Documentation when not authenticated, no company, or role ID < 4
-    if (!hasJwt || !company) {
-      const filteredItems = items.filter((item) => item.title === 'Documentation');
+    // If we don't have JWT, show minimal navigation
+    if (!hasJwt) {
+      return getBaseNavigationItems().filter((item) => item.title === 'Documentation');
+    }
+
+    // While loading or if we have persistent errors, show base navigation
+    if (isCompanyLoading || (companyError && !company)) {
+      return getBaseNavigationItems();
+    }
+
+    // If we have company data, show full navigation based on role
+    if (company) {
+      // Get filtered items based on user role (special handling for children with roleId 4)
+      const baseItems = getFilteredItems(company.roleId);
+
+      // Apply additional role threshold filtering for non-child users
+      const filteredItems =
+        company.roleId === 4
+          ? baseItems // Children get pre-filtered items, no additional filtering needed
+          : baseItems.filter((item) => {
+              const meetsRoleThreshold = !item.roleThreshold || company.roleId <= item.roleThreshold;
+              return meetsRoleThreshold;
+            });
+
       return filteredItems.map((item) => ({
         ...item,
-        isActive: true, // Force Documentation to be active/expanded when it's alone
+        isActive: isActive(item, pathname, queryParams),
       }));
     }
 
-    // Get filtered items based on user role (special handling for children with roleId 4)
-    const baseItems = getFilteredItems(company.roleId);
+    // Fallback to base navigation
+    return getBaseNavigationItems();
+  }, [company, companyError, isCompanyLoading, pathname, queryParams, getBaseNavigationItems]);
 
-    // Apply additional role threshold filtering for non-child users
-    const filteredItems =
-      company.roleId === 4
-        ? baseItems // Children get pre-filtered items, no additional filtering needed
-        : baseItems.filter((item) => {
-            const meetsRoleThreshold = !item.roleThreshold || company.roleId <= item.roleThreshold;
-            return meetsRoleThreshold;
-          });
+  const showRetryButton = companyError && retryCount >= 5;
 
-    // Auto-expand Documentation if it's the only item
-    if (filteredItems.length === 1 && filteredItems[0].title === 'Documentation') {
-      return filteredItems.map((item) => ({
-        ...item,
-        isActive: true, // Force Documentation to be active/expanded when it's alone
-      }));
-    }
-
-    return filteredItems.map((item) => ({
-      ...item,
-      isActive: isActive(item, pathname, queryParams),
-    }));
-  }, [company, companyError, pathname, queryParams]);
-
-  // Show loading state until all data is ready (with timeout)
-  const isLoading = (!isJwtLoaded || isCompanyLoading) && !loadingTimeout;
-
-  // If timeout occurred or we've retried and still have an error, show a partial UI
-  if (loadingTimeout || (companyError && retryCount >= 3)) {
-    return (
-      <SidebarGroup>
-        <SidebarGroupLabel>Pages</SidebarGroupLabel>
-        <SidebarMenu>
+  return (
+    <SidebarGroup>
+      <SidebarGroupLabel className="flex items-center justify-between">
+        <span>Pages</span>
+        {isCompanyLoading && (
+          <div className='h-3 w-3 animate-spin rounded-full border-b-2 border-t-2 border-primary opacity-60'></div>
+        )}
+      </SidebarGroupLabel>
+      <SidebarMenu>
+        {showRetryButton && (
           <SidebarMenuItem>
             <SidebarMenuButton
               side='left'
               className='text-destructive'
               onClick={() => {
-                setLoadingTimeout(false);
                 setRetryCount(0);
                 mutateCompany();
               }}
@@ -505,46 +569,7 @@ export function NavMain() {
               <span className='text-xs text-muted-foreground'>Click to retry</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          {/* Always show Documentation as fallback */}
-          <Collapsible asChild defaultOpen className='group/collapsible'>
-            <SidebarMenuItem>
-              <CollapsibleTrigger asChild>
-                <SidebarMenuButton
-                  side='left'
-                  tooltip='Documentation'
-                  onClick={() => {
-                    if (!open) toggleSidebar();
-                    router.push('/docs');
-                  }}
-                >
-                  <BookOpen />
-                  <span>Documentation</span>
-                </SidebarMenuButton>
-              </CollapsibleTrigger>
-            </SidebarMenuItem>
-          </Collapsible>
-        </SidebarMenu>
-      </SidebarGroup>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <SidebarGroup>
-        <SidebarGroupLabel>Pages</SidebarGroupLabel>
-        <SidebarMenu>
-          <div className='flex items-center justify-center p-4'>
-            <div className='h-5 w-5 animate-spin rounded-full border-b-2 border-t-2 border-primary'></div>
-          </div>
-        </SidebarMenu>
-      </SidebarGroup>
-    );
-  }
-
-  return (
-    <SidebarGroup>
-      <SidebarGroupLabel>Pages</SidebarGroupLabel>
-      <SidebarMenu>
+        )}
         {itemsWithActiveState.map((item) => (
           <Collapsible
             key={item.title}
