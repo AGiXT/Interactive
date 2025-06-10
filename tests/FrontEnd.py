@@ -1798,83 +1798,45 @@ class FrontEndTest:
                 continue
 
         if not toggle_found:
-            # Use JavaScript to find and click the switch next to Data Analysis text
+            # JavaScript fallback with enhanced targeting using switch index approach
             await self.test_action(
-                "Use JavaScript to locate and click the specific switch for Run Data Analysis command",
+                "Using JavaScript fallback to find and click the exact 'Run Data Analysis' switch by index",
                 lambda: self.page.evaluate(
                     """() => {
-                    // PRIORITY: Find exact "Run Data Analysis" h4 elements and their associated switches
-                    const h4Elements = Array.from(document.querySelectorAll('h4'));
-                    
-                    // First, look for exact "Run Data Analysis" text
-                    for (const h4 of h4Elements) {
-                        const text = (h4.textContent || '').trim();
-                        if (text === 'Run Data Analysis') {
-                            console.log('Found Run Data Analysis h4 element');
+                        console.log('Starting enhanced JavaScript fallback for Run Data Analysis switch');
+                        
+                        // Get all switches on the page (excluding show-enabled-only)
+                        const allSwitches = Array.from(document.querySelectorAll('button[role="switch"]:not(#show-enabled-only)'));
+                        console.log(`Found ${allSwitches.length} total switches (excluding show-enabled-only)`);
+                        
+                        // Get all h4 elements to map commands to switch indices
+                        const h4Elements = Array.from(document.querySelectorAll('h4'));
+                        const commandTexts = h4Elements.map(h4 => h4.textContent.trim()).filter(text => text !== 'Show Enabled Only');
+                        console.log('Command texts found:', commandTexts);
+                        
+                        // Find the index of "Run Data Analysis" in the command list
+                        const targetIndex = commandTexts.findIndex(text => text === 'Run Data Analysis');
+                        console.log(`"Run Data Analysis" found at command index: ${targetIndex}`);
+                        
+                        if (targetIndex >= 0 && targetIndex < allSwitches.length) {
+                            const targetSwitch = allSwitches[targetIndex];
+                            console.log(`Clicking switch at index ${targetIndex} for "Run Data Analysis"`);
                             
-                            // Look for switch in the same card container, but NOT the show-enabled-only switch
-                            const card = h4.closest('[class*="card"], div[class*="border"]');
-                            if (card) {
-                                console.log('Found card container for Run Data Analysis');
-                                const switches = card.querySelectorAll('button[role="switch"]');
-                                console.log(`Found ${switches.length} switches in card`);
-                                
-                                for (const switchEl of switches) {
-                                    console.log(`Checking switch with id: ${switchEl.id}`);
-                                    // Skip the "Show Enabled Only" switch and look for the command switch
-                                    if (switchEl.id !== 'show-enabled-only') {
-                                        console.log('Clicking command switch (not show-enabled-only)');
-                                        switchEl.click();
-                                        return true;
-                                    }
-                                }
-                            }
+                            // Scroll the switch into view first
+                            targetSwitch.scrollIntoView({ behavior: 'smooth', block: 'center' });
                             
-                            // Try looking in parent containers with more specificity
-                            let parent = h4.parentElement;
-                            while (parent && parent !== document.body) {
-                                const switches = parent.querySelectorAll('button[role="switch"]:not(#show-enabled-only)');
-                                if (switches.length > 0) {
-                                    console.log(`Found ${switches.length} non-show-enabled-only switches in parent`);
-                                    // Find the switch that's closest to our h4 element
-                                    for (const switchEl of switches) {
-                                        // Check if this switch is in the same immediate container as the h4
-                                        const switchCard = switchEl.closest('[class*="card"], div[class*="border"]');
-                                        const h4Card = h4.closest('[class*="card"], div[class*="border"]');
-                                        if (switchCard === h4Card) {
-                                            console.log('Found matching card switch for Run Data Analysis');
-                                            switchEl.click();
-                                            return true;
-                                        }
-                                    }
-                                }
-                                parent = parent.parentElement;
-                            }
+                            // Wait a moment for scroll to complete, then click
+                            setTimeout(() => {
+                                targetSwitch.click();
+                                console.log('Successfully clicked Run Data Analysis switch');
+                            }, 500);
+                            
+                            return true;
+                        } else {
+                            console.log(`Invalid index ${targetIndex} for switches array length ${allSwitches.length}`);
+                            return false;
                         }
-                    }
-                    
-                    // FALLBACK: Look for exact "Data Analysis" text (OVERRIDE_EXTENSIONS)
-                    for (const h4 of h4Elements) {
-                        const text = (h4.textContent || '').trim();
-                        if (text === 'Data Analysis') {
-                            console.log('Found Data Analysis h4 element (fallback)');
-                            
-                            // Same logic but for Data Analysis
-                            const card = h4.closest('[class*="card"], div[class*="border"]');
-                            if (card) {
-                                const switches = card.querySelectorAll('button[role="switch"]:not(#show-enabled-only)');
-                                for (const switchEl of switches) {
-                                    console.log('Clicking Data Analysis command switch');
-                                    switchEl.click();
-                                    return true;
-                                }
-                            }
-                        }
-                    }
-                    
-                    console.log('No suitable switches found');
-                    return false;
-                }"""
+                    }"""
                 ),
             )
             await self.take_screenshot(
