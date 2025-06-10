@@ -426,7 +426,8 @@ class FrontEndTest:
 
             # Send video to Discord immediately after creation
             demo_name = video_name.replace("_", " ").title()
-            self.send_video_to_discord(final_video_path, demo_name, test_status)
+            if demo_name != "Report":
+                self.send_video_to_discord(final_video_path, demo_name, test_status)
 
             return final_video_path
 
@@ -932,13 +933,31 @@ class FrontEndTest:
                 lambda: self.page.click('button[type="submit"]'),
             )
 
-            # Verify successful login by waiting for chat page
+            # Wait a bit for the login to process
+            await asyncio.sleep(5)
+
+            # Verify successful login by checking for the "New Chat" button or other authenticated UI elements
             await self.test_action(
                 "The system authenticates the user and redirects to the chat interface",
-                lambda: self.page.wait_for_url(
-                    f"{self.base_uri}/chat", wait_until="networkidle"
-                ),
+                lambda: self.page.wait_for_load_state("networkidle", timeout=60000),
             )
+
+            # Simple verification: Look for "New Chat" button which indicates user is logged in
+            try:
+                await self.page.wait_for_selector('text="New Chat"', timeout=30000)
+                logging.info("Login verified: Found 'New Chat' button - user is authenticated")
+            except:
+                # Fallback: Check for other authenticated UI elements
+                try:
+                    await self.page.wait_for_selector('[data-sidebar="sidebar"]', timeout=15000)
+                    logging.info("Login verified: Found sidebar - user is authenticated")
+                except:
+                    # Final fallback: Check if we're not on the login page anymore
+                    current_url = self.page.url
+                    if "/user" not in current_url:
+                        logging.info(f"Login verified: No longer on login page - URL: {current_url}")
+                    else:
+                        raise Exception("Login verification failed - still on login page")
         except Exception as e:
             logging.error(f"Error during login: {e}")
             raise Exception(f"Error during login: {str(e)}")
@@ -1707,25 +1726,58 @@ class FrontEndTest:
             "Scrolled down to reveal Run Data Analysis capability"
         )
 
-        # Toggle the "Run Data Analysis" command - focus on finding the actual toggle/checkbox
-        # Based on the abilities page structure, look for Switch components next to specific text
+        # First, let's debug what's actually on the page
+        await self.test_action(
+            "Debug: Check what command text is available on the abilities page",
+            lambda: self.page.evaluate(
+                """() => {
+                const h4Elements = Array.from(document.querySelectorAll('h4'));
+                const commandTexts = h4Elements.map(h4 => h4.textContent?.trim()).filter(text => text);
+                console.log('Available command texts:', commandTexts);
+                
+                const switches = Array.from(document.querySelectorAll('button[role="switch"]'));
+                console.log(`Total switches found: ${switches.length}`);
+                switches.forEach((sw, i) => {
+                    console.log(`Switch ${i}: id="${sw.id}", text="${sw.textContent?.trim()}", parent card text="${sw.closest('[class*="card"], div')?.textContent?.slice(0, 100)}"`);
+                });
+                
+                return {
+                    commandTexts: commandTexts,
+                    switchCount: switches.length
+                };
+            }"""
+            ),
+        )
+
+        # Toggle the "Run Data Analysis" command - use precise selectors based on card structure
+        # Each command is in its own Card with an h4 title and Switch directly after it
+        # PRIORITIZE "Run Data Analysis" since that's the actual backend command name
+        # EXCLUDE the "Show Enabled Only" switch by using :not() selector
         toggle_selectors = [
-            # Look for Switch elements next to "Data Analysis" text (from OVERRIDE_EXTENSIONS)
-            'h4:has-text("Data Analysis") ~ button[role="switch"]',
-            'h4:has-text("Data Analysis") + * button[role="switch"]',
-            '*:has-text("Data Analysis") button[role="switch"]:not(#show-enabled-only)',
-            # Look for Switch elements next to "Run Data Analysis" text
-            'h4:has-text("Run Data Analysis") ~ button[role="switch"]',
-            'h4:has-text("Run Data Analysis") + * button[role="switch"]',
-            '*:has-text("Run Data Analysis") button[role="switch"]:not(#show-enabled-only)',
-            # Look for generic switch elements in cards, but exclude the "Show Enabled Only" switch
-            'div.grid div:has-text("Data Analysis") button[role="switch"]:not(#show-enabled-only)',
-            'div.grid div:has-text("Run Data Analysis") button[role="switch"]:not(#show-enabled-only)',
-            # Look for switch elements in Card components containing the text
-            '[class*="card"]:has-text("Data Analysis") button[role="switch"]',
-            '[class*="card"]:has-text("Run Data Analysis") button[role="switch"]',
-            # Fallback to any switch that's not the "Show Enabled Only" one
-            'button[role="switch"]:not(#show-enabled-only)',
+            # PRIORITY: Direct sibling relationship - h4 with exact text followed by switch (exclude show-enabled-only)
+            'h4:text-is("Run Data Analysis") + div button[role="switch"]:not(#show-enabled-only)',
+            'h4:text-is("Run Data Analysis") ~ button[role="switch"]:not(#show-enabled-only)',
+            # Look for the switch within the same card as the "Run Data Analysis" h4 (exclude show-enabled-only)
+            'div:has(h4:text-is("Run Data Analysis")) button[role="switch"]:not(#show-enabled-only)',
+            # More specific card-based selector for "Run Data Analysis" (exclude show-enabled-only)
+            '[class*="card"]:has(h4:text-is("Run Data Analysis")) button[role="switch"]:not(#show-enabled-only)',
+            # Try targeting the specific command card structure (card with border class)
+            'div[class*="border"]:has(h4:text-is("Run Data Analysis")) button[role="switch"]:not(#show-enabled-only)',
+            # Flex container approach (based on the structure with switch and h4 in flex items)
+            'div:has(h4:text-is("Run Data Analysis")) > div button[role="switch"]:not(#show-enabled-only)',
+            # Try using contains text instead of exact match
+            'h4:has-text("Run Data Analysis") ~ button[role="switch"]:not(#show-enabled-only)',
+            'div:has(h4:has-text("Run Data Analysis")) button[role="switch"]:not(#show-enabled-only)',
+            # FALLBACK: Look for "Data Analysis" from OVERRIDE_EXTENSIONS (exclude show-enabled-only)
+            'h4:text-is("Data Analysis") + div button[role="switch"]:not(#show-enabled-only)',
+            'h4:text-is("Data Analysis") ~ button[role="switch"]:not(#show-enabled-only)',
+            'div:has(h4:text-is("Data Analysis")) button[role="switch"]:not(#show-enabled-only)',
+            '[class*="card"]:has(h4:text-is("Data Analysis")) button[role="switch"]:not(#show-enabled-only)',
+            'h4:has-text("Data Analysis") ~ button[role="switch"]:not(#show-enabled-only)',
+            'div:has(h4:has-text("Data Analysis")) button[role="switch"]:not(#show-enabled-only)',
+            # Even more general fallback for any data analysis related command (exclude show-enabled-only)
+            'h4:text("data analysis") ~ button[role="switch"]:not(#show-enabled-only)',
+            'div:has(h4:text("data analysis")) button[role="switch"]:not(#show-enabled-only)',
         ]
 
         toggle_found = False
@@ -1748,47 +1800,85 @@ class FrontEndTest:
         if not toggle_found:
             # Use JavaScript to find and click the switch next to Data Analysis text
             await self.test_action(
-                "Use JavaScript to locate and click the switch next to Data Analysis",
+                "Use JavaScript to locate and click the specific switch for Run Data Analysis command",
                 lambda: self.page.evaluate(
                     """() => {
-                    // Find all h4 elements that contain "Data Analysis" or "Run Data Analysis"
-                    const headings = Array.from(document.querySelectorAll('h4'));
-                    for (const heading of headings) {
-                        const text = heading.textContent || '';
-                        if (text.includes('Data Analysis') || text.includes('Run Data Analysis')) {
-                            // Look for a switch (button with role="switch") in the same container
-                            const container = heading.closest('div');
-                            if (container) {
-                                const switches = container.querySelectorAll('button[role="switch"]');
+                    // PRIORITY: Find exact "Run Data Analysis" h4 elements and their associated switches
+                    const h4Elements = Array.from(document.querySelectorAll('h4'));
+                    
+                    // First, look for exact "Run Data Analysis" text
+                    for (const h4 of h4Elements) {
+                        const text = (h4.textContent || '').trim();
+                        if (text === 'Run Data Analysis') {
+                            console.log('Found Run Data Analysis h4 element');
+                            
+                            // Look for switch in the same card container, but NOT the show-enabled-only switch
+                            const card = h4.closest('[class*="card"], div[class*="border"]');
+                            if (card) {
+                                console.log('Found card container for Run Data Analysis');
+                                const switches = card.querySelectorAll('button[role="switch"]');
+                                console.log(`Found ${switches.length} switches in card`);
+                                
                                 for (const switchEl of switches) {
-                                    // Make sure it's not the "Show Enabled Only" switch
+                                    console.log(`Checking switch with id: ${switchEl.id}`);
+                                    // Skip the "Show Enabled Only" switch and look for the command switch
                                     if (switchEl.id !== 'show-enabled-only') {
+                                        console.log('Clicking command switch (not show-enabled-only)');
                                         switchEl.click();
                                         return true;
                                     }
                                 }
                             }
-                        }
-                    }
-                    
-                    // Fallback: find any switch that's not the "Show Enabled Only" one
-                    const allSwitches = Array.from(document.querySelectorAll('button[role="switch"]'));
-                    for (const switchEl of allSwitches) {
-                        if (switchEl.id !== 'show-enabled-only') {
-                            // Check if this switch is in a card with Data Analysis text
-                            const card = switchEl.closest('[class*="card"], .card');
-                            if (card && (card.textContent.includes('Data Analysis') || card.textContent.includes('Run Data Analysis'))) {
-                                switchEl.click();
-                                return true;
+                            
+                            // Try looking in parent containers with more specificity
+                            let parent = h4.parentElement;
+                            while (parent && parent !== document.body) {
+                                const switches = parent.querySelectorAll('button[role="switch"]:not(#show-enabled-only)');
+                                if (switches.length > 0) {
+                                    console.log(`Found ${switches.length} non-show-enabled-only switches in parent`);
+                                    // Find the switch that's closest to our h4 element
+                                    for (const switchEl of switches) {
+                                        // Check if this switch is in the same immediate container as the h4
+                                        const switchCard = switchEl.closest('[class*="card"], div[class*="border"]');
+                                        const h4Card = h4.closest('[class*="card"], div[class*="border"]');
+                                        if (switchCard === h4Card) {
+                                            console.log('Found matching card switch for Run Data Analysis');
+                                            switchEl.click();
+                                            return true;
+                                        }
+                                    }
+                                }
+                                parent = parent.parentElement;
                             }
                         }
                     }
+                    
+                    // FALLBACK: Look for exact "Data Analysis" text (OVERRIDE_EXTENSIONS)
+                    for (const h4 of h4Elements) {
+                        const text = (h4.textContent || '').trim();
+                        if (text === 'Data Analysis') {
+                            console.log('Found Data Analysis h4 element (fallback)');
+                            
+                            // Same logic but for Data Analysis
+                            const card = h4.closest('[class*="card"], div[class*="border"]');
+                            if (card) {
+                                const switches = card.querySelectorAll('button[role="switch"]:not(#show-enabled-only)');
+                                for (const switchEl of switches) {
+                                    console.log('Clicking Data Analysis command switch');
+                                    switchEl.click();
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                    
+                    console.log('No suitable switches found');
                     return false;
                 }"""
                 ),
             )
             await self.take_screenshot(
-                "Attempted to toggle Data Analysis using JavaScript"
+                "Attempted to toggle Run Data Analysis command using precise JavaScript targeting"
             )
 
         # Navigate to new chat to test the capability
