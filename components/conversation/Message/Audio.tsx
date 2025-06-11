@@ -31,12 +31,23 @@ export default function AudioPlayer({ src, autoplay = false }: AudioPlayerProps)
 
   // Register this audio player with the context
   useEffect(() => {
-    registerAudioPlayer(audioIdRef.current, autoplay, setCanAutoplay);
+    const audioId = audioIdRef.current;
+    registerAudioPlayer(audioId, autoplay, setCanAutoplay, audio);
 
     return () => {
-      unregisterAudioPlayer(audioIdRef.current);
+      unregisterAudioPlayer(audioId);
     };
-  }, [autoplay, registerAudioPlayer, unregisterAudioPlayer]);
+  }, [autoplay, registerAudioPlayer, unregisterAudioPlayer, audio]);
+
+  // Cleanup audio element on unmount
+  useEffect(() => {
+    return () => {
+      audio.pause();
+      if (audioSrc) {
+        URL.revokeObjectURL(audioSrc);
+      }
+    };
+  }, [audio, audioSrc]);
 
   // Effect to handle global audio state changes
   useEffect(() => {
