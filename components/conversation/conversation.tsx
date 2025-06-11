@@ -564,8 +564,12 @@ export function Chat({
 
   // Handler for sending messages
   async function chat(messageTextBody, messageAttachedFiles): Promise<string> {
+    // Handle different types of messageTextBody (string or object)
+    const messageText = typeof messageTextBody === 'string' ? messageTextBody : '';
+    const messageFlags = typeof messageTextBody === 'object' ? messageTextBody : {};
+    
     // Don't send empty messages
-    if (!messageTextBody.trim() && Object.keys(messageAttachedFiles).length === 0) {
+    if (!messageText.trim() && Object.keys(messageAttachedFiles).length === 0) {
       return '';
     }
 
@@ -573,7 +577,7 @@ export function Chat({
     messages.push({
       role: 'user',
       content: [
-        { type: 'text', text: messageTextBody },
+        { type: 'text', text: messageText },
         ...Object.entries(messageAttachedFiles).map(([fileName, fileContent]: [string, string]) => ({
           type: `${fileContent.split(':')[1].split('/')[0]}_url`,
           file_name: fileName,
@@ -582,12 +586,21 @@ export function Chat({
           },
         })),
       ],
-      ...(activeCompany?.id ? { company_id: activeCompany?.id } : {}),
+      // Include flags in the message itself
       ...(getCookie('agixt-create-image') ? { create_image: getCookie('agixt-create-image') } : {}),
-      ...(getCookie('agixt-tts') ? { tts: getCookie('agixt-tts') } : {}),
       ...(getCookie('agixt-websearch') ? { websearch: getCookie('agixt-websearch') } : {}),
       ...(getCookie('agixt-analyze-user-input') ? { analyze_user_input: getCookie('agixt-analyze-user-input') } : {}),
+      // Enable TTS automatically for children (roleId 4) or if the TTS cookie is set or if passed via messageFlags
+      ...(activeCompany?.roleId === 4 || getCookie('agixt-tts') || messageFlags.tts ? { tts: 'true' } : {}),
     });
+
+    // Build the request payload with proper structure
+    const requestPayload = {
+      messages: messages,
+      model: getCookie('agixt-agent'),
+      user: interactiveConfig.overrides.conversation,
+      ...(activeCompany?.id ? { company_id: activeCompany?.id } : {}),
+    };
 
     setLoading(true);
 
@@ -600,11 +613,7 @@ export function Chat({
     try {
       const completionResponse = await axios.post(
         `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/chat/completions`,
-        {
-          messages: messages,
-          model: getCookie('agixt-agent'),
-          user: interactiveConfig.overrides.conversation,
-        },
+        requestPayload,
         {
           headers: {
             Authorization: getCookie('jwt'),
