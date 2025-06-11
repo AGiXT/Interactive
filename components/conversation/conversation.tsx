@@ -567,7 +567,7 @@ export function Chat({
     // Handle different types of messageTextBody (string or object)
     const messageText = typeof messageTextBody === 'string' ? messageTextBody : '';
     const messageFlags = typeof messageTextBody === 'object' ? messageTextBody : {};
-    
+
     // Don't send empty messages
     if (!messageText.trim() && Object.keys(messageAttachedFiles).length === 0) {
       return '';
@@ -591,7 +591,7 @@ export function Chat({
       ...(getCookie('agixt-websearch') ? { websearch: getCookie('agixt-websearch') } : {}),
       ...(getCookie('agixt-analyze-user-input') ? { analyze_user_input: getCookie('agixt-analyze-user-input') } : {}),
       // Enable TTS automatically for children (roleId 4) or if the TTS cookie is set or if passed via messageFlags
-      ...(activeCompany?.roleId === 4 || getCookie('agixt-tts') || messageFlags.tts ? { tts: 'true' } : {}),
+      ...(activeCompany?.roleId === 4 ? { tts: 'true' } : {}),
     });
 
     // Build the request payload with proper structure

@@ -14,16 +14,21 @@ import { LuCopy, LuDownload, LuPen as LuEdit, LuGitFork, LuThumbsDown, LuThumbsU
 import { mutate } from 'swr';
 import { InteractiveConfigContext } from '@/components/interactive/InteractiveConfigContext';
 import { useConversations } from '@/components/interactive/useConversation';
+import { useAudioContext } from '@/components/conversation/Message/AudioContext';
 import MessageDialog from '@/components/conversation/Message/Dialog';
 import { ChatItem } from '@/components/conversation/Message/Message';
 
 const ForwardedLuEdit = React.forwardRef<HTMLSpanElement, React.ComponentProps<typeof LuEdit>>((props, ref) => (
-  <span ref={ref}><LuEdit {...props} /></span>
+  <span ref={ref}>
+    <LuEdit {...props} />
+  </span>
 ));
 ForwardedLuEdit.displayName = 'ForwardedLuEdit';
 
 const ForwardedLuTrash2 = React.forwardRef<HTMLSpanElement, React.ComponentProps<typeof LuTrash2>>((props, ref) => (
-  <span ref={ref}><LuTrash2 {...props} /></span>
+  <span ref={ref}>
+    <LuTrash2 {...props} />
+  </span>
 ));
 ForwardedLuTrash2.displayName = 'ForwardedLuTrash2';
 
@@ -52,6 +57,7 @@ export function MessageActions({
   const state = useContext(InteractiveConfigContext);
   const { data: convData } = useConversations();
   const { toast } = useToast();
+  const { setCurrentlyPlaying, stopAllAudio } = useAudioContext();
   const [vote, setVote] = useState(chatItem.rlhf ? (chatItem.rlhf.positive ? 1 : -1) : 0);
   const [open, setOpen] = useState(false);
   const [feedback, setFeedback] = useState('');
@@ -60,6 +66,7 @@ export function MessageActions({
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const ttsAudioId = `tts-${chatItem.id}`;
 
   const handleTTS = async () => {
     if (!state.overrides?.conversation) return;
@@ -81,9 +88,13 @@ export function MessageActions({
       const url = URL.createObjectURL(blob);
       setAudioUrl(url);
 
-      // Play audio automatically when loaded
+      // Stop all other audio before playing TTS
+      stopAllAudio();
+
+      // Play audio automatically when loaded and set as currently playing
       if (audioRef.current) {
         audioRef.current.play();
+        setCurrentlyPlaying(ttsAudioId);
       }
     } catch (error) {
       toast({
@@ -96,6 +107,28 @@ export function MessageActions({
     }
   };
 
+  // Handle TTS audio events
+  React.useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleEnded = () => {
+      setCurrentlyPlaying(null);
+    };
+
+    const handlePause = () => {
+      setCurrentlyPlaying(null);
+    };
+
+    audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('pause', handlePause);
+
+    return () => {
+      audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('pause', handlePause);
+    };
+  }, [audioUrl, setCurrentlyPlaying]);
+
   return (
     <div className={cn('flex', chatItem.role === 'USER' && 'justify-end items-center')}>
       {(audios?.message?.trim() || !audios) && (
@@ -103,7 +136,7 @@ export function MessageActions({
           {chatItem.role !== 'USER' && process.env.NEXT_PUBLIC_AGIXT_RLHF === 'true' && (
             <>
               <TooltipBasic title='Provide Positive Feedback'>
-                <div className="inline-flex">
+                <div className='inline-flex'>
                   <Button
                     variant='ghost'
                     size='icon'
@@ -117,7 +150,7 @@ export function MessageActions({
                 </div>
               </TooltipBasic>
               <TooltipBasic title='Provide Negative Feedback'>
-                <div className="inline-flex">
+                <div className='inline-flex'>
                   <Button
                     variant='ghost'
                     size='icon'
@@ -140,7 +173,7 @@ export function MessageActions({
                 </audio>
               ) : (
                 <TooltipBasic title='Speak Message'>
-                  <div className="inline-flex">
+                  <div className='inline-flex'>
                     <Button variant='ghost' size='icon' onClick={handleTTS} disabled={isLoadingAudio}>
                       {isLoadingAudio ? <Loader2 className='h-4 w-4 animate-spin' /> : <Volume2 className='h-4 w-4' />}
                     </Button>
@@ -150,13 +183,13 @@ export function MessageActions({
             </>
           )}
           <TooltipBasic title='Fork Conversation'>
-            <div className="inline-flex">
+            <div className='inline-flex'>
               <Button
                 variant='ghost'
                 size='icon'
                 onClick={async () => {
                   if (!state.overrides?.conversation) return;
-                  
+
                   try {
                     const response = await fetch(
                       `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/conversation/fork/${state.overrides.conversation}/${chatItem.id}`,
@@ -190,7 +223,7 @@ export function MessageActions({
             </div>
           </TooltipBasic>
           <TooltipBasic title='Copy Message'>
-            <div className="inline-flex">
+            <div className='inline-flex'>
               <Button
                 variant='ghost'
                 size='icon'
@@ -207,7 +240,7 @@ export function MessageActions({
             </div>
           </TooltipBasic>
           <TooltipBasic title='Download Message'>
-            <div className="inline-flex">
+            <div className='inline-flex'>
               <Button
                 variant='ghost'
                 size='icon'
@@ -240,11 +273,7 @@ export function MessageActions({
                   if (state.overrides?.conversation && convData) {
                     const conversation = convData.find((item) => item.id === state.overrides?.conversation);
                     if (conversation?.name) {
-                      await state.agixt.updateConversationMessage(
-                        conversation.name,
-                        chatItem.id,
-                        updatedMessage,
-                      );
+                      await state.agixt.updateConversationMessage(conversation.name, chatItem.id, updatedMessage);
                       mutate('/conversation/' + state.overrides.conversation);
                     }
                   }
@@ -271,10 +300,7 @@ export function MessageActions({
                   if (state.overrides?.conversation && convData) {
                     const conversation = convData.find((item) => item.id === state.overrides?.conversation);
                     if (conversation?.name) {
-                      await state.agixt.deleteConversationMessage(
-                        conversation.name,
-                        chatItem.id,
-                      );
+                      await state.agixt.deleteConversationMessage(conversation.name, chatItem.id);
                       mutate('/conversation/' + state.overrides.conversation);
                     }
                   }
