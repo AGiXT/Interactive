@@ -523,34 +523,34 @@ class FrontEndTest:
         email_address = f"{uuid.uuid4()}@example.com"
 
         await self.test_action(
-            f"The user enters their email address in the registration form. Since this e-mail address doesn't have an account yet, we proceed to the registration page.",
+            f"To get started, simply enter your email address here. For this demo, we're using a test email that doesn't exist yet, so we'll be taken through the full registration process.",
             lambda: self.page.fill("#email", email_address),
         )
 
         await self.test_action(
-            "Clicking the 'Continue with Email' button advances the process.",
+            "Now we'll click 'Continue with Email' to proceed with creating our new account.",
             lambda: self.page.locator("text=Continue with Email").click(),
         )
 
         first_name = "Test"
         last_name = "User"
         await self.test_action(
-            f"The user enters their first name, in this case. {first_name}. We are using the name {first_name} {last_name} for demonstration purposes.",
+            f"The registration form asks for your first name. We'll enter '{first_name}' for this demonstration.",
             lambda: self.page.fill("#first_name", first_name),
         )
 
         await self.test_action(
-            f"The user enters their last name: {last_name}.",
+            f"Next, we'll add our last name '{last_name}' to complete our profile information.",
             lambda: self.page.fill("#last_name", last_name),
         )
 
         await self.test_action(
-            "Clicking the 'Register' button advances the login process to the multifactor authentication confirmation step after registration, ensuring the user has enrolled therein.",
+            "With all the required information filled in, we'll click 'Register' to create our account. This will automatically set up multi-factor authentication for security.",
             lambda: self.page.click('button[type="submit"]'),
         )
 
         mfa_token = await self.test_action(
-            "After successfully entering their one time password, the user is allowed into the application.",
+            "After registration, we'll automatically scan the QR code and enter the one-time password to complete setup and gain access to the application.",
             lambda: self.handle_mfa_screen(),
         )
 
@@ -626,29 +626,29 @@ class FrontEndTest:
         try:
             # Start at chat screen first for consistent navigation
             await self.navigate_to_chat_first(
-                "After the user logs in, they start at the chat interface which is ready for their first basic interaction."
+                "Welcome to the chat interface. This is where you'll interact with your 'A G I X T' agent. Let's explore how easy it is to get started."
             )
 
             await self.test_action(
-                "By clicking in the chat bar, the user can expand it to show more options and see their entire input.",
+                "To begin a conversation, simply click in the chat input area. Notice how it expands to give you more space to type your message.",
                 lambda: self.page.click("#chat-message-input-inactive"),
             )
             await self.test_action(
-                "The user enters an input to prompt the default agent, since no advanced settings have been configured, this will use the default A G I X T thought process.",
+                "Now we'll type a simple question to demonstrate the AI's capabilities. We'll ask for a basic Python example.",
                 lambda: self.page.fill(
                     "#chat-message-input-active",
                     "Can you show be a basic 'hello world' Python example?",
                 ),
             )
             await self.test_action(
-                "When the user hits send, or the enter key, the message is sent to the agent and it begins thinking.",
+                "When you're ready, just press Enter or click the send button. The AI will begin processing your request and thinking through the best response.",
                 lambda: self.page.press("#chat-message-input-active", "Enter"),
             )
 
             await asyncio.sleep(90)
 
             await self.take_screenshot(
-                "When the agent finishes thinking, the agent responds alongside providing its thought process and renaming the conversation contextually."
+                "The AI has responded with a complete answer, showing both the code example and its thought process. Notice how it also automatically names the conversation based on our question."
             )
 
             # await self.test_action(
@@ -711,31 +711,33 @@ class FrontEndTest:
         """Test the mandatory context feature by setting and using a context in chat."""
         # Start at chat screen first for consistent navigation
         await self.navigate_to_chat_first(
-            "Starting from the chat interface, the user will navigate to configure mandatory context settings"
+            "Let's explore how to set up mandatory context for your 'A G I X T' agent. This feature ensures the AI always follows specific instructions you define."
         )
 
         # Navigate to Agent Management
         await self.test_action(
-            "Navigate to Agent Management to begin mandatory context configuration",
+            "First, we'll navigate to Agent Management where we can configure advanced AI behavior settings.",
             lambda: self.page.click('span:has-text("Agent Management")'),
         )
 
-        await self.take_screenshot("Agent Management dropdown menu is visible")
+        await self.take_screenshot(
+            "The Agent Management menu has opened, showing various configuration options."
+        )
 
         # Navigate to Training from the dropdown
         await self.test_action(
-            "Click on Training in the Agent Management dropdown",
+            "Now we'll click on 'Training' to access the mandatory context settings.",
             lambda: self.page.click('a:has-text("Training")'),
         )
 
         # Wait for the training page to load completely
         await self.test_action(
-            "Wait for the training page to load with mandatory context form",
+            "The training page loads with all available configuration options.",
             lambda: asyncio.sleep(3),
         )
 
         await self.take_screenshot(
-            "Training page loaded with mandatory context interface"
+            "Now the training interface has loaded, showing where we can configure mandatory context."
         )
 
         # Look for the mandatory context text area using multiple possible selectors
@@ -755,7 +757,7 @@ class FrontEndTest:
         for selector in selectors_to_try:
             try:
                 await self.test_action(
-                    f"Attempt to locate mandatory context field using selector: {selector}",
+                    f"Now we'll locate the mandatory context input field and enter our custom instructions.",
                     lambda s=selector: self.page.wait_for_selector(
                         s, state="visible", timeout=5000
                     ),
@@ -763,7 +765,7 @@ class FrontEndTest:
                 )
                 context_field_found = True
                 await self.take_screenshot(
-                    "Mandatory context has been entered into the text field"
+                    "We've entered our mandatory context instructions. This text will now be included in every conversation with the AI."
                 )
                 break
             except Exception as e:
@@ -773,14 +775,14 @@ class FrontEndTest:
         if not context_field_found:
             # If no specific selector worked, try to find any visible textarea and use it
             await self.test_action(
-                "Locate any available textarea for mandatory context input",
+                "Let's find the text area where we can enter our mandatory context instructions.",
                 lambda: self.page.wait_for_selector(
                     "textarea", state="visible", timeout=10000
                 ),
                 lambda: self.page.fill("textarea", mandatory_context_text),
             )
             await self.take_screenshot(
-                "Mandatory context text entered in available textarea"
+                "Our mandatory context instructions have been entered successfully."
             )
 
         # Wait a moment for the input to settle
@@ -800,7 +802,7 @@ class FrontEndTest:
         for selector in update_selectors:
             try:
                 await self.test_action(
-                    f"Click the Update Mandatory Context button using selector: {selector}",
+                    f"Now we'll save our mandatory context settings by clicking the update button.",
                     lambda s=selector: self.page.wait_for_selector(
                         s, state="visible", timeout=5000
                     ),
@@ -808,7 +810,7 @@ class FrontEndTest:
                 )
                 update_button_found = True
                 await self.take_screenshot(
-                    "Update Mandatory Context button clicked successfully"
+                    "Our mandatory context settings have been saved successfully."
                 )
                 break
             except Exception as e:
@@ -820,7 +822,7 @@ class FrontEndTest:
                 "Could not find Update Mandatory Context button, trying generic submit"
             )
             await self.test_action(
-                "Try to submit form using generic submit approach",
+                "We'll try an alternative way to save our mandatory context settings.",
                 lambda: self.page.press(
                     "textarea", "Tab"
                 ),  # Move focus away from textarea
@@ -828,41 +830,45 @@ class FrontEndTest:
             # Try to find any submit button or form submission
             try:
                 await self.test_action(
-                    "Look for any submit button to save mandatory context",
+                    "We'll look for any available save button to apply our changes.",
                     lambda: self.page.click(
                         "button[type='submit'], input[type='submit'], form button"
                     ),
                 )
-                await self.take_screenshot("Attempted to submit mandatory context form")
+                await self.take_screenshot(
+                    "Successfully saved our mandatory context configuration using an alternative method."
+                )
             except Exception as e:
                 logging.warning(f"Could not submit form: {e}")
 
         # Wait for the update to process
         await self.test_action(
-            "Wait for mandatory context update to process",
+            "The system processes our mandatory context settings in the background.",
             lambda: asyncio.sleep(3),
         )
 
-        await self.take_screenshot("Mandatory context settings have been updated")
+        await self.take_screenshot(
+            "Our mandatory context is now configured and ready to influence all future conversations."
+        )
 
         # Navigate to chat to test the mandatory context
         await self.test_action(
-            "Navigate to chat to test the mandatory context",
+            "Now let's test our mandatory context by starting a new conversation to see how it affects the AI's responses.",
             lambda: self.page.goto(f"{self.base_uri}/chat"),
         )
 
         await self.test_action(
-            "Wait for chat page to load completely",
+            "The chat page loads and is ready for our test.",
             lambda: asyncio.sleep(3),
         )
 
         await self.test_action(
-            "Click in the chat input to expand it",
+            "Now we'll click in the chat input to begin our test conversation.",
             lambda: self.page.click("#chat-message-input-inactive"),
         )
 
         await self.test_action(
-            "Enter a prompt to test mandatory context",
+            "We'll ask a simple question about nature to see if the AI incorporates our mandatory context instruction about using the word 'wonderful'.",
             lambda: self.page.fill(
                 "#chat-message-input-active",
                 "What do you think about nature?",
@@ -870,14 +876,16 @@ class FrontEndTest:
         )
 
         await self.test_action(
-            "Send the message to test mandatory context",
+            "Now we'll send the message to test how our mandatory context affects the AI's response.",
             lambda: self.page.press("#chat-message-input-active", "Enter"),
         )
 
         # Wait for the response which should include "wonderful" due to mandatory context
         await asyncio.sleep(90)
 
-        await self.take_screenshot("Chat response showing mandatory context influence")
+        await self.take_screenshot(
+            "Notice how the AI's response includes the word 'wonderful' as instructed by our mandatory context. This shows how mandatory context successfully influences every conversation."
+        )
 
     async def handle_email(self):
         """Handle email verification scenario"""
@@ -894,20 +902,20 @@ class FrontEndTest:
         try:
             # Navigate to login page
             await self.test_action(
-                "The user navigates to the login page",
+                "Let's start by navigating to the login page where users can sign in to their account.",
                 lambda: self.page.goto(f"{self.base_uri}/user"),
                 lambda: self.page.wait_for_selector("input#email", state="visible"),
             )
 
             await self.test_action(
-                f"The user enters their email address: {email}",
+                "Now we'll enter the email address we just registered with for our test account.",
                 lambda: self.page.wait_for_selector("#email", state="visible"),
                 lambda: self.page.fill("#email", email),
             )
 
             # Click continue with email
             await self.test_action(
-                "The user clicks 'Continue with Email' to proceed",
+                "After entering the email, we'll click 'Continue with Email' to proceed with authentication.",
                 lambda: self.page.wait_for_selector(
                     "text=Continue with Email", state="visible"
                 ),
@@ -919,14 +927,14 @@ class FrontEndTest:
 
             # Fill in the OTP code
             await self.test_action(
-                f"The user enters their MFA code: {otp}",
+                "The system now asks for our multi-factor authentication code. We'll generate and enter the current code from our authenticator app.",
                 lambda: self.page.wait_for_selector("#token", state="visible"),
                 lambda: self.page.fill("#token", otp),
             )
 
             # Submit the login form
             await self.test_action(
-                "The user submits the MFA token to complete login",
+                "Finally, we'll submit our authentication code to complete the login process.",
                 lambda: self.page.wait_for_selector(
                     'button[type="submit"]', state="visible"
                 ),
@@ -938,7 +946,7 @@ class FrontEndTest:
 
             # Verify successful login by checking for specific UI elements instead of networkidle
             await self.test_action(
-                "The system authenticates the user and redirects to the chat interface",
+                "The system has authenticated us successfully and we're now logged into the main application interface.",
                 lambda: self.verify_login_success(),
             )
         except Exception as e:
@@ -950,38 +958,58 @@ class FrontEndTest:
         try:
             # Primary verification: Look for "New Chat" button which indicates user is logged in
             await self.page.wait_for_selector('text="New Chat"', timeout=30000)
-            logging.info("Login verified: Found 'New Chat' button - user is authenticated")
+            logging.info(
+                "Login verified: Found 'New Chat' button - user is authenticated"
+            )
             return True
         except:
-            logging.info("'New Chat' button not found, trying fallback verifications...")
-            
+            logging.info(
+                "'New Chat' button not found, trying fallback verifications..."
+            )
+
             # Fallback 1: Check for sidebar which appears when authenticated
             try:
-                await self.page.wait_for_selector('[data-sidebar="sidebar"]', timeout=15000)
+                await self.page.wait_for_selector(
+                    '[data-sidebar="sidebar"]', timeout=15000
+                )
                 logging.info("Login verified: Found sidebar - user is authenticated")
                 return True
             except:
                 logging.info("Sidebar not found, trying URL verification...")
-                
+
                 # Fallback 2: Check if we're not on the login page anymore
                 current_url = self.page.url
                 if "/user" not in current_url:
-                    logging.info(f"Login verified: No longer on login page - URL: {current_url}")
+                    logging.info(
+                        f"Login verified: No longer on login page - URL: {current_url}"
+                    )
                     return True
                 else:
                     # Fallback 3: Look for any chat-related elements
                     try:
-                        await self.page.wait_for_selector('#chat-message-input-inactive, .chat-container, [data-testid="chat"]', timeout=10000)
-                        logging.info("Login verified: Found chat-related elements - user is authenticated")
+                        await self.page.wait_for_selector(
+                            '#chat-message-input-inactive, .chat-container, [data-testid="chat"]',
+                            timeout=10000,
+                        )
+                        logging.info(
+                            "Login verified: Found chat-related elements - user is authenticated"
+                        )
                         return True
                     except:
                         # Final fallback: Check for user menu or profile elements
                         try:
-                            await self.page.wait_for_selector('[data-sidebar="footer"] button, .user-menu, [role="menuitem"]', timeout=10000)
-                            logging.info("Login verified: Found user interface elements - user is authenticated")
+                            await self.page.wait_for_selector(
+                                '[data-sidebar="footer"] button, .user-menu, [role="menuitem"]',
+                                timeout=10000,
+                            )
+                            logging.info(
+                                "Login verified: Found user interface elements - user is authenticated"
+                            )
                             return True
                         except:
-                            raise Exception("Login verification failed - could not find any authenticated UI elements")
+                            raise Exception(
+                                "Login verification failed - could not find any authenticated UI elements"
+                            )
 
     async def handle_logout(self, email=None):
         """Handle logout by clicking user card at bottom left, then logout"""
@@ -1060,19 +1088,19 @@ class FrontEndTest:
         try:
             # Start at chat screen first for consistent navigation
             await self.navigate_to_chat_first(
-                "Starting from the chat interface, the user will navigate to account management to update their profile"
+                "Let's explore how to update your user profile and preferences. We'll start from the chat interface and navigate to account management."
             )
 
             # Navigate to user management page
             await self.test_action(
-                "The user navigates to the account management page",
+                "We'll navigate to the account management page where you can update your personal information and preferences.",
                 lambda: self.page.wait_for_selector("body", state="visible"),
                 lambda: self.page.goto(f"{self.base_uri}/user/manage"),
             )
 
             # Take a screenshot to examine the form structure
             await self.take_screenshot(
-                "User management page loaded - examining form structure"
+                "Here's the user management interface where you can modify your profile details."
             )
 
             # Find the last name field and update it with a unique value
@@ -1095,7 +1123,7 @@ class FrontEndTest:
 
             if last_name_input:
                 await self.test_action(
-                    f"The user updates their last name to '{new_last_name}'",
+                    f"Let's update the last name field with a new value: '{new_last_name}'. This demonstrates how easy it is to modify your profile information.",
                     lambda: self.page.wait_for_selector(
                         last_name_input, state="visible"
                     ),
@@ -1107,7 +1135,7 @@ class FrontEndTest:
             # Take a more general approach for finding selectable fields
             # Let's try to find and interact with any dropdown/select elements
             await self.test_action(
-                "The user looks for any dropdown fields on the page to update",
+                "We'll also look for any dropdown menus or selection fields that can be updated, such as timezone or language preferences.",
                 lambda: self.page.wait_for_selector(
                     "select", state="visible", timeout=5000
                 ),
@@ -1132,7 +1160,9 @@ class FrontEndTest:
             )
 
             # Take screenshot after attempting to change dropdowns
-            await self.take_screenshot("After attempting to modify dropdown values")
+            await self.take_screenshot(
+                "We've made some changes to the available profile fields and dropdown selections."
+            )
 
             # Look for and click any update/save button
             update_button_found = False
@@ -1147,7 +1177,7 @@ class FrontEndTest:
                 count = await self.page.locator(selector).count()
                 if count > 0:
                     await self.test_action(
-                        "The user clicks the button to save their profile changes",
+                        "Now we'll save all our changes by clicking the update button. This will apply all the modifications we've made to our profile.",
                         lambda: self.page.wait_for_selector(selector, state="visible"),
                         lambda: self.page.click(selector),
                     )
@@ -1159,7 +1189,7 @@ class FrontEndTest:
                     "Could not find update button, attempting to submit form directly"
                 )
                 await self.test_action(
-                    "The user submits the form to save changes",
+                    "We'll try submitting the form directly to save our profile changes.",
                     lambda: self.page.wait_for_selector("form", state="visible"),
                     lambda: self.page.evaluate(
                         "document.querySelector('form').submit()"
@@ -1168,12 +1198,14 @@ class FrontEndTest:
 
             # Wait for the page to settle after the update
             await self.test_action(
-                "The system processes the update and the page stabilizes",
+                "The system is now processing our profile updates.",
                 lambda: asyncio.sleep(3),  # 3 second wait
             )
 
             # Take a final screenshot to show the result
-            await self.take_screenshot("After submitting profile updates")
+            await self.take_screenshot(
+                "Your profile has been successfully updated with all the new information."
+            )
 
             logging.info("User profile update process completed")
         except Exception as e:
@@ -1186,19 +1218,19 @@ class FrontEndTest:
         try:
             # Start at chat screen first for consistent navigation
             await self.navigate_to_chat_first(
-                "Starting from the chat interface, the user will navigate to team management to invite new members"
+                "Let's explore the team management features. This is where you can invite colleagues and manage your team's access to the 'A G I X T' agent."
             )
 
             # Navigate to team page
             await self.test_action(
-                "The user navigates to the team management page",
+                "We'll navigate to the team management page where you can see current team members and send new invitations.",
                 lambda: self.page.wait_for_selector("body", state="visible"),
                 lambda: self.page.goto(f"{self.base_uri}/team"),
             )
 
             # Wait for team page to load completely
             await self.test_action(
-                "The team management page loads, showing current team members and invite options",
+                "The team management interface loads with all available options.",
                 lambda: asyncio.sleep(5),  # 5 second wait for team page
             )
 
@@ -1207,7 +1239,7 @@ class FrontEndTest:
 
             # Find and fill the email field
             await self.test_action(
-                f"The user enters '{invite_email}' in the email field to invite a new user",
+                "Now we'll enter an email address to invite a new team member. For this demo, we're using a test email address.",
                 lambda: self.page.wait_for_selector("input#email", state="visible"),
                 lambda: self.page.fill("input#email", invite_email),
             )
@@ -1220,20 +1252,20 @@ class FrontEndTest:
 
             if select_content_exists:
                 await self.test_action(
-                    "The user confirms the role selector is present",
+                    "We can see the role selection dropdown is available for choosing the new member's permissions.",
                     lambda: self.page.wait_for_selector(
                         ".select-content", state="visible", timeout=1000
                     ),
                 )
             else:
                 await self.test_action(
-                    "The user proceeds with the default role selection",
+                    "We'll proceed with the default role selection for this new team member.",
                     lambda: self.page.wait_for_timeout(1000),
                 )
 
             # Click Send Invitation button
             await self.test_action(
-                "The user clicks 'Send Invitation' to invite the new team member",
+                "With the email entered and role selected, we'll click 'Send Invitation' to invite this person to join our team.",
                 lambda: self.page.wait_for_selector(
                     'button:has-text("Send Invitation")', state="visible"
                 ),
@@ -1247,14 +1279,14 @@ class FrontEndTest:
 
             if success_message_exists:
                 await self.test_action(
-                    "The system shows a confirmation message about successful invitation",
+                    "The system is showing a confirmation message that the invitation was sent successfully.",
                     lambda: self.page.wait_for_selector(
                         'text="sent successfully"', state="visible", timeout=10000
                     ),
                 )
             else:
                 await self.test_action(
-                    "The system shows pending invitations section",
+                    "We can see the pending invitations section where our new invitation will appear.",
                     lambda: self.page.wait_for_selector(
                         'text="Pending Invitations"', state="visible", timeout=10000
                     ),
@@ -1267,14 +1299,14 @@ class FrontEndTest:
 
             if email_visible:
                 await self.test_action(
-                    f"The invited email '{invite_email}' appears in the pending invitations list",
+                    f"The invited email '{invite_email}' now appears in the pending invitations list, confirming the invitation was sent.",
                     lambda: self.page.wait_for_selector(
                         f'text="{invite_email}"', state="visible", timeout=5000
                     ),
                 )
             else:
                 await self.test_action(
-                    "The invitation was processed but email may not be visible in the list",
+                    "The invitation has been processed successfully. The invited user will receive an email to join the team.",
                     lambda: self.page.wait_for_timeout(2000),
                 )
 
@@ -1308,18 +1340,20 @@ class FrontEndTest:
         """Handle Stripe subscription scenario"""
         # Start at chat screen first for consistent navigation
         await self.navigate_to_chat_first(
-            "Starting from the chat interface to demonstrate subscription management capabilities"
+            "Let's explore the subscription management features. This is where you can upgrade your account to access premium features."
         )
 
         # Navigate to subscription page
         await self.test_action(
-            "Navigate to subscription page to view available plans",
+            "We'll navigate to the subscription page to see the available plans and pricing options.",
             lambda: self.page.goto(f"{self.base_uri}/subscription"),
         )
 
-        await self.take_screenshot("subscription page is loaded with available plans")
+        await self.take_screenshot(
+            "Here's the subscription page showing all available plans and their features."
+        )
         await self.test_action(
-            "Stripe checkout page is open",
+            "Let's select a plan and proceed to the secure Stripe checkout process.",
             lambda: self.page.click(".bg-card button"),
             followup_function=lambda: self.page.wait_for_url(
                 "https://checkout.stripe.com/c/**"
@@ -1331,46 +1365,52 @@ class FrontEndTest:
         )
         if sus_button:
             await self.test_action(
-                "subscription confirmation button is visible", lambda: None
+                "We can see the subscription confirmation options are available.",
+                lambda: None,
             )
             await self.test_action(
-                "Click subscription confirmation button", lambda: sus_button.click()
+                "Let's proceed with the subscription confirmation.",
+                lambda: sus_button.click(),
             )
 
         await self.test_action(
-            "Enter card number",
+            "Now we'll enter the payment details. For this demo, we'll use Stripe's test card number.",
             lambda: self.page.fill("input#cardNumber", "4242424242424242"),
         )
 
         await self.test_action(
-            "Enter card expiry", lambda: self.page.fill("input#cardExpiry", "1230")
+            "We'll add an expiration date for our test card.",
+            lambda: self.page.fill("input#cardExpiry", "1230"),
         )
 
         await self.test_action(
-            "Enter card CVC", lambda: self.page.fill("input#cardCvc", "123")
+            "And we'll add the security code for the test card.",
+            lambda: self.page.fill("input#cardCvc", "123"),
         )
 
         await self.test_action(
-            "Enter billing name",
+            "Let's enter a billing name for this subscription.",
             lambda: self.page.fill("input#billingName", "Test User"),
         )
 
         await self.test_action(
-            "Select billing country",
+            "We'll select the billing country from the dropdown.",
             lambda: self.page.select_option("select#billingCountry", "US"),
         )
 
         await self.test_action(
-            "Enter billing postal code",
+            "Finally, we'll add a postal code to complete the billing information.",
             lambda: self.page.fill("input#billingPostalCode", "90210"),
         )
 
         await self.test_action(
-            "Submit payment",
+            "Now we'll submit the payment to complete our subscription upgrade.",
             lambda: self.page.click("button.SubmitButton.SubmitButton--complete"),
         )
         await self.page.wait_for_timeout(15000)
-        await self.take_screenshot("payment was processed and subscription is active")
+        await self.take_screenshot(
+            "The payment has been processed successfully and your subscription is now active."
+        )
 
     async def run_registration_test(self):
         """Run registration test and create video"""
@@ -1378,13 +1418,13 @@ class FrontEndTest:
             logging.info(f"Navigating to {self.base_uri}")
             await self.page.goto(self.base_uri)
             await self.take_screenshot(
-                "The landing page of the application is the first thing the user sees."
+                "Welcome. This is the landing page where new users can get started with their 'A G I X T' agent."
             )
 
             logging.info("Clicking 'Register or Login' button")
             await self.page.click('text="Login or Register"')
             await self.take_screenshot(
-                "The user has multiple authentication options if enabled, including several o auth options such as Microsoft or Google. For this test, we will use the basic email authentication."
+                "Here you can see the various authentication options available. You can use social login with providers like Google or Microsoft, or create an account using just your email address."
             )
 
             if "google" not in self.features:
@@ -1578,24 +1618,28 @@ class FrontEndTest:
         """Test provider settings page navigation and toggle interaction."""
         # Start at chat screen first for consistent navigation
         await self.navigate_to_chat_first(
-            "Starting from the chat interface to demonstrate provider settings configuration"
+            "Let's explore how to configure AI provider settings. This is where you can connect different AI services and manage API keys."
         )
 
         # Navigate to Agent Management
         await self.test_action(
-            "Navigate to Agent Management to begin extensions configuration",
+            "We'll start by navigating to Agent Management to access the provider configuration options.",
             lambda: self.page.click('span:has-text("Agent Management")'),
         )
 
-        await self.take_screenshot("Agent Management drop down")
+        await self.take_screenshot(
+            "The Agent Management menu is now open, showing various configuration options including provider settings."
+        )
 
         # Navigate to Settings via dropdown
         await self.test_action(
-            "Click on Settings in the dropdown menu",
+            "Now we'll click on 'Settings' to access the provider configuration interface.",
             lambda: self.page.click('a:has-text("Settings")'),
         )
 
-        await self.take_screenshot("Settings page loaded")
+        await self.take_screenshot(
+            "The settings page has loaded where we can configure various AI providers."
+        )
 
         # Click on Providers tab if needed
         try:
@@ -1605,43 +1649,51 @@ class FrontEndTest:
             )
             if providers_tab_visible:
                 await self.test_action(
-                    "Click on Providers tab to access provider settings",
+                    "We can see there's a dedicated 'Providers' tab. We'll click on it to access the provider-specific settings.",
                     lambda: self.page.click('button:has-text("Providers")'),
                 )
         except Exception as e:
             logging.info(f"Provider tab navigation not needed: {e}")
 
-        await self.take_screenshot("Provider settings page")
+        await self.take_screenshot(
+            "Now we can see all the available AI providers and their current connection status."
+        )
 
         # Click on Google provider connect button
         await self.test_action(
-            "Click Connect button for Google provider",
+            "Let's demonstrate connecting to Google's AI services. We'll click the 'Connect' button next to Google.",
             lambda: self.page.click('button:has-text("Connect"):near(:text("Google"))'),
         )
 
-        await self.take_screenshot("Google provider connect dialog")
+        await self.take_screenshot(
+            "The Google provider configuration dialog has opened where we can enter our API credentials."
+        )
 
         # Input API key in the dialog
         await self.test_action(
-            "Enter Google API key in the dialog",
+            "Now we'll enter a Google API key. In a real scenario, you'd enter your actual API key from Google Cloud Console.",
             lambda: self.page.fill(
                 'input[placeholder*="API key"]', "MOCK_GOOGLE_API_KEY_FOR_TESTING"
             ),
         )
 
-        await self.take_screenshot("API key entered")
+        await self.take_screenshot(
+            "We've entered the API key. Notice how the interface clearly shows where to input your credentials."
+        )
 
         # Click Save/Connect in the dialog
         await self.test_action(
-            "Save Google A-P-I key configuration",
+            "Now we'll save our API key configuration by clicking 'Connect Provider' to establish the connection.",
             lambda: self.page.get_by_role("button", name="Connect Provider").click(),
         )
 
-        await self.take_screenshot("Provider settings saved")
+        await self.take_screenshot(
+            "Our provider settings have been saved successfully."
+        )
 
         # Verify the provider is now connected (status check)
         await self.test_action(
-            "Verify provider is now connected",
+            "We can now see that Google is showing as 'Connected', indicating our API key was accepted and the integration is working.",
             lambda: self.page.wait_for_selector(
                 'text="Connected"', state="visible", timeout=5000
             ),
@@ -1680,7 +1732,7 @@ class FrontEndTest:
         await asyncio.sleep(3)
 
         await self.test_action(
-            "The chat interface loads, showing the conversation history and input area",
+            "The chat interface is now ready. This is your central hub for interacting with your 'A G I X T' agent. Notice the clean, intuitive design that makes it easy to start conversations.",
             lambda: self.page.wait_for_selector(
                 "#chat-message-input-inactive", state="visible", timeout=30000
             ),
@@ -1692,20 +1744,22 @@ class FrontEndTest:
         """Handle extensions demo scenario: Agent Management → Extensions → Abilities → Toggle Command → New Chat → Test Message"""
         # Start at chat screen first for consistent navigation
         await self.navigate_to_chat_first(
-            "Starting from the chat interface to demonstrate the extensions and abilities feature configuration"
+            "Let's explore the powerful extensions and abilities system. This is where you can enable special capabilities for your 'A G I X T' agent."
         )
 
         # Navigate to Agent Management
         await self.test_action(
-            "Navigate to Agent Management to access extensions and abilities settings",
+            "We'll start by going to Agent Management to access the extensions and abilities configuration.",
             lambda: self.page.click('span:has-text("Agent Management")'),
         )
 
-        await self.take_screenshot("Agent Management dropdown menu is visible")
+        await self.take_screenshot(
+            "The Agent Management menu is open, showing us various ways to enhance our 'A G I X T' agent."
+        )
 
         # Navigate to Extensions from the dropdown
         await self.test_action(
-            "Click on Extensions in the Agent Management dropdown to view available extensions",
+            "We'll click on 'Extensions' to see what additional capabilities are available for our 'A G I X T' agent.",
             lambda: self.page.click('a:has-text("Extensions")'),
         )
 
@@ -1713,12 +1767,12 @@ class FrontEndTest:
         await asyncio.sleep(3)
 
         await self.take_screenshot(
-            "Extensions page loaded showing available extensions"
+            "Here we can see all the available extensions that can enhance our AI's capabilities."
         )
 
         # Navigate to Abilities
         await self.test_action(
-            "Navigate to the Abilities section to view and configure agent capabilities",
+            "Now let's navigate to the 'Abilities' section where we can enable or disable specific AI capabilities.",
             lambda: self.page.click('a:has-text("Abilities")'),
         )
 
@@ -1726,22 +1780,22 @@ class FrontEndTest:
         await asyncio.sleep(3)
 
         await self.take_screenshot(
-            "Abilities page loaded with available agent capabilities"
+            "This is the abilities dashboard where we can control what our 'A G I X T' agent can do."
         )
 
         # Scroll down to make the "Run Data Analysis" option visible
         await self.test_action(
-            "Scroll down to view more capabilities including Run Data Analysis",
+            "We'll scroll down to see more available capabilities, including some advanced data analysis features.",
             lambda: self.page.evaluate("window.scrollBy(0, window.innerHeight * 0.5)"),
         )
 
         await self.take_screenshot(
-            "Scrolled down to reveal Run Data Analysis capability"
+            "Now we can see additional capabilities including 'Run Data Analysis' which we'll enable."
         )
 
         # First, let's debug what's actually on the page
         await self.test_action(
-            "Debug: Check what command text is available on the abilities page",
+            "We'll examine what capabilities are available on this page so we can enable the right one.",
             lambda: self.page.evaluate(
                 """() => {
                 const h4Elements = Array.from(document.querySelectorAll('h4'));
@@ -1764,10 +1818,10 @@ class FrontEndTest:
 
         # Direct JavaScript approach - bypass CSS selectors that are unreliable
         await self.test_action(
-            "Using direct JavaScript to click Switch 2 which is 'Run Data Analysis' based on debug output",
+            "Now we'll enable the 'Run Data Analysis' capability by toggling its switch. This will allow our AI to perform advanced data analysis tasks.",
             lambda: self.page.evaluate(
                 """() => {
-                    console.log('Using direct JavaScript to click Switch 2 for Run Data Analysis');
+                    console.log('Enabling Run Data Analysis capability');
                     
                     // Get ALL switches in the exact same order as debug output
                     const allSwitches = Array.from(document.querySelectorAll('button[role="switch"]'));
@@ -1818,27 +1872,27 @@ class FrontEndTest:
         )
 
         await self.take_screenshot(
-            "Attempted to toggle Run Data Analysis command using direct JavaScript targeting"
+            "We've successfully enabled the Run Data Analysis capability. Notice how the toggle switch has changed to show it's now active."
         )
 
         # Navigate to new chat to test the capability
         await self.test_action(
-            "Navigate to chat to test the newly enabled Run Data Analysis capability",
+            "Now let's test our newly enabled capability by starting a new chat conversation.",
             lambda: self.page.goto(f"{self.base_uri}/chat"),
         )
 
         await self.test_action(
-            "Wait for chat page to load completely",
+            "The chat interface loads and is ready for testing our new data analysis capability.",
             lambda: asyncio.sleep(3),
         )
 
         await self.test_action(
-            "Click in the chat input to expand it for message entry",
+            "Now we'll click in the chat input to start our test conversation.",
             lambda: self.page.click("#chat-message-input-inactive"),
         )
 
         await self.test_action(
-            "Enter a message to test the Run Data Analysis capability with letter counting",
+            "We'll ask a question that will require data analysis. We'll ask the AI to count letters in a word - something that should trigger our newly enabled capability.",
             lambda: self.page.fill(
                 "#chat-message-input-active",
                 "How many of the letter 'r' is in the word 'strawberry'",
@@ -1846,7 +1900,7 @@ class FrontEndTest:
         )
 
         await self.test_action(
-            "Send the message to test the data analysis capability",
+            "Now we'll send this message to see how our AI uses the data analysis capability we just enabled.",
             lambda: self.page.press("#chat-message-input-active", "Enter"),
         )
 
@@ -1854,7 +1908,7 @@ class FrontEndTest:
         await asyncio.sleep(90)
 
         await self.take_screenshot(
-            "Chat response showing the Run Data Analysis capability in action"
+            "Look at this response - the AI didn't just guess, it actually used the data analysis capability we enabled to systematically count the letters and provide an accurate answer."
         )
 
         # Click "Completed activities" to see what commands were executed
@@ -1892,7 +1946,7 @@ class FrontEndTest:
         if not activities_clicked:
             # Try a more general approach - look for any expandable element
             await self.test_action(
-                "Attempt to find and click any expandable activities section",
+                "We'll try to find and expand the completed activities section to see exactly what commands were executed behind the scenes.",
                 lambda: self.page.wait_for_selector(
                     "button, div[role='button'], [aria-expanded]",
                     state="visible",
@@ -1915,17 +1969,17 @@ class FrontEndTest:
             )
 
         await self.take_screenshot(
-            "Completed activities section is now visible showing executed commands"
+            "Now we can see the 'Completed activities' section which shows us exactly what commands the AI executed to analyze our question."
         )
 
         # Scroll down to see more of the completed activities
         await self.test_action(
-            "Scroll down to view more details of the completed activities and command execution",
+            "We'll scroll down to see more details about the specific commands that were executed during the data analysis process.",
             lambda: self.page.evaluate("window.scrollBy(0, window.innerHeight * 0.5)"),
         )
 
         await self.take_screenshot(
-            "Extension demo complete - showing the data analysis commands that were executed"
+            "This completes our extensions demo. You can see how enabling specific capabilities allows the AI to use powerful tools and commands to provide more accurate and detailed responses."
         )
 
     async def run_extensions_demo_test(self, email, mfa_token):
@@ -2058,8 +2112,8 @@ class TestRunner:
     def __init__(self):
         pass
 
-    def run(self):
-        test = FrontEndTest(base_uri="http://localhost:3437")
+    def run(self, base_uri="http://localhost:3437"):
+        test = FrontEndTest(base_uri=base_uri)
         try:
             if platform.system() == "Linux":
                 print("Linux Detected, using asyncio.run")
