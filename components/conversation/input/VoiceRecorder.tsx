@@ -1,8 +1,10 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { LuMic as Mic, LuSquare as Square } from 'react-icons/lu';
+import { getCookie } from 'cookies-next';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useCompany } from '@/components/interactive/useUser';
 
 export interface VoiceRecorderProps {
   onSend: (message: string | object, uploadedFiles?: { [x: string]: string }) => Promise<void>;
@@ -11,41 +13,141 @@ export interface VoiceRecorderProps {
 
 export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onSend, disabled }) => {
   const [isRecording, setIsRecording] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const silenceTimer = useRef<NodeJS.Timeout | null>(null);
-  const audioContext = useRef<AudioContext | null>(null);
+  const mediaRecorder = useRef<MediaRecorder | null>(null);
+  const audioChunks = useRef<Blob[]>([]);
+  const stream = useRef<MediaStream | null>(null);
   const analyser = useRef<AnalyserNode | null>(null);
+  const audioContext = useRef<AudioContext | null>(null);
   const animationFrame = useRef<number>();
-  const audioChunks = useRef<Float32Array[]>([]);
-  const processorNode = useRef<ScriptProcessorNode | null>(null);
   const [ptt, setPtt] = useState(false);
-  // Move stopRecording above detectSilence
-  const stopRecording = useCallback(() => {
-    if (!audioContext.current || !processorNode.current) return;
+  const { data: company } = useCompany();
 
-    // Stop recording
-    processorNode.current.disconnect();
-    analyser.current?.disconnect();
+  const AUDIO_WEBM = 'audio/webm';
 
-    // Convert to WAV
-    const audioData = concatenateAudioBuffers(audioChunks.current, audioContext.current.sampleRate);
-    const wavBlob = createWavBlob(audioData, audioContext.current.sampleRate);
+  // Interface for window with voice debug
+  interface WindowWithVoiceDebug extends Window {
+    voiceDebugRun?: boolean;
+    webkitAudioContext?: typeof AudioContext;
+  }
 
-    // Convert to base64 and send
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64Audio = reader.result as string;
-      onSend('', {
-        'recording.wav': base64Audio,
-      });
-    };
-    reader.readAsDataURL(wavBlob);
+  // Helper function to get supported MIME type
+  const getSupportedMimeType = (): string => {
+    if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+      return 'audio/webm;codecs=opus';
+    }
+    if (MediaRecorder.isTypeSupported(AUDIO_WEBM)) {
+      return AUDIO_WEBM;
+    }
+    if (MediaRecorder.isTypeSupported('audio/mp4')) {
+      return 'audio/mp4';
+    }
+    if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
+      return 'audio/ogg;codecs=opus';
+    }
+    if (MediaRecorder.isTypeSupported('audio/ogg')) {
+      return 'audio/ogg';
+    }
+    return AUDIO_WEBM;
+  };
 
-    // Cleanup
-    audioContext.current.close();
-    audioContext.current = null;
+  // Helper function to setup audio analysis
+  const setupAudioAnalysis = async (audioStream: MediaStream): Promise<void> => {
+    if (ptt) return;
+
+    try {
+      const AudioContextClass = window.AudioContext || (window as WindowWithVoiceDebug).webkitAudioContext;
+      audioContext.current = new AudioContextClass();
+
+      if (audioContext.current.state === 'suspended') {
+        await audioContext.current.resume();
+      }
+
+      const source = audioContext.current.createMediaStreamSource(audioStream);
+      analyser.current = audioContext.current.createAnalyser();
+      analyser.current.fftSize = 256;
+      source.connect(analyser.current);
+
+      animationFrame.current = requestAnimationFrame(analyzeAudio);
+    } catch (audioError) {
+      console.warn('Audio analysis setup failed, continuing without silence detection:', audioError);
+    }
+  };
+
+  // Helper function to setup MediaRecorder
+  const setupMediaRecorder = (audioStream: MediaStream, mimeType: string): void => {
+    mediaRecorder.current = new MediaRecorder(audioStream, { mimeType });
     audioChunks.current = [];
-    analyser.current = null;
-    processorNode.current = null;
+
+    mediaRecorder.current.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        audioChunks.current.push(event.data);
+      }
+    };
+
+    mediaRecorder.current.onstop = () => {
+      const audioBlob = new Blob(audioChunks.current, {
+        type: mediaRecorder.current?.mimeType || mimeType,
+      });
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64Audio = reader.result as string;
+        const extension = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('ogg') ? 'ogg' : 'webm';
+
+        // Create message object with TTS enabled for children
+        const messageObject = company?.roleId === 4 || getCookie('agixt-tts') === 'true' ? { tts: 'true' } : '';
+
+        onSend(messageObject, {
+          [`recording.${extension}`]: base64Audio,
+        });
+      };
+      reader.readAsDataURL(audioBlob);
+
+      audioChunks.current = [];
+    };
+
+    mediaRecorder.current.onerror = (event) => {
+      console.error('MediaRecorder error:', event);
+      setError('Recording failed');
+      stopRecording();
+    };
+  };
+
+  // Helper function to handle errors with user-friendly messages
+  const handleRecordingError = (err: unknown): void => {
+    console.error('Error starting recording:', err);
+    const errorMessage = err instanceof Error ? err.message : 'Failed to start recording';
+
+    if (errorMessage.includes('Permission denied') || errorMessage.includes('NotAllowedError')) {
+      setError('Microphone permission denied. Please enable microphone access and try again.');
+    } else if (errorMessage.includes('NotFoundError') || errorMessage.includes('DevicesNotFoundError')) {
+      setError('No microphone found. Please connect a microphone and try again.');
+    } else if (errorMessage.includes('NotSupportedError')) {
+      setError('Recording not supported in this browser. Try Chrome, Firefox, or Safari.');
+    } else {
+      setError(errorMessage);
+    }
+
+    stopRecording();
+  };
+
+  // Modern stopRecording using MediaRecorder API
+  const stopRecording = useCallback(() => {
+    if (mediaRecorder.current && mediaRecorder.current.state !== 'inactive') {
+      mediaRecorder.current.stop();
+    }
+
+    if (stream.current) {
+      stream.current.getTracks().forEach((track) => track.stop());
+      stream.current = null;
+    }
+
+    if (audioContext.current) {
+      audioContext.current.close();
+      audioContext.current = null;
+    }
 
     if (animationFrame.current) {
       cancelAnimationFrame(animationFrame.current);
@@ -57,8 +159,10 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onSend, disabled }
       silenceTimer.current = null;
     }
 
+    analyser.current = null;
     setIsRecording(false);
-  }, [onSend]);
+    setError(null);
+  }, []);
 
   const detectSilence = useCallback(
     (dataArray: Uint8Array) => {
@@ -93,97 +197,40 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onSend, disabled }
 
   const startRecording = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setError(null);
 
-      audioContext.current = new AudioContext({ sampleRate: 16000 });
-      const source = audioContext.current.createMediaStreamSource(stream);
-      analyser.current = audioContext.current.createAnalyser();
-      processorNode.current = audioContext.current.createScriptProcessor(4096, 1, 1);
-
-      source.connect(analyser.current);
-      analyser.current.connect(processorNode.current);
-      processorNode.current.connect(audioContext.current.destination);
-
-      audioChunks.current = [];
-
-      processorNode.current.onaudioprocess = (e) => {
-        const channelData = e.inputBuffer.getChannelData(0);
-        if (channelData.length > 0) {
-          const buffer = new Float32Array(channelData.length);
-          buffer.set(channelData);
-          audioChunks.current.push(buffer);
-        }
-      };
-
-      setIsRecording(true);
-      if (!ptt) {
-        animationFrame.current = requestAnimationFrame(analyzeAudio);
+      // Check if MediaRecorder is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('MediaRecorder API is not supported in this browser');
       }
-    } catch (error) {
-      console.error('Error starting recording:', error);
+
+      // Request microphone access
+      const audioStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 16000,
+        },
+      });
+
+      stream.current = audioStream;
+
+      // Setup audio analysis for silence detection
+      await setupAudioAnalysis(audioStream);
+
+      // Setup MediaRecorder
+      const mimeType = getSupportedMimeType();
+      console.log('Using MediaRecorder with mimeType:', mimeType);
+
+      setupMediaRecorder(audioStream, mimeType);
+
+      // Start recording
+      mediaRecorder.current?.start(100);
+      setIsRecording(true);
+    } catch (err) {
+      handleRecordingError(err);
     }
-  }, [analyzeAudio, ptt]);
-
-  // Create WAV file from audio buffer
-  const createWavBlob = (audioData: Float32Array, sampleRate: number): Blob => {
-    const buffer = new ArrayBuffer(44 + audioData.length * 2);
-    const view = new DataView(buffer);
-
-    // Write WAV header
-    // "RIFF" identifier
-    writeString(view, 0, 'RIFF');
-    // File size
-    view.setUint32(4, 36 + audioData.length * 2, true);
-    // "WAVE" identifier
-    writeString(view, 8, 'WAVE');
-    // "fmt " chunk descriptor
-    writeString(view, 12, 'fmt ');
-    // Chunk size
-    view.setUint32(16, 16, true);
-    // Audio format (1 for PCM)
-    view.setUint16(20, 1, true);
-    // Number of channels
-    view.setUint16(22, 1, true);
-    // Sample rate
-    view.setUint32(24, sampleRate, true);
-    // Byte rate
-    view.setUint32(28, sampleRate * 2, true);
-    // Block align
-    view.setUint16(32, 2, true);
-    // Bits per sample
-    view.setUint16(34, 16, true);
-    // "data" chunk descriptor
-    writeString(view, 36, 'data');
-    // Data chunk size
-    view.setUint32(40, audioData.length * 2, true);
-
-    // Write audio data
-    const length = audioData.length;
-    const index = 44;
-    const volume = 1;
-    for (let i = 0; i < length; i++) {
-      view.setInt16(index + i * 2, audioData[i] * 0x7fff * volume, true);
-    }
-
-    return new Blob([buffer], { type: 'audio/wav' });
-  };
-
-  const writeString = (view: DataView, offset: number, string: string): void => {
-    for (let i = 0; i < string.length; i++) {
-      view.setUint8(offset + i, string.charCodeAt(i));
-    }
-  };
-
-  const concatenateAudioBuffers = (buffers: Float32Array[], sampleRate: number): Float32Array => {
-    const totalLength = buffers.reduce((acc, buf) => acc + buf.length, 0);
-    const result = new Float32Array(totalLength);
-    let offset = 0;
-    for (const buffer of buffers) {
-      result.set(buffer, offset);
-      offset += buffer.length;
-    }
-    return result;
-  };
+  }, [setupAudioAnalysis, getSupportedMimeType, setupMediaRecorder, handleRecordingError]);
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
@@ -206,6 +253,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onSend, disabled }
     },
     [ptt, stopRecording],
   );
+
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
@@ -218,18 +266,11 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onSend, disabled }
 
   useEffect(() => {
     return () => {
-      if (audioContext.current) {
-        audioContext.current.close();
-      }
-      if (animationFrame.current) {
-        cancelAnimationFrame(animationFrame.current);
-      }
-      if (silenceTimer.current) {
-        clearTimeout(silenceTimer.current);
-        silenceTimer.current = null;
-      }
+      stopRecording();
     };
-  }, []);
+  }, [stopRecording]);
+
+  const buttonTitle = error ? `Recording Error: ${error}` : isRecording ? 'Stop recording' : 'Start recording';
 
   return (
     <Tooltip>
@@ -240,6 +281,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onSend, disabled }
           className={cn(
             'transition-all duration-300 ease-in-out rounded-full',
             isRecording ? 'w-10 bg-red-500 hover:bg-red-600' : 'w-10',
+            error && 'border-2 border-red-500',
           )}
           size='icon'
           variant='ghost'
@@ -247,7 +289,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onSend, disabled }
           {isRecording ? <Square className='w-5 h-5' /> : <Mic className='w-5 h-5' />}
         </Button>
       </TooltipTrigger>
-      <TooltipContent>{isRecording ? 'Stop recording' : 'Start recording'}</TooltipContent>
+      <TooltipContent>{buttonTitle}</TooltipContent>
     </Tooltip>
   );
 };
