@@ -437,14 +437,6 @@ export function Chat({
   conversation: conversationOverride,
 }: Overrides & UIProps): React.JSX.Element {
   const [loading, setLoading] = useState(false);
-  const [localThinkingActivity, setLocalThinkingActivity] = useState<{
-    role: string;
-    message: string;
-    timestamp: string;
-    children: any[];
-    id: string;
-  } | null>(null);
-  const [conversationLengthWhenThinking, setConversationLengthWhenThinking] = useState<number>(0);
   const interactiveConfig = useContext(InteractiveConfigContext);
   const { data: conversations } = useConversations();
   const router = useRouter();
