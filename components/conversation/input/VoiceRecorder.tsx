@@ -3,7 +3,7 @@ import { LuMic as Mic, LuSquare as Square } from 'react-icons/lu';
 import { getCookie } from 'cookies-next';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+// Tooltip removed to fix infinite re-render issues
 import { useCompany } from '@/components/interactive/useUser';
 
 export interface VoiceRecorderProps {
@@ -273,23 +273,19 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onSend, disabled }
   const buttonTitle = error ? `Recording Error: ${error}` : isRecording ? 'Stop recording' : 'Start recording';
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          onClick={isRecording ? stopRecording : startRecording}
-          disabled={disabled}
-          className={cn(
-            'transition-all duration-300 ease-in-out rounded-full',
-            isRecording ? 'w-10 bg-red-500 hover:bg-red-600' : 'w-10',
-            error && 'border-2 border-red-500',
-          )}
-          size='icon'
-          variant='ghost'
-        >
-          {isRecording ? <Square className='w-5 h-5' /> : <Mic className='w-5 h-5' />}
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>{buttonTitle}</TooltipContent>
-    </Tooltip>
+    <Button
+      onClick={isRecording ? stopRecording : startRecording}
+      disabled={disabled}
+      title={buttonTitle}
+      className={cn(
+        'transition-all duration-300 ease-in-out rounded-full',
+        isRecording ? 'w-10 bg-red-500 hover:bg-red-600' : 'w-10',
+        error && 'border-2 border-red-500',
+      )}
+      size='icon'
+      variant='ghost'
+    >
+      {isRecording ? <Square className='w-5 h-5' /> : <Mic className='w-5 h-5' />}
+    </Button>
   );
 };

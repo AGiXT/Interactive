@@ -31,6 +31,7 @@ export type ChatItem = {
   role: string;
   message: string;
   timestamp: string;
+  children?: any[];
   rlhf?: {
     positive: boolean;
     feedback: string;

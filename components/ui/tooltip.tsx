@@ -39,15 +39,15 @@ type TooltipBasicProps = React.PropsWithChildren & {
   side?: 'top' | 'right' | 'bottom' | 'left';
 };
 
-// This version of TooltipBasic wraps the children in a span 
+// This version of TooltipBasic wraps the children in a div 
 // to avoid ref forwarding hydration issues
 const TooltipBasic: React.FC<TooltipBasicProps> = ({ title, side, children }) => {
   return (
     <TooltipProvider>
       <Tooltip delayDuration={600}>
         <TooltipTrigger asChild>
-          {/* Use a wrapper element instead of forwarding refs */}
-          <span className="inline-block">{children}</span>
+          {/* Use a wrapper div to ensure asChild works properly without ref issues */}
+          <div style={{ display: 'inline-block' }}>{children}</div>
         </TooltipTrigger>
         <TooltipContent side={side}>{title}</TooltipContent>
       </Tooltip>

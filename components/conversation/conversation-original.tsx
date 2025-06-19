@@ -1,14 +1,14 @@
 'use client';
 
-import { useContext, useEffect, useState, useRef, useMemo } from 'react';
+import { useContext, useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { mutate } from 'swr';
-import useSWR from 'swr';
 import { getCookie } from 'cookies-next';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { Paperclip, Pencil, Plus, Check, Download, Trash2 } from 'lucide-react';
 
-import { useConversationWebSocket } from '@/hooks/useConversationWebSocketStable';
+import { useConversationWebSocket } from '@/hooks/useConversationWebSocket';
+
 import { InteractiveConfigContext, Overrides } from '@/components/interactive/InteractiveConfigContext';
 import { useCompany } from '@/components/interactive/useUser';
 import { useConversations } from '@/components/interactive/useConversation';
@@ -64,11 +64,11 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
 
       // Properly invalidate both the conversation list and the specific conversation cache
       await mutate('/conversations');
-      await mutate(conversationSWRPath + interactiveConfig.overrides?.conversation);
+      await mutate(conversationSWRPath + interactiveConfig.overrides.conversation);
 
       // Update the state to a new conversation
       if (interactiveConfig.mutate) {
-        interactiveConfig.mutate((oldState: any) => ({
+        interactiveConfig.mutate((oldState) => ({
           ...oldState,
           overrides: { ...oldState.overrides, conversation: '-' },
         }));
@@ -113,7 +113,7 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
 
       // Properly invalidate both the conversation list and the specific conversation
       await mutate('/conversations');
-      await mutate(conversationSWRPath + interactiveConfig.overrides?.conversation);
+      await mutate(conversationSWRPath + interactiveConfig.overrides.conversation);
 
       toast({
         title: 'Success',
@@ -150,7 +150,7 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
         name: currentConversation?.name || 'Conversation',
         id: currentConversation?.id || '-',
         created_at: currentConversation?.createdAt || new Date().toISOString(),
-        messages: conversationContent.map((msg: any) => ({
+        messages: conversationContent.map((msg) => ({
           role: msg.role,
           content: msg.message,
           timestamp: msg.timestamp,
@@ -220,7 +220,7 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
 
   // Don't show sidebar content if no conversation exists
   if (!currentConversation || currentConversation.id === '-') {
-    return <div />;
+    return null;
   }
 
   return (
@@ -234,6 +234,7 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   className='w-full'
+                  autoFocus
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       handleRenameConversation(newName);
@@ -265,13 +266,13 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
               icon: Plus,
               func: () => {
                 if (interactiveConfig?.mutate) {
-                  interactiveConfig.mutate((oldState: any) => ({
+                  interactiveConfig.mutate((oldState) => ({
                     ...oldState,
                     overrides: { ...oldState.overrides, conversation: '-' },
                   }));
 
                   // Force an invalidation of any existing conversation data
-                  mutate(conversationSWRPath + interactiveConfig.overrides?.conversation);
+                  mutate(conversationSWRPath + interactiveConfig.overrides.conversation);
                 }
                 router.push('/chat');
               },
@@ -359,52 +360,59 @@ export function ChatLog({
     <div className='flex flex-col-reverse flex-grow overflow-auto bg-background pb-28' style={{ flexBasis: '0px' }}>
       <div className='flex flex-col h-min'>
         {conversation && conversation.length > 0 ? (
-          conversation
-            .filter((chatItem) => {
-              // Filter out SUBACTIVITY messages as they should only appear as children
-              return !chatItem.message.startsWith('[SUBACTIVITY]');
-            })
-            .map((chatItem, index: number) => {
-              if (chatItem.role === 'user') {
-                lastUserMessage = chatItem.message;
-              }
-              const validTypes = ['[ACTIVITY]', '[ACTIVITY][ERROR]', '[ACTIVITY][WARN]', '[ACTIVITY][INFO]'];
-              const messageType = chatItem.message.split(' ')[0];
-              const messageBody = validTypes.some((x) => messageType.includes(x))
-                ? chatItem.message.substring(chatItem.message.indexOf(' '))
-                : chatItem.message;
+          conversation.map((chatItem, index: number) => {
+            if (chatItem.role === 'user') {
+              lastUserMessage = chatItem.message;
+            }
+            const validTypes = [
+              '[ACTIVITY]',
+              '[ACTIVITY][ERROR]',
+              '[ACTIVITY][WARN]',
+              '[ACTIVITY][INFO]',
+              '[SUBACTIVITY]',
+              '[SUBACTIVITY][THOUGHT]',
+              '[SUBACTIVITY][REFLECTION]',
+              '[SUBACTIVITY][EXECUTION]',
+              '[SUBACTIVITY][ERROR]',
+              '[SUBACTIVITY][WARN]',
+              '[SUBACTIVITY][INFO]',
+            ];
+            const messageType = chatItem.message.split(' ')[0];
+            const messageBody = validTypes.some((x) => messageType.includes(x))
+              ? chatItem.message.substring(chatItem.message.indexOf(' '))
+              : chatItem.message;
 
-              return validTypes.includes(messageType) ? (
-                <ChatActivity
-                  key={chatItem.timestamp + '-' + messageBody}
-                  activityType={
-                    messageType === '[ACTIVITY]'
-                      ? 'success'
-                      : (messageType.split('[')[2]?.split(']')[0]?.toLowerCase() as
-                          | 'error'
-                          | 'info'
-                          | 'success'
-                          | 'warn'
-                          | 'thought'
-                          | 'reflection'
-                          | 'execution'
-                          | 'diagram')
-                  }
-                  nextTimestamp={conversation[index + 1]?.timestamp}
-                  message={messageBody}
-                  timestamp={chatItem.timestamp}
-                  alternateBackground={alternateBackground}
-                  children={chatItem.children}
-                />
-              ) : (
-                <Message
-                  key={chatItem.timestamp + '-' + messageBody}
-                  chatItem={chatItem}
-                  lastUserMessage={lastUserMessage}
-                  setLoading={setLoading}
-                />
-              );
-            })
+            return validTypes.includes(messageType) ? (
+              <ChatActivity
+                key={chatItem.timestamp + '-' + messageBody}
+                activityType={
+                  messageType === '[ACTIVITY]'
+                    ? 'success'
+                    : (messageType.split('[')[2]?.split(']')[0]?.toLowerCase() as
+                        | 'error'
+                        | 'info'
+                        | 'success'
+                        | 'warn'
+                        | 'thought'
+                        | 'reflection'
+                        | 'execution'
+                        | 'diagram')
+                }
+                nextTimestamp={conversation[index + 1]?.timestamp}
+                message={messageBody}
+                timestamp={chatItem.timestamp}
+                alternateBackground={alternateBackground}
+                children={chatItem.children}
+              />
+            ) : (
+              <Message
+                key={chatItem.timestamp + '-' + messageBody}
+                chatItem={chatItem}
+                lastUserMessage={lastUserMessage}
+                setLoading={setLoading}
+              />
+            );
+          })
         ) : (
           <div className='max-w-4xl px-2 mx-auto space-y-4 text-center mt-8'>
             <div>
@@ -424,10 +432,79 @@ export function ChatLog({
   );
 }
 
+// Helper function to format the conversation data from the API
+export async function getAndFormatConversation(state): Promise<any[]> {
+  // For empty/new conversations, return empty array
+  if (!state.overrides.conversation || state.overrides.conversation === '-') {
+    return [];
+  }
+
+  const rawConversation = await state.agixt.getConversation('', state.overrides.conversation, 100, 1);
+
+  // Create a map of activity messages for faster lookups
+  const activityMessages = {};
+  const formattedConversation = [];
+
+  // First pass: identify and store all main activities
+  rawConversation.forEach((message) => {
+    const messageType = message.message.split(' ')[0];
+    if (!messageType.startsWith('[SUBACTIVITY]')) {
+      formattedConversation.push({ ...message, children: [] });
+      activityMessages[message.id] = formattedConversation[formattedConversation.length - 1];
+    }
+  });
+
+  // Second pass: handle subactivities
+  rawConversation.forEach((currentMessage) => {
+    const messageType = currentMessage.message.split(' ')[0];
+    if (messageType.startsWith('[SUBACTIVITY]')) {
+      try {
+        // Try to extract parent ID
+        const parent = messageType.split('[')[2].split(']')[0];
+        let foundParent = false;
+
+        // Look for the parent in our activity map
+        if (activityMessages[parent]) {
+          activityMessages[parent].children.push({ ...currentMessage, children: [] });
+          foundParent = true;
+        } else {
+          // If no exact match, try to find it in children
+          for (const activity of formattedConversation) {
+            const targetInChildren = activity.children.find((child) => child.id === parent);
+            if (targetInChildren) {
+              targetInChildren.children.push({ ...currentMessage, children: [] });
+              foundParent = true;
+              break;
+            }
+          }
+        }
+
+        // If still not found, add to the last activity as a fallback
+        if (!foundParent && formattedConversation.length > 0) {
+          const lastActivity = formattedConversation[formattedConversation.length - 1];
+          lastActivity.children.push({ ...currentMessage, children: [] });
+        }
+      } catch (error) {
+        // If parsing fails, add to the last activity as a fallback
+        if (formattedConversation.length > 0) {
+          const lastActivity = formattedConversation[formattedConversation.length - 1];
+          lastActivity.children.push({ ...currentMessage, children: [] });
+        } else {
+          // If no activities exist yet, convert this subactivity to an activity
+          formattedConversation.push({ ...currentMessage, children: [] });
+        }
+      }
+    }
+  });
+
+  return formattedConversation;
+}
+
 export function Chat({
   alternateBackground,
   enableFileUpload,
   enableVoiceInput,
+  showOverrideSwitchesCSV,
   conversation: conversationOverride,
 }: Overrides & UIProps): React.JSX.Element {
   const [loading, setLoading] = useState(false);
@@ -440,54 +517,27 @@ export function Chat({
   } | null>(null);
   const [conversationLengthWhenThinking, setConversationLengthWhenThinking] = useState<number>(0);
   const interactiveConfig = useContext(InteractiveConfigContext);
-  const { data: conversations } = useConversations();
+  const { data: conversations, isLoading: isLoadingConversations } = useConversations();
   const router = useRouter();
 
-  // Use conversation override from props as priority, fallback to interactive config
-  const activeConversationId = conversationOverride || interactiveConfig.overrides?.conversation;
-
   // Find the current conversation
-  const currentConversation = conversations?.find((conv) => conv.id === activeConversationId);
+  const currentConversation = conversations?.find((conv) => conv.id === interactiveConfig.overrides.conversation);
 
-  // Use WebSocket for real-time conversation updates with SWR fallback for initial data
-  const { messages: conversationData, connectionStatus } = useConversationWebSocket({
-    conversationId: activeConversationId,
-    enabled: activeConversationId !== '-' && activeConversationId !== undefined,
+  // Use WebSocket for real-time conversation updates instead of SWR polling
+  const {
+    messages: conversationData,
+    connectionStatus,
+    isLoading: wsLoading,
+  } = useConversationWebSocket({
+    conversationId: interactiveConfig.overrides.conversation,
+    enabled: interactiveConfig.overrides.conversation !== '-',
     onMessage: (message) => {
       console.log('📨 WebSocket message received:', message.message);
-
-      // Clear thinking activity immediately when any real message arrives
-      // This includes activities and regular messages, but not our local thinking activities
+      
+      // Clear thinking activity when real messages arrive
       if (localThinkingActivity && !message.id.startsWith('thinking-')) {
-        // Check if it's a real activity or any substantive message from the server
-        const isRealActivity =
-          message.message &&
-          (message.message.startsWith('[ACTIVITY]') ||
-            message.message.startsWith('[SUBACTIVITY]') ||
-            // Any non-empty message that's not a thinking activity is considered real
-            (message.message.trim().length > 0 && !message.message.includes('Processing your request')));
-
-        console.log('🔍 Checking if should clear thinking activity:', {
-          hasThinking: !!localThinkingActivity,
-          messageId: message.id,
-          messageContent: message.message,
-          isRealActivity,
-          messageRole: message.role,
-          startsWithActivity: message.message?.startsWith('[ACTIVITY]'),
-          startsWithSubactivity: message.message?.startsWith('[SUBACTIVITY]'),
-          messageLength: message.message?.trim().length,
-          includesProcessing: message.message?.includes('Processing your request'),
-        });
-
-        if (isRealActivity) {
-          console.log('🧹 Clearing thinking activity - real WebSocket message received:', {
-            messageId: message.id,
-            messageType: message.message.substring(0, 50) + '...',
-            messageRole: message.role,
-            thinkingId: localThinkingActivity.id,
-          });
-          setLocalThinkingActivity(null);
-        }
+        console.log('🧹 Clearing thinking activity - real message received via WebSocket');
+        setLocalThinkingActivity(null);
       }
     },
     onConnect: () => {
@@ -498,215 +548,50 @@ export function Chat({
     },
   });
 
-  // Debug WebSocket messages structure (remove in production)
-  // useEffect(() => {
-  //   if (conversationData && conversationData.length > 0) {
-  //     console.log('🔍 WebSocket conversation data:', conversationData);
-  //     conversationData.forEach((msg, index) => {
-  //       console.log(`Message ${index}:`, {
-  //         id: msg.id,
-  //         role: msg.role,
-  //         message: msg.message.substring(0, 100) + '...',
-  //         childrenCount: msg.children?.length || 0,
-  //         children: msg.children?.map(child => ({
-  //           id: child.id,
-  //           message: child.message.substring(0, 50) + '...'
-  //         }))
-  //       });
-  //     });
-  //   }
-  // }, [conversationData]);
-
-  // Always use SWR for initial data, then enhance with WebSocket for real-time updates
-  const { data: swrConversationData, error: swrError } = useSWR(
-    activeConversationId !== '-' && activeConversationId !== undefined ? conversationSWRPath + activeConversationId : null,
-    () => interactiveConfig.agixt.getConversation('', activeConversationId),
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      refreshInterval: 0,
-      dedupingInterval: 2000,
-    },
-  );
-
-  // Determine which data source to use and merge appropriately
-  const activeConversationData = useMemo(() => {
-    // If we have SWR data (complete conversation structure), use it as the base
-    if (swrConversationData && swrConversationData.length > 0) {
-      // If we also have WebSocket data (real-time updates), merge them
-      if (conversationData && conversationData.length > 0) {
-        // Merge SWR data with WebSocket data, preserving children from WebSocket
-        const mergedData = swrConversationData.map((swrMsg: any) => {
-          // Find corresponding WebSocket message with same ID
-          const wsMsg = conversationData.find((ws: any) => ws.id === swrMsg.id);
-          if (wsMsg && wsMsg.children && wsMsg.children.length > 0) {
-            console.log('🔄 Merging children from WebSocket into SWR message:', {
-              id: swrMsg.id,
-              swrChildren: swrMsg.children?.length || 0,
-              wsChildren: wsMsg.children?.length || 0,
-            });
-            return {
-              ...swrMsg,
-              children: wsMsg.children,
-            };
-          }
-          return swrMsg;
-        });
-
-        // Find the latest timestamp in merged data
-        const latestMergedTimestamp = mergedData.reduce((latest: number, msg: any) => {
-          const msgTime = new Date(msg.timestamp).getTime();
-          return msgTime > latest ? msgTime : latest;
-        }, 0);
-
-        // Add any WebSocket messages that are newer than the latest merged message
-        const newWSMessages = conversationData.filter((wsMsg: any) => {
-          const wsTime = new Date(wsMsg.timestamp).getTime();
-          return wsTime > latestMergedTimestamp;
-        });
-
-        if (newWSMessages.length > 0) {
-          console.log('🔄 Adding new WebSocket messages to merged data:', mergedData.length, '+', newWSMessages.length);
-          return [...mergedData, ...newWSMessages];
-        }
-
-        console.log('🔄 Using merged SWR+WebSocket data:', mergedData.length, 'messages');
-        return mergedData;
-      }
-
-      console.log('🔄 Using SWR data for existing conversation:', swrConversationData.length, 'messages');
-      return swrConversationData;
-    }
-
-    // If we only have WebSocket data, use it (for new conversations)
-    if (conversationData && conversationData.length > 0) {
-      console.log('📡 Using WebSocket data for new conversation:', conversationData.length, 'messages');
-      return conversationData;
-    }
-
-    return [];
-  }, [swrConversationData, conversationData]);
-
-  // Ensure conversationData is always an array with valid structure
-  const safeConversationData = useMemo(() => {
-    try {
-      if (!Array.isArray(activeConversationData)) {
-        console.warn('activeConversationData is not an array:', activeConversationData);
-        return [];
-      }
-
-      return activeConversationData.map((msg, index) => {
-        // Validate each message object
-        if (!msg || typeof msg !== 'object') {
-          console.warn('Invalid message object at index', index, ':', msg);
-          return {
-            id: `invalid-msg-${Date.now()}-${index}`,
-            role: 'system',
-            message: '[Invalid message data]',
-            timestamp: new Date().toISOString(),
-            children: [],
-          };
-        }
-
-        return {
-          id: msg.id || `msg-${Date.now()}-${index}`,
-          role: msg.role || 'unknown',
-          message: msg.message || '',
-          timestamp: msg.timestamp || new Date().toISOString(),
-          children: Array.isArray(msg.children)
-            ? msg.children.map((child, childIndex) => ({
-                id: child?.id || `child-${Date.now()}-${index}-${childIndex}`,
-                role: child?.role || 'unknown',
-                message: child?.message || '',
-                timestamp: child?.timestamp || new Date().toISOString(),
-                children: [],
-              }))
-            : [],
-        };
-      });
-    } catch (error) {
-      console.error('Error processing conversation data:', error);
-      return [];
-    }
-  }, [activeConversationData]);
+  // Fallback function for manual conversation refresh (used by sidebar operations)
+  const mutateConversation = useCallback(async () => {
+    // For WebSocket implementation, this is mainly used by sidebar operations
+    // The WebSocket connection will handle real-time updates
+    console.log('🔄 Manual conversation refresh requested');
+  }, []);
 
   // Effect to clear thinking activity when new messages arrive or loading stops
   useEffect(() => {
     if (!localThinkingActivity) return;
 
-    // PRIORITY 1: Clear thinking activity immediately if we have any real WebSocket activity data
-    const hasRealActivityInWebSocket = conversationData?.some((msg: any) => {
-      // Skip if it's our thinking activity
-      if (msg.id && msg.id.startsWith('thinking-')) return false;
-
-      // Check for any activity messages (which indicate real processing)
-      const isRealActivity =
-        msg.message &&
-        msg.message.startsWith('[ACTIVITY]') &&
-        !msg.message.includes('Thinking') &&
-        !msg.message.includes('Processing');
-      if (isRealActivity) {
-        console.log('🔍 Found real activity in WebSocket:', {
-          messageId: msg.id,
-          message: msg.message.substring(0, 50) + '...',
-          timestamp: msg.timestamp,
-        });
-      }
-      return isRealActivity;
-    });
-
-    if (hasRealActivityInWebSocket) {
-      console.log('🧹 Clearing thinking activity - real activity detected in WebSocket data');
+    // Simple logic: if loading has stopped, clear thinking activity
+    if (!loading) {
+      console.log('🧹 Clearing thinking activity - loading stopped');
       setLocalThinkingActivity(null);
       return;
     }
 
-    // PRIORITY 2: Clear thinking activity if we have any real WebSocket messages that came after thinking started
-    const thinkingStartTime = new Date(localThinkingActivity.timestamp).getTime();
-    const hasNewWebSocketMessages = conversationData?.some((msg: any) => {
-      // Skip if it's our thinking activity
-      if (msg.id && msg.id.startsWith('thinking-')) return false;
-
-      // Check if this is a real message that came after thinking started
-      const msgTime = new Date(msg.timestamp).getTime();
-      const isAfterThinking = msgTime > thinkingStartTime;
-
-      if (isAfterThinking) {
-        console.log('🔍 Found new WebSocket message after thinking:', {
-          messageId: msg.id,
-          message: msg.message.substring(0, 50) + '...',
-          msgTime: new Date(msg.timestamp).toISOString(),
-          thinkingTime: localThinkingActivity.timestamp,
-          isAfter: isAfterThinking,
-        });
-      }
-
-      return isAfterThinking;
-    });
-
-    if (hasNewWebSocketMessages) {
-      console.log('🧹 Clearing thinking activity - new WebSocket messages detected after thinking started');
-      setLocalThinkingActivity(null);
-      return;
-    }
-
-    // PRIORITY 3: Clear thinking activity if we have more conversation items than when we started thinking
-    if (safeConversationData.length > conversationLengthWhenThinking) {
+    // If we have more conversation items than when we started thinking, clear it
+    if (conversationData.length > conversationLengthWhenThinking) {
       console.log('🧹 Clearing thinking activity - new messages detected:', {
-        currentLength: safeConversationData.length,
+        currentLength: conversationData.length,
         lengthWhenThinking: conversationLengthWhenThinking,
       });
       setLocalThinkingActivity(null);
       return;
     }
 
-    // PRIORITY 4: Clear thinking activity if loading has stopped (fallback)
-    if (!loading) {
-      console.log('🧹 Clearing thinking activity - loading stopped');
+    // Also clear if we detect any real messages (not our thinking activity)
+    const hasRealNewMessages = conversationData.some((msg: any) => {
+      // Skip if it's our thinking activity
+      if (msg.id && msg.id.startsWith('thinking-')) return false;
+      
+      // Check if this message came after we started thinking
+      const msgTime = new Date(msg.timestamp);
+      const thinkingTime = new Date(localThinkingActivity.timestamp);
+      return msgTime >= thinkingTime;
+    });
+
+    if (hasRealNewMessages) {
+      console.log('🧹 Clearing thinking activity - real messages detected');
       setLocalThinkingActivity(null);
-      return;
     }
-  }, [safeConversationData, localThinkingActivity, conversationLengthWhenThinking, loading, conversationData]);
+  }, [conversationData, localThinkingActivity, conversationLengthWhenThinking, loading]);
 
   // Enhanced thinking activity with progressive messages
   useEffect(() => {
@@ -717,19 +602,15 @@ export function Chat({
         '[ACTIVITY] Processing your request...',
         '[ACTIVITY] Analyzing context...',
         '[ACTIVITY] Generating response...',
-        '[ACTIVITY] Almost done...',
+        '[ACTIVITY] Almost done...'
       ];
 
       const timer = setInterval(() => {
         messageIndex = (messageIndex + 1) % progressMessages.length;
-        setLocalThinkingActivity((prev) =>
-          prev
-            ? {
-                ...prev,
-                message: progressMessages[messageIndex],
-              }
-            : null,
-        );
+        setLocalThinkingActivity(prev => prev ? {
+          ...prev,
+          message: progressMessages[messageIndex]
+        } : null);
       }, 2000); // Update message every 2 seconds
 
       return () => clearInterval(timer);
@@ -740,38 +621,37 @@ export function Chat({
   useEffect(() => {
     if (localThinkingActivity && loading) {
       const timer = setTimeout(() => {
-        console.log('⏰ Clearing thinking activity - backup timer triggered after 15 seconds');
+        console.log('⏰ Clearing thinking activity - backup timer triggered after 3 seconds');
         setLocalThinkingActivity(null);
-      }, 15000); // 15 seconds - shorter timeout for better responsiveness
-
+      }, 3000); // 3 seconds for testing
+      
       return () => clearTimeout(timer);
     }
   }, [localThinkingActivity, loading]);
 
+  // Effect to aggressively revalidate when loading starts/stops
+  useEffect(() => {
+    if (loading) {
+      console.log('🚀 Loading started - beginning aggressive polling');
+    } else {
+      console.log('⏹️ Loading stopped - ending polling');
+      // One final revalidation when loading stops to catch any final messages
+      mutateConversation();
+    }
+  }, [loading, mutateConversation]);
+
   // Combine server data with local thinking activity
   const displayConversationData = useMemo(() => {
-    const wsData = safeConversationData.map((msg) => ({
+    const wsData = conversationData.map(msg => ({
       ...msg,
-      children: msg.children || [],
+      children: msg.children || []
     }));
-
+    
     if (localThinkingActivity && loading) {
-      console.log('🧠 Including thinking activity in display data:', {
-        thinkingId: localThinkingActivity.id,
-        thinkingMessage: localThinkingActivity.message,
-        totalMessages: wsData.length + 1,
-        loading,
-      });
       return [...wsData, localThinkingActivity];
     }
-
-    console.log('📋 Display data without thinking activity:', {
-      totalMessages: wsData.length,
-      hasThinkingActivity: !!localThinkingActivity,
-      loading,
-    });
     return wsData;
-  }, [safeConversationData, localThinkingActivity, loading]);
+  }, [conversationData, localThinkingActivity, loading]);
 
   // Check if the conversation is empty
   const isEmptyConversation = !displayConversationData?.length;
@@ -779,8 +659,39 @@ export function Chat({
   // Get company info for API calls
   const { data: activeCompany } = useCompany();
 
+  // Handle array-type conversation ID in state (shouldn't happen, but as precaution)
+  useEffect(() => {
+    if (Array.isArray(interactiveConfig.overrides.conversation)) {
+      interactiveConfig.mutate((oldState) => ({
+        ...oldState,
+        overrides: { ...oldState.overrides, conversation: oldState.overrides.conversation[0] },
+      }));
+    }
+  }, [interactiveConfig]);
+
+  // Refresh conversation data when conversation ID changes or loading state changes
+  useEffect(() => {
+    mutateConversation();
+  }, [interactiveConfig.overrides.conversation, mutateConversation]);
+
+  useEffect(() => {
+    if (!loading) {
+      const timer = setTimeout(() => {
+        mutateConversation();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, mutateConversation]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      setLoading(false);
+    };
+  }, []);
+
   // Handler for sending messages
-  async function chat(messageTextBody: any, messageAttachedFiles: any): Promise<string> {
+  async function chat(messageTextBody, messageAttachedFiles): Promise<string> {
     // Handle different types of messageTextBody (string or object)
     const messageText = typeof messageTextBody === 'string' ? messageTextBody : '';
 
@@ -820,8 +731,12 @@ export function Chat({
 
     setLoading(true);
 
+    // Immediately get latest conversation state before starting
+    console.log('🔄 Pre-chat conversation revalidation');
+    await mutateConversation();
+
     // Store current conversation length before adding thinking activity
-    setConversationLengthWhenThinking(safeConversationData.length);
+    setConversationLengthWhenThinking(conversationData.length);
 
     // Add immediate thinking activity to local state
     const thinkingActivity = {
@@ -834,62 +749,64 @@ export function Chat({
 
     // Set local thinking activity
     console.log('🧠 Adding thinking activity:', thinkingActivity);
-    console.log('📊 Conversation length when thinking started:', safeConversationData.length);
+    console.log('📊 Conversation length when thinking started:', conversationData.length);
     setLocalThinkingActivity(thinkingActivity);
 
     try {
       // Fire the request and handle it in the background
-      axios
-        .post(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/chat/completions`, requestPayload, {
+      axios.post(
+        `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/chat/completions`,
+        requestPayload,
+        {
           headers: {
             Authorization: getCookie('jwt'),
           },
-        })
-        .then(async (completionResponse) => {
-          if (completionResponse.status === 200) {
-            const chatCompletion = completionResponse.data;
-            const conversationId = chatCompletion.id;
+        },
+      ).then(async (completionResponse) => {
+        if (completionResponse.status === 200) {
+          const chatCompletion = completionResponse.data;
+          const conversationId = chatCompletion.id;
 
-            // Only update route if conversation ID has changed
-            if (conversationId !== activeConversationId) {
-              // Update conversation state
-              if (interactiveConfig.mutate) {
-                interactiveConfig.mutate((oldState: any) => ({
-                  ...oldState,
-                  overrides: {
-                    ...oldState.overrides,
-                    conversation: conversationId,
-                  },
-                }));
-              }
-
-              // Push route after state is updated
-              router.push(`/chat/${conversationId}`);
+          // Only update route if conversation ID has changed
+          if (conversationId !== interactiveConfig.overrides?.conversation) {
+            // Update conversation state
+            if (interactiveConfig.mutate) {
+              interactiveConfig.mutate((oldState: any) => ({
+                ...oldState,
+                overrides: {
+                  ...oldState.overrides,
+                  conversation: conversationId,
+                },
+              }));
             }
 
-            // Trigger proper mutations
-            mutate('/conversations');
-            mutate('/user');
+            // Push route after state is updated
+            router.push(`/chat/${conversationId}`);
           }
-        })
-        .catch((error) => {
-          console.error('❌ Chat API error:', error);
-          toast({
-            title: 'Error',
-            description: 'Failed to get response from the agent',
-            duration: 5000,
-            variant: 'destructive',
-          });
-        })
-        .finally(() => {
-          // End loading state and final cleanup
-          setLoading(false);
-          console.log('🔄 Chat request completed, final cleanup');
+
+          // Trigger proper mutations
+          mutate('/conversations');
+          mutate('/user');
+        }
+      }).catch((error) => {
+        console.error('❌ Chat API error:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to get response from the agent',
+          duration: 5000,
+          variant: 'destructive',
         });
+      }).finally(() => {
+        // End loading state and final cleanup
+        setLoading(false);
+        console.log('🔄 Chat request completed, final cleanup');
+        mutateConversation();
+      });
 
       // Return immediately while the request processes in the background
-      // The WebSocket connection will handle updating the UI with real-time activities
+      // The polling mechanism will handle updating the UI with real-time activities
       return '';
+
     } catch (error) {
       setLoading(false);
       setLocalThinkingActivity(null); // Clear thinking activity on error

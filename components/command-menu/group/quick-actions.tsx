@@ -1,10 +1,11 @@
-import { TbMessageCirclePlus } from 'react-icons/tb';
-import { ArrowRight, HistoryIcon, Palette } from 'lucide-react';
+import { ArrowRight, HistoryIcon, Palette, MessageCircle } from 'lucide-react';
 import { useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+
 import { CommandItemComponent } from '@/components/command-menu/index';
 import { SubPage, useCommandMenu } from '@/components/command-menu/command-menu-context';
 import { CommandGroup, CommandSeparator } from '@/components/ui/command';
-import { useRouter } from 'next/navigation';
+
 export type QuickAction = {
   label: string;
   icon: React.ElementType;
@@ -36,7 +37,7 @@ export function QuickActionsGroup() {
     <>
       <CommandGroup heading='Quick Actions'>
         <CommandItemComponent
-          item={{ label: 'New Chat', icon: TbMessageCirclePlus, description: 'Create a new chat' }}
+          item={{ label: 'New Chat', icon: MessageCircle, description: 'Create a new chat' }}
           onSelect={handleNewChat}
         />
         {quickActions.map((item) => (
