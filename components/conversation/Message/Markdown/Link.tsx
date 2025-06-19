@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import AudioPlayer from '@/components/conversation/Message/Audio';
 // import Plyr from 'plyr-react';
@@ -10,18 +10,30 @@ interface MediaProps {
   href: string;
 }
 
-const YoutubeEmbed: React.FC<MediaProps> = ({ href }) => (
-  <div className='w-96'>
-    <div className='relative w-full aspect-video'>
-      <iframe
-        className='absolute top-0 left-0 w-full h-full'
-        src={`https://www.youtube.com/embed/${getYoutubeId(href)}`}
-        allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
-        allowFullScreen
-      />
+const YoutubeEmbed: React.FC<MediaProps> = React.memo(({ href }) => {
+  const embedUrl = useMemo(() => {
+    const youtubeId = getYoutubeId(href);
+    return youtubeId ? `https://www.youtube.com/embed/${youtubeId}` : null;
+  }, [href]);
+
+  if (!embedUrl) return null;
+
+  return (
+    <div className='w-96'>
+      <div className='relative w-full aspect-video'>
+        <iframe
+          title={`YouTube video ${getYoutubeId(href)}`}
+          className='absolute top-0 left-0 w-full h-full'
+          src={embedUrl}
+          allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+          allowFullScreen
+        />
+      </div>
     </div>
-  </div>
-);
+  );
+});
+
+YoutubeEmbed.displayName = 'YoutubeEmbed';
 
 const VideoPlayer: React.FC<MediaProps> = ({ href }) => (
   <div className='w-96'>
@@ -59,27 +71,21 @@ const getYoutubeId = (url: string): string | null => {
 
 type MarkdownLinkProps = React.AnchorHTMLAttributes<HTMLAnchorElement>;
 
-const MarkdownLink: React.FC<MarkdownLinkProps> = ({ children, href, className, ...props }) => {
+const MarkdownLink: React.FC<MarkdownLinkProps> = React.memo(({ children, href, className, ...props }) => {
   const targetRef = useRef<HTMLAnchorElement>(null);
   const isExternal = href && !href.startsWith('#');
-  const youtubeId = href ? getYoutubeId(href) : null;
+  
+  // Memoize YouTube detection to prevent unnecessary recalculations
+  const youtubeId = useMemo(() => {
+    return href ? getYoutubeId(href) : null;
+  }, [href]);
+  
   const isVideo = href?.match(/\.(mp4|webm|ogg)$/i);
   const isAudio = href?.startsWith('http') && href?.match(/\.(wav|mp3|ogg|m4a|aac|flac)$/i);
 
-  if (youtubeId) {
-    return (
-      <div className='w-96'>
-        <div className='relative w-full aspect-video'>
-          <iframe
-            title={youtubeId}
-            className='absolute top-0 left-0 w-full h-full'
-            src={`https://www.youtube.com/embed/${youtubeId}`}
-            allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
-            allowFullScreen
-          />
-        </div>
-      </div>
-    );
+  // Use the memoized YoutubeEmbed component for YouTube URLs
+  if (youtubeId && href) {
+    return <YoutubeEmbed href={href} />;
   }
 
   if (isAudio && href) {
@@ -121,6 +127,8 @@ const MarkdownLink: React.FC<MarkdownLinkProps> = ({ children, href, className, 
       {children}
     </a>
   );
-};
+});
+
+MarkdownLink.displayName = 'MarkdownLink';
 
 export default MarkdownLink;
