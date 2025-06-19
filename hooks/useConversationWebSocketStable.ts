@@ -145,8 +145,11 @@ export function useConversationWebSocket({
 
   // Main effect for managing WebSocket connection - only depends on enabled and conversationId
   useEffect(() => {
+    console.log('🔍 WebSocket effect triggered:', { enabled, conversationId, currentId: currentConversationIdRef.current });
+    
     // Don't connect if disabled or no conversation ID
-    if (!enabled || !conversationId || conversationId === '-') {
+    if (!enabled || !conversationId) {
+      console.log('🚫 WebSocket disabled or no conversation ID:', { enabled, conversationId });
       disconnect();
       setMessages([]);
       return;
