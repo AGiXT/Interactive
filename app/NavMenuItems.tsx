@@ -15,7 +15,7 @@ import {
   Workflow,
   ListTodo,
 } from 'lucide-react';
-import { TbMessageCirclePlus } from 'react-icons/tb';
+import { MessageCircle } from 'lucide-react';
 type NestedItem = {
   title: string;
   url: string;
@@ -48,7 +48,7 @@ export const getFilteredItems = (userRoleId?: number): Item[] => {
       {
         title: 'New Chat',
         url: '/chat',
-        icon: TbMessageCirclePlus,
+        icon: MessageCircle,
         isActive: true,
       },
     ];
@@ -62,7 +62,7 @@ export const items: Item[] = [
   {
     title: 'New Chat',
     url: '/chat',
-    icon: TbMessageCirclePlus,
+    icon: MessageCircle,
     isActive: true,
   },
   {
