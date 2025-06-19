@@ -14,6 +14,7 @@ import { FaRunning } from 'react-icons/fa';
 import { Ban as Error, CircleCheck, TriangleAlert } from 'lucide-react';
 import { TfiThought } from 'react-icons/tfi';
 import { GiMirrorMirror } from 'react-icons/gi';
+import { ClientIcon } from '@/components/ui/client-icon';
 
 export const severities = {
   error: {
@@ -184,7 +185,7 @@ export function Activity({
               >
                 <div className='flex items-center justify-between gap-2 m-w-40'>
                   {activityType !== 'info' && !nextTimestamp ? (
-                    <AutorenewOutlined className='animate-spin text-primary' />
+                    <ClientIcon icon={AutorenewOutlined} className='animate-spin text-primary' />
                   ) : (
                     severities[activityType].icon
                   )}
@@ -207,7 +208,7 @@ export function Activity({
           >
             <div className='flex items-center justify-between gap-2 m-w-40'>
               {activityType !== 'info' && !nextTimestamp ? (
-                <AutorenewOutlined className='animate-spin text-primary' />
+                <ClientIcon icon={AutorenewOutlined} className='animate-spin text-primary' />
               ) : (
                 severities[activityType].icon
               )}
@@ -229,22 +230,30 @@ export function Activity({
 
   if (!children || children.length <= 0) return rootChildren;
 
+  console.log('🔍 Activity with children rendering accordion:', {
+    activityMessage: message.substring(0, 50) + '...',
+    childrenCount: children.length,
+    childrenData: children.map((child) => ({
+      id: child.id,
+      message: child.message.substring(0, 50) + '...',
+      timestamp: child.timestamp,
+    })),
+  });
+
   return (
-    <Accordion
-      type='single'
-      className={`w-full border-t border-border ${alternateBackground === 'primary' ? 'bg-primary/10' : ''}`}
-    >
-      <AccordionItem value='item-1' className='border-b-0'>
-        <AccordionTrigger
-          className={cn(
-            rootStyles,
-            'w-full flex justify-start items-center px-0 py-2.5 border-b border-border hover:no-underline',
-          )}
-        >
-          {rootChildren}
-        </AccordionTrigger>
-        <AccordionContent className='pl-4 border-b-0'>
-          {children?.map((child, index) => {
+    <div className={`w-full border-t border-border ${alternateBackground === 'primary' ? 'bg-primary/10' : ''}`}>
+      <Accordion type='single'>
+        <AccordionItem value='item-1' className='border-b-0'>
+          <AccordionTrigger
+            className={cn(
+              rootStyles,
+              'w-full flex justify-start items-center px-0 py-2.5 border-b border-border hover:no-underline',
+            )}
+          >
+            {rootChildren}
+          </AccordionTrigger>
+          <AccordionContent className='pl-4 border-b-0 bg-muted/30 border-l-2 border-l-primary/20 ml-2'>
+            {children?.map((child, index) => {
             const messageType = child.message.split(' ')[0];
             const messageBody = child.message.substring(child.message.indexOf(' '));
             return (
@@ -277,5 +286,6 @@ export function Activity({
         </AccordionContent>
       </AccordionItem>
     </Accordion>
+    </div>
   );
 }
