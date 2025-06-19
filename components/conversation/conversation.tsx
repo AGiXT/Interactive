@@ -25,7 +25,7 @@ interface ConversationMessage {
 import { Activity as ChatActivity } from '@/components/conversation/activity';
 import Message from '@/components/conversation/Message/Message';
 import { SidebarContent } from '@/components/layout/SidebarContentManager';
-import { ChatBar } from '@/components/conversation/input/chat-input-fixed';
+import { ChatBar } from '@/components/conversation/input/chat-input';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -358,8 +358,6 @@ export function ChatLog({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   let lastUserMessage = ''; // track the last user message
 
-
-
   // Scroll to bottom when conversation updates
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -467,8 +465,6 @@ export function Chat({
     },
   });
 
-
-
   // Always use SWR for initial data, then enhance with WebSocket for real-time updates
   const { data: swrConversationData } = useSWR(
     activeConversationId !== '-' && activeConversationId !== undefined ? conversationSWRPath + activeConversationId : null,
@@ -490,7 +486,7 @@ export function Chat({
         // Use WebSocket data as base, add any missing SWR messages
         const wsIds = new Set(conversationData.map((msg: { id: string }) => msg.id));
         const missingSWRMessages = swrConversationData.filter((swrMsg: { id: string }) => !wsIds.has(swrMsg.id));
-        
+
         if (missingSWRMessages.length > 0) {
           // Sort by timestamp to maintain chronological order
           return [...conversationData, ...missingSWRMessages].sort(
@@ -499,7 +495,7 @@ export function Chat({
           );
         }
       }
-      
+
       return conversationData;
     }
 
