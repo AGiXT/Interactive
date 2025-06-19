@@ -7,6 +7,7 @@ import { SidebarMain } from '@/components/layout/SidebarMain';
 import { AudioProvider } from '@/components/conversation/Message/AudioContext';
 import '@/components/interactive/zod2gql';
 import { SidebarProvider } from '@/components/ui/sidebar';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import { Inter } from 'next/font/google';
@@ -42,22 +43,24 @@ export default function RootLayout({ children }: { children: ReactNode }): React
         />
       </head>
       <body className={cn(inter.className, theme, appearance)}>
-        <AudioProvider>
-          <InteractiveConfigContextWrapper>
-            <CommandMenuProvider>
-              <SidebarContentProvider>
-                <SidebarProvider className='flex-1' defaultRightOpen={false}>
-                  <SidebarMain side='left' />
-                  {children}
-                  <Toaster />
-                  {/* <ThemeSetter /> */}
-                  <CommandMenu />
-                  <SidebarContext side='right' />
-                </SidebarProvider>
-              </SidebarContentProvider>
-            </CommandMenuProvider>
-          </InteractiveConfigContextWrapper>
-        </AudioProvider>
+        <TooltipProvider>
+          <AudioProvider>
+            <InteractiveConfigContextWrapper>
+              <CommandMenuProvider>
+                <SidebarContentProvider>
+                  <SidebarProvider className='flex-1' defaultRightOpen={false}>
+                    <SidebarMain side='left' />
+                    {children}
+                    <Toaster />
+                    {/* <ThemeSetter /> */}
+                    <CommandMenu />
+                    <SidebarContext side='right' />
+                  </SidebarProvider>
+                </SidebarContentProvider>
+              </CommandMenuProvider>
+            </InteractiveConfigContextWrapper>
+          </AudioProvider>
+        </TooltipProvider>
       </body>
     </html>
   );

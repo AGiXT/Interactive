@@ -1,22 +1,33 @@
 'use client';
 
-import { useContext, useEffect, useState, useRef, useCallback } from 'react';
-import useSWR, { mutate } from 'swr';
+import { useContext, useEffect, useState, useRef, useMemo } from 'react';
+import { mutate } from 'swr';
+import useSWR from 'swr';
 import { getCookie } from 'cookies-next';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
+import { Paperclip, Pencil, Plus, Check, Download, Trash2 } from 'lucide-react';
 
+import { useConversationWebSocket } from '@/hooks/useConversationWebSocketStable';
 import { InteractiveConfigContext, Overrides } from '@/components/interactive/InteractiveConfigContext';
 import { useCompany } from '@/components/interactive/useUser';
 import { useConversations } from '@/components/interactive/useConversation';
 import { toast } from '@/components/layout/toast';
+
+interface ConversationMessage {
+  id: string;
+  role: string;
+  message: string;
+  timestamp: string;
+  children: ConversationMessage[];
+}
 
 import { Activity as ChatActivity } from '@/components/conversation/activity';
 import Message from '@/components/conversation/Message/Message';
 import { SidebarContent } from '@/components/layout/SidebarContentManager';
 import { ChatBar } from '@/components/conversation/input/chat-input';
 
-import { Badge, Paperclip, Pencil, Plus, Check, Download, Trash2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -61,11 +72,11 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
 
       // Properly invalidate both the conversation list and the specific conversation cache
       await mutate('/conversations');
-      await mutate(conversationSWRPath + interactiveConfig.overrides.conversation);
+      await mutate(conversationSWRPath + interactiveConfig.overrides?.conversation);
 
       // Update the state to a new conversation
       if (interactiveConfig.mutate) {
-        interactiveConfig.mutate((oldState) => ({
+        interactiveConfig.mutate((oldState: any) => ({
           ...oldState,
           overrides: { ...oldState.overrides, conversation: '-' },
         }));
@@ -110,7 +121,7 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
 
       // Properly invalidate both the conversation list and the specific conversation
       await mutate('/conversations');
-      await mutate(conversationSWRPath + interactiveConfig.overrides.conversation);
+      await mutate(conversationSWRPath + interactiveConfig.overrides?.conversation);
 
       toast({
         title: 'Success',
@@ -147,7 +158,7 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
         name: currentConversation?.name || 'Conversation',
         id: currentConversation?.id || '-',
         created_at: currentConversation?.createdAt || new Date().toISOString(),
-        messages: conversationContent.map((msg) => ({
+        messages: conversationContent.map((msg: any) => ({
           role: msg.role,
           content: msg.message,
           timestamp: msg.timestamp,
@@ -217,7 +228,7 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
 
   // Don't show sidebar content if no conversation exists
   if (!currentConversation || currentConversation.id === '-') {
-    return null;
+    return <div />;
   }
 
   return (
@@ -231,7 +242,6 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   className='w-full'
-                  autoFocus
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       handleRenameConversation(newName);
@@ -263,13 +273,13 @@ export function ChatSidebar({ currentConversation }: { currentConversation: any 
               icon: Plus,
               func: () => {
                 if (interactiveConfig?.mutate) {
-                  interactiveConfig.mutate((oldState) => ({
+                  interactiveConfig.mutate((oldState: any) => ({
                     ...oldState,
                     overrides: { ...oldState.overrides, conversation: '-' },
                   }));
 
                   // Force an invalidation of any existing conversation data
-                  mutate(conversationSWRPath + interactiveConfig.overrides.conversation);
+                  mutate(conversationSWRPath + interactiveConfig.overrides?.conversation);
                 }
                 router.push('/chat');
               },
@@ -340,7 +350,7 @@ export function ChatLog({
   loading,
   setLoading,
 }: {
-  conversation: { role: string; message: string; timestamp: string; children: any[] }[];
+  conversation: { id: string; role: string; message: string; timestamp: string; children: any[] }[];
   setLoading: (loading: boolean) => void;
   loading: boolean;
   alternateBackground?: string;
@@ -357,59 +367,52 @@ export function ChatLog({
     <div className='flex flex-col-reverse flex-grow overflow-auto bg-background pb-28' style={{ flexBasis: '0px' }}>
       <div className='flex flex-col h-min'>
         {conversation && conversation.length > 0 ? (
-          conversation.map((chatItem, index: number) => {
-            if (chatItem.role === 'user') {
-              lastUserMessage = chatItem.message;
-            }
-            const validTypes = [
-              '[ACTIVITY]',
-              '[ACTIVITY][ERROR]',
-              '[ACTIVITY][WARN]',
-              '[ACTIVITY][INFO]',
-              '[SUBACTIVITY]',
-              '[SUBACTIVITY][THOUGHT]',
-              '[SUBACTIVITY][REFLECTION]',
-              '[SUBACTIVITY][EXECUTION]',
-              '[SUBACTIVITY][ERROR]',
-              '[SUBACTIVITY][WARN]',
-              '[SUBACTIVITY][INFO]',
-            ];
-            const messageType = chatItem.message.split(' ')[0];
-            const messageBody = validTypes.some((x) => messageType.includes(x))
-              ? chatItem.message.substring(chatItem.message.indexOf(' '))
-              : chatItem.message;
+          conversation
+            .filter((chatItem) => {
+              // Filter out SUBACTIVITY messages as they should only appear as children
+              return !chatItem.message.startsWith('[SUBACTIVITY]');
+            })
+            .map((chatItem, index: number) => {
+              if (chatItem.role === 'user') {
+                lastUserMessage = chatItem.message;
+              }
+              const validTypes = ['[ACTIVITY]', '[ACTIVITY][ERROR]', '[ACTIVITY][WARN]', '[ACTIVITY][INFO]'];
+              const messageType = chatItem.message.split(' ')[0];
+              const messageBody = validTypes.some((x) => messageType.includes(x))
+                ? chatItem.message.substring(chatItem.message.indexOf(' '))
+                : chatItem.message;
 
-            return validTypes.includes(messageType) ? (
-              <ChatActivity
-                key={chatItem.timestamp + '-' + messageBody}
-                activityType={
-                  messageType === '[ACTIVITY]'
-                    ? 'success'
-                    : (messageType.split('[')[2]?.split(']')[0]?.toLowerCase() as
-                        | 'error'
-                        | 'info'
-                        | 'success'
-                        | 'warn'
-                        | 'thought'
-                        | 'reflection'
-                        | 'execution'
-                        | 'diagram')
-                }
-                nextTimestamp={conversation[index + 1]?.timestamp}
-                message={messageBody}
-                timestamp={chatItem.timestamp}
-                alternateBackground={alternateBackground}
-                children={chatItem.children}
-              />
-            ) : (
-              <Message
-                key={chatItem.timestamp + '-' + messageBody}
-                chatItem={chatItem}
-                lastUserMessage={lastUserMessage}
-                setLoading={setLoading}
-              />
-            );
-          })
+              return validTypes.includes(messageType) ? (
+                <ChatActivity
+                  key={chatItem.timestamp + '-' + messageBody}
+                  activityType={
+                    messageType === '[ACTIVITY]'
+                      ? 'success'
+                      : (messageType.split('[')[2]?.split(']')[0]?.toLowerCase() as
+                          | 'error'
+                          | 'info'
+                          | 'success'
+                          | 'warn'
+                          | 'thought'
+                          | 'reflection'
+                          | 'execution'
+                          | 'diagram')
+                  }
+                  nextTimestamp={conversation[index + 1]?.timestamp}
+                  message={messageBody}
+                  timestamp={chatItem.timestamp}
+                  alternateBackground={alternateBackground}
+                  children={chatItem.children}
+                />
+              ) : (
+                <Message
+                  key={chatItem.timestamp + '-' + messageBody}
+                  chatItem={chatItem}
+                  lastUserMessage={lastUserMessage}
+                  setLoading={setLoading}
+                />
+              );
+            })
         ) : (
           <div className='max-w-4xl px-2 mx-auto space-y-4 text-center mt-8'>
             <div>
@@ -429,145 +432,145 @@ export function ChatLog({
   );
 }
 
-// Helper function to format the conversation data from the API
-export async function getAndFormatConversation(state): Promise<any[]> {
-  // For empty/new conversations, return empty array
-  if (!state.overrides.conversation || state.overrides.conversation === '-') {
-    return [];
-  }
-
-  const rawConversation = await state.agixt.getConversation('', state.overrides.conversation, 100, 1);
-
-  // Create a map of activity messages for faster lookups
-  const activityMessages = {};
-  const formattedConversation = [];
-
-  // First pass: identify and store all main activities
-  rawConversation.forEach((message) => {
-    const messageType = message.message.split(' ')[0];
-    if (!messageType.startsWith('[SUBACTIVITY]')) {
-      formattedConversation.push({ ...message, children: [] });
-      activityMessages[message.id] = formattedConversation[formattedConversation.length - 1];
-    }
-  });
-
-  // Second pass: handle subactivities
-  rawConversation.forEach((currentMessage) => {
-    const messageType = currentMessage.message.split(' ')[0];
-    if (messageType.startsWith('[SUBACTIVITY]')) {
-      try {
-        // Try to extract parent ID
-        const parent = messageType.split('[')[2].split(']')[0];
-        let foundParent = false;
-
-        // Look for the parent in our activity map
-        if (activityMessages[parent]) {
-          activityMessages[parent].children.push({ ...currentMessage, children: [] });
-          foundParent = true;
-        } else {
-          // If no exact match, try to find it in children
-          for (const activity of formattedConversation) {
-            const targetInChildren = activity.children.find((child) => child.id === parent);
-            if (targetInChildren) {
-              targetInChildren.children.push({ ...currentMessage, children: [] });
-              foundParent = true;
-              break;
-            }
-          }
-        }
-
-        // If still not found, add to the last activity as a fallback
-        if (!foundParent && formattedConversation.length > 0) {
-          const lastActivity = formattedConversation[formattedConversation.length - 1];
-          lastActivity.children.push({ ...currentMessage, children: [] });
-        }
-      } catch (error) {
-        // If parsing fails, add to the last activity as a fallback
-        if (formattedConversation.length > 0) {
-          const lastActivity = formattedConversation[formattedConversation.length - 1];
-          lastActivity.children.push({ ...currentMessage, children: [] });
-        } else {
-          // If no activities exist yet, convert this subactivity to an activity
-          formattedConversation.push({ ...currentMessage, children: [] });
-        }
-      }
-    }
-  });
-
-  return formattedConversation;
-}
-
 export function Chat({
   alternateBackground,
   enableFileUpload,
   enableVoiceInput,
-  showOverrideSwitchesCSV,
   conversation: conversationOverride,
 }: Overrides & UIProps): React.JSX.Element {
   const [loading, setLoading] = useState(false);
   const interactiveConfig = useContext(InteractiveConfigContext);
-  const { data: conversations, isLoading: isLoadingConversations } = useConversations();
+  const { data: conversations } = useConversations();
   const router = useRouter();
 
-  // Find the current conversation
-  const currentConversation = conversations?.find((conv) => conv.id === interactiveConfig.overrides.conversation);
+  // Use conversation override from props as priority, fallback to interactive config
+  const activeConversationId = conversationOverride || interactiveConfig.overrides?.conversation;
 
-  // Fetch conversation data with SWR
-  const { data: conversationData = [], mutate: mutateConversation } = useSWR(
-    conversationSWRPath + interactiveConfig.overrides.conversation,
-    async () => {
-      return await getAndFormatConversation(interactiveConfig);
+  // Find the current conversation
+  const currentConversation = conversations?.find((conv) => conv.id === activeConversationId);
+
+  // Use WebSocket for real-time conversation updates with SWR fallback for initial data
+  // Enable WebSocket for all conversations including new ones with ID "-"
+  const { messages: conversationData } = useConversationWebSocket({
+    conversationId: activeConversationId,
+    enabled: activeConversationId !== undefined, // Enable for all IDs including "-"
+    onMessage: () => {
+      // WebSocket message received
     },
+    onConnect: () => {
+      // WebSocket connected successfully
+    },
+    onError: (error) => {
+      console.error('❌ WebSocket error:', error);
+    },
+  });
+
+  // Always use SWR for initial data, then enhance with WebSocket for real-time updates
+  const { data: swrConversationData } = useSWR(
+    activeConversationId !== '-' && activeConversationId !== undefined ? conversationSWRPath + activeConversationId : null,
+    () => interactiveConfig.agixt.getConversation('', activeConversationId),
     {
-      fallbackData: [],
-      refreshInterval: loading ? 1000 : 0,
       revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      refreshInterval: 0,
+      dedupingInterval: 2000,
     },
   );
 
+  // Determine which data source to use - prioritize WebSocket for real-time updates
+  const activeConversationData = useMemo(() => {
+    // If WebSocket has data, use it as primary source (real-time updates)
+    if (conversationData && conversationData.length > 0) {
+      // If we also have SWR data, merge missing messages from SWR
+      if (swrConversationData && swrConversationData.length > 0) {
+        // Use WebSocket data as base, add any missing SWR messages
+        const wsIds = new Set(conversationData.map((msg: { id: string }) => msg.id));
+        const missingSWRMessages = swrConversationData.filter((swrMsg: { id: string }) => !wsIds.has(swrMsg.id));
+
+        if (missingSWRMessages.length > 0) {
+          // Sort by timestamp to maintain chronological order
+          return [...conversationData, ...missingSWRMessages].sort(
+            (a: { timestamp: string }, b: { timestamp: string }) =>
+              new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+          );
+        }
+      }
+
+      return conversationData;
+    }
+
+    // Fallback to SWR data if no WebSocket data
+    if (swrConversationData && swrConversationData.length > 0) {
+      return swrConversationData;
+    }
+
+    return [];
+  }, [conversationData, swrConversationData]); // WebSocket data first in dependencies
+
+  // Ensure conversationData is always an array with valid structure
+  const safeConversationData = useMemo(() => {
+    try {
+      if (!Array.isArray(activeConversationData)) {
+        console.warn('activeConversationData is not an array:', activeConversationData);
+        return [];
+      }
+
+      return activeConversationData.map((msg: any, index: number): ConversationMessage => {
+        // Validate each message object
+        if (!msg || typeof msg !== 'object') {
+          console.warn('Invalid message object at index', index, ':', msg);
+          return {
+            id: `invalid-msg-${Date.now()}-${index}`,
+            role: 'system',
+            message: '[Invalid message data]',
+            timestamp: new Date().toISOString(),
+            children: [],
+          };
+        }
+
+        return {
+          id: msg.id || `msg-${Date.now()}-${index}`,
+          role: msg.role || 'unknown',
+          message: msg.message || '',
+          timestamp: msg.timestamp || new Date().toISOString(),
+          children: Array.isArray(msg.children)
+            ? msg.children.map(
+                (child: any, childIndex: number): ConversationMessage => ({
+                  id: child?.id || `child-${Date.now()}-${index}-${childIndex}`,
+                  role: child?.role || 'unknown',
+                  message: child?.message || '',
+                  timestamp: child?.timestamp || new Date().toISOString(),
+                  children: [],
+                }),
+              )
+            : [],
+        };
+      });
+    } catch (error) {
+      console.error('Error processing conversation data:', error);
+      return [];
+    }
+  }, [activeConversationData]);
+
+  // Combine server data
+  const displayConversationData = useMemo(() => {
+    return safeConversationData.map((msg) => ({
+      ...msg,
+      children: msg.children || [],
+    }));
+  }, [safeConversationData]);
+
   // Check if the conversation is empty
-  const isEmptyConversation = !conversationData?.length;
+  const isEmptyConversation = !displayConversationData?.length;
 
   // Get company info for API calls
   const { data: activeCompany } = useCompany();
 
-  // Handle array-type conversation ID in state (shouldn't happen, but as precaution)
-  useEffect(() => {
-    if (Array.isArray(interactiveConfig.overrides.conversation)) {
-      interactiveConfig.mutate((oldState) => ({
-        ...oldState,
-        overrides: { ...oldState.overrides, conversation: oldState.overrides.conversation[0] },
-      }));
-    }
-  }, [interactiveConfig]);
-
-  // Refresh conversation data when conversation ID changes or loading state changes
-  useEffect(() => {
-    mutateConversation();
-  }, [interactiveConfig.overrides.conversation, mutateConversation]);
-
-  useEffect(() => {
-    if (!loading) {
-      const timer = setTimeout(() => {
-        mutateConversation();
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [loading, mutateConversation]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      setLoading(false);
-    };
-  }, []);
-
   // Handler for sending messages
-  async function chat(messageTextBody, messageAttachedFiles): Promise<string> {
+  async function chat(messageTextBody: any, messageAttachedFiles: any): Promise<string> {
     // Handle different types of messageTextBody (string or object)
     const messageText = typeof messageTextBody === 'string' ? messageTextBody : '';
-    const messageFlags = typeof messageTextBody === 'object' ? messageTextBody : {};
-    
+
     // Don't send empty messages
     if (!messageText.trim() && Object.keys(messageAttachedFiles).length === 0) {
       return '';
@@ -591,78 +594,76 @@ export function Chat({
       ...(getCookie('agixt-websearch') ? { websearch: getCookie('agixt-websearch') } : {}),
       ...(getCookie('agixt-analyze-user-input') ? { analyze_user_input: getCookie('agixt-analyze-user-input') } : {}),
       // Enable TTS automatically for children (roleId 4) or if the TTS cookie is set or if passed via messageFlags
-      ...(activeCompany?.roleId === 4 || getCookie('agixt-tts') || messageFlags.tts ? { tts: 'true' } : {}),
+      ...(activeCompany?.roleId === 4 ? { tts: 'true' } : {}),
     });
 
     // Build the request payload with proper structure
     const requestPayload = {
       messages: messages,
       model: getCookie('agixt-agent'),
-      user: interactiveConfig.overrides.conversation,
+      user: interactiveConfig.overrides?.conversation,
       ...(activeCompany?.id ? { company_id: activeCompany?.id } : {}),
     };
 
     setLoading(true);
 
-    // Slight delay to allow UI to update
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    // Refresh conversation data immediately to show the message
-    mutateConversation();
-
     try {
-      const completionResponse = await axios.post(
-        `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/chat/completions`,
-        requestPayload,
-        {
+      // Fire the request and handle it in the background
+      axios
+        .post(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/chat/completions`, requestPayload, {
           headers: {
             Authorization: getCookie('jwt'),
           },
-        },
-      );
+        })
+        .then(async (completionResponse) => {
+          if (completionResponse.status === 200) {
+            const chatCompletion = completionResponse.data;
+            const conversationId = chatCompletion.id;
 
-      if (completionResponse.status === 200) {
-        const chatCompletion = completionResponse.data;
+            // Only update route if conversation ID has changed
+            if (conversationId !== activeConversationId) {
+              // Update conversation state
+              if (interactiveConfig.mutate) {
+                interactiveConfig.mutate((oldState: any) => ({
+                  ...oldState,
+                  overrides: {
+                    ...oldState.overrides,
+                    conversation: conversationId,
+                  },
+                }));
+              }
 
-        // Store conversation ID
-        const conversationId = chatCompletion.id;
+              // Push route after state is updated
+              router.push(`/chat/${conversationId}`);
+            }
 
-        // Only update route if conversation ID has changed
-        if (conversationId !== interactiveConfig.overrides.conversation) {
-          // Update conversation state
-          interactiveConfig.mutate((oldState) => ({
-            ...oldState,
-            overrides: {
-              ...oldState.overrides,
-              conversation: conversationId,
-            },
-          }));
+            // Trigger proper mutations
+            mutate('/conversations');
+            mutate('/user');
+          }
+        })
+        .catch((error) => {
+          console.error('❌ Chat API error:', error);
+          toast({
+            title: 'Error',
+            description: 'Failed to get response from the agent',
+            duration: 5000,
+            variant: 'destructive',
+          });
+        })
+        .finally(() => {
+          // End loading state and final cleanup
+          setLoading(false);
+        });
 
-          // Push route after state is updated
-          router.push(`/chat/${conversationId}`);
-        }
-
-        // Refresh data after updating conversation
-        setLoading(false);
-
-        // Trigger proper mutations
-        mutateConversation();
-        mutate('/conversations');
-        mutate('/user');
-
-        if (chatCompletion?.choices[0]?.message.content.length > 0) {
-          return chatCompletion.choices[0].message.content;
-        } else {
-          throw new Error('Failed to get response from the agent');
-        }
-      } else {
-        throw new Error('Failed to get response from the agent');
-      }
+      // Return immediately while the request processes in the background
+      // The WebSocket connection will handle updating the UI with real-time activities
+      return '';
     } catch (error) {
       setLoading(false);
       toast({
         title: 'Error',
-        description: 'Failed to get response from the agent',
+        description: 'Failed to send message',
         duration: 5000,
         variant: 'destructive',
       });
@@ -674,7 +675,7 @@ export function Chat({
     <>
       <ChatSidebar currentConversation={currentConversation} />
       <ChatLog
-        conversation={conversationData}
+        conversation={displayConversationData}
         alternateBackground={alternateBackground}
         setLoading={setLoading}
         loading={loading}
@@ -685,8 +686,6 @@ export function Chat({
         enableFileUpload={enableFileUpload}
         enableVoiceInput={enableVoiceInput}
         loading={loading}
-        setLoading={setLoading}
-        showOverrideSwitchesCSV={showOverrideSwitchesCSV}
         showResetConversation={false}
         isEmptyConversation={isEmptyConversation}
       />

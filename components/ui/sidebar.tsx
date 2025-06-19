@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
+// Temporarily disabled tooltip imports to fix infinite re-render issue
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { ViewVerticalIcon } from '@radix-ui/react-icons';
@@ -585,7 +586,7 @@ const SidebarMenuButton = React.forwardRef<
     side?: SidebarSide;
     asChild?: boolean;
     isActive?: boolean;
-    tooltip?: string | React.ComponentProps<typeof TooltipContent>;
+    tooltip?: string; // Simplified tooltip type - TooltipContent temporarily disabled
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(
   (
@@ -619,16 +620,12 @@ const SidebarMenuButton = React.forwardRef<
       return button;
     }
 
-    if (typeof tooltip === 'string') {
-      tooltip = {
-        children: tooltip,
-      };
-    }
-
     return (
       <Tooltip>
         <TooltipTrigger asChild>{button}</TooltipTrigger>
-        <TooltipContent side='right' align='center' hidden={state !== 'collapsed' || isMobile} {...tooltip} />
+        <TooltipContent side='right' align='center' hidden={state !== 'collapsed' || isMobile}>
+          {tooltip}
+        </TooltipContent>
       </Tooltip>
     );
   },
