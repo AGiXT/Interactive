@@ -448,14 +448,6 @@ export function Chat({
   // Use conversation override from props as priority, fallback to interactive config
   const activeConversationId = conversationOverride || interactiveConfig.overrides?.conversation;
 
-  console.log('🔍 Conversation setup:', {
-    conversationOverride,
-    configConversation: interactiveConfig.overrides?.conversation,
-    activeConversationId,
-    willEnableWebSocket: activeConversationId !== undefined,
-    wsWillConnect: activeConversationId !== undefined && activeConversationId
-  });
-
   // Find the current conversation
   const currentConversation = conversations?.find((conv) => conv.id === activeConversationId);
 

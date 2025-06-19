@@ -20,25 +20,16 @@ export interface UseConversationWebSocketOptions {
 
 // Simple function to group activities and subactivities
 function groupMessages(rawMessages: WebSocketMessage[]): WebSocketMessage[] {
-  console.log('🔧 Grouping messages:', rawMessages.length);
   const result: WebSocketMessage[] = [];
   let currentActivity: WebSocketMessage | null = null;
 
   for (const msg of rawMessages) {
     const text = msg.message || '';
-    console.log('🔧 Processing message:', {
-      id: msg.id,
-      message: text.substring(0, 50) + '...',
-      isActivity: text.startsWith('[ACTIVITY]'),
-      isSubactivity: text.startsWith('[SUBACTIVITY]'),
-      hasCurrentActivity: !!currentActivity
-    });
 
     if (text.startsWith('[ACTIVITY]')) {
       // This is a new activity
       currentActivity = { ...msg, children: [] };
       result.push(currentActivity);
-      console.log('🔧 Created new activity:', currentActivity.id);
     } else if (text.startsWith('[SUBACTIVITY]') && currentActivity) {
       // This is a subactivity - add to current activity
       if (!currentActivity.children) {
@@ -49,41 +40,13 @@ function groupMessages(rawMessages: WebSocketMessage[]): WebSocketMessage[] {
       const existingSubactivity = currentActivity.children.find(child => child.id === msg.id);
       if (!existingSubactivity) {
         currentActivity.children.push({ ...msg, children: [] });
-        console.log('🔧 Added subactivity to activity:', {
-          activityId: currentActivity.id,
-          subactivityId: msg.id,
-          totalChildren: currentActivity.children.length
-        });
-      } else {
-        console.log('🔧 Subactivity already exists, skipping:', msg.id);
       }
     } else {
       // Regular message
       result.push({ ...msg, children: [] });
       // Don't reset currentActivity here - let it persist until a new activity starts
-      console.log('🔧 Added regular message:', msg.id);
     }
   }
-
-  console.log(
-    '🔧 Grouping result:',
-    result.map((msg) => ({
-      id: msg.id,
-      message: msg.message.substring(0, 50) + '...',
-      childrenCount: msg.children?.length || 0,
-    })),
-  );
-
-  // Final validation - log the children count for activities
-  result.forEach((msg, index) => {
-    if (msg.message?.startsWith('[ACTIVITY]')) {
-      console.log(`🔧 Final activity ${index}:`, {
-        id: msg.id,
-        childrenCount: msg.children?.length || 0,
-        children: msg.children?.map((child) => child.id) || []
-      });
-    }
-  });
 
   return result;
 }
@@ -145,11 +108,8 @@ export function useConversationWebSocket({
 
   // Main effect for managing WebSocket connection - only depends on enabled and conversationId
   useEffect(() => {
-    console.log('🔍 WebSocket effect triggered:', { enabled, conversationId, currentId: currentConversationIdRef.current });
-    
     // Don't connect if disabled or no conversation ID
     if (!enabled || !conversationId) {
-      console.log('🚫 WebSocket disabled or no conversation ID:', { enabled, conversationId });
       disconnect();
       setMessages([]);
       return;
@@ -175,14 +135,10 @@ export function useConversationWebSocket({
       return;
     }
 
-    console.log('🔄 Conversation changed, establishing new connection:', conversationId);
-
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const serverUrl = process.env.NEXT_PUBLIC_AGIXT_SERVER || 'http://localhost:7437';
     const wsUrl = serverUrl.replace(/^https?:/, protocol);
     const url = `${wsUrl}/v1/conversation/${conversationId}/stream?authorization=${encodeURIComponent(token)}`;
-
-    console.log('🔌 Connecting to WebSocket:', url);
 
     try {
       setConnectionStatus('connecting');
@@ -190,7 +146,6 @@ export function useConversationWebSocket({
       wsRef.current = ws;
 
       ws.onopen = () => {
-        console.log('✅ WebSocket connected');
         setConnectionStatus('connected');
         onConnectRef.current?.();
       };
@@ -198,7 +153,6 @@ export function useConversationWebSocket({
       ws.onmessage = (event) => {
         try {
           const wsEvent = JSON.parse(event.data);
-          console.log('📨 WebSocket message:', wsEvent);
 
           if ((wsEvent.type === 'initial_message' || wsEvent.type === 'message_added') && wsEvent.data) {
             const newMessage = wsEvent.data;
@@ -240,11 +194,6 @@ export function useConversationWebSocket({
                   );
                   
                   if (activityFound) {
-                    console.log('🔧 Direct subactivity addition:', {
-                      activityId,
-                      subactivityId: newMessage.id,
-                      activityChildren: updatedMessages.find((m) => m.id === activityId)?.children?.length || 0,
-                    });
                     return updatedMessages;
                   }
                 }
@@ -259,11 +208,6 @@ export function useConversationWebSocket({
               return groupedMessages.map((groupedMsg) => {
                 const existingMsg = prevMessages.find((msg) => msg.id === groupedMsg.id);
                 if (existingMsg && existingMsg.children && existingMsg.children.length > 0) {
-                  console.log('🔧 Preserving existing children for:', {
-                    id: groupedMsg.id,
-                    existingChildren: existingMsg.children.length,
-                    groupedChildren: groupedMsg.children?.length || 0
-                  });
                   return {
                     ...groupedMsg,
                     children: existingMsg.children
@@ -282,7 +226,6 @@ export function useConversationWebSocket({
       };
 
       ws.onclose = (event) => {
-        console.log('🔌 WebSocket closed:', event.code, event.reason);
         setConnectionStatus('disconnected');
         wsRef.current = null;
         onDisconnectRef.current?.();
