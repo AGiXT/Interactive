@@ -262,20 +262,25 @@ export function AgentSelector() {
             {showLoadingState ? (
               <div className='py-2 px-2 text-sm text-muted-foreground'>Loading agents...</div>
             ) : agentsData && agentsData.length > 0 ? (
-              agentsData.map((agent) => (
-                <DropdownMenuItem
-                  key={agent.id}
-                  onClick={() => !isSwitching && switchAgents(agent)}
-                  className='flex items-center justify-between p-2 cursor-pointer'
-                  disabled={isSwitching}
-                >
-                  <div className='flex flex-col'>
-                    <span>{agent.name}</span>
-                    <span className='text-xs text-muted-foreground'>Agent</span>
-                  </div>
-                  {activeAgent?.agent?.id === agent.id && <Check className='w-4 h-4 ml-2' />}
-                </DropdownMenuItem>
-              ))
+              agentsData.map((agent) => {
+                // Find the company that contains this agent
+                const agentCompany = user?.companies?.find((c) => c.agents.some((a) => a.id === agent.id));
+                
+                return (
+                  <DropdownMenuItem
+                    key={agent.id}
+                    onClick={() => !isSwitching && switchAgents(agent)}
+                    className='flex items-center justify-between p-2 cursor-pointer'
+                    disabled={isSwitching}
+                  >
+                    <div className='flex flex-col'>
+                      <span>{agent.name}</span>
+                      <span className='text-xs text-muted-foreground'>{agentCompany?.name || 'Agent'}</span>
+                    </div>
+                    {activeAgent?.agent?.id === agent.id && <Check className='w-4 h-4 ml-2' />}
+                  </DropdownMenuItem>
+                );
+              })
             ) : (
               <div className='py-2 px-2 text-sm text-muted-foreground'>No agents available</div>
             )}
