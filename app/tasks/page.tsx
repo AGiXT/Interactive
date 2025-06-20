@@ -8,7 +8,7 @@ import useSWR, { mutate } from 'swr';
 import axios from 'axios';
 import { getCookie } from 'cookies-next';
 import { useState, useMemo } from 'react';
-import { LuPlus, LuPencil, LuTrash2, LuCalendar, LuListTodo } from 'react-icons/lu';
+import { LuPlus, LuPencil, LuTrash2, LuCalendar, LuListTodo, LuCheck, LuChevronsUpDown, LuMessageSquare } from 'react-icons/lu';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,6 +17,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { DataTableColumnHeader } from '@/components/conversation/Message/data-table/data-table-column-header';
 import { toast } from '@/components/layout/toast';
+import {
+  Command,
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from '@/components/ui/command';
+import { useConversations, type ConversationEdge } from '@/components/interactive/useConversation';
+import { cn } from '@/lib/utils';
+import AGiXTSDK from '@/lib/sdk';
 
 // Define the Task interface based on expected data structure
 interface Task {
@@ -31,6 +44,10 @@ interface Task {
   start_date?: string; // For reoccurring tasks
   end_date?: string; // For reoccurring tasks
   conversation_id?: string; // Optional
+  // Additional properties for form handling
+  days?: number; // For one-time tasks
+  hours?: number; // For one-time tasks
+  minutes?: number; // For one-time tasks
 }
 
 // Define columns for the DataTable
@@ -80,8 +97,28 @@ const columns: ColumnDef<Task>[] = [
       const task = row.original;
       const [modifyDialogOpen, setModifyDialogOpen] = useState(false);
       const [modifyFormData, setModifyFormData] = useState<Partial<Task>>(task);
+      const [modifyFormErrors, setModifyFormErrors] = useState<{title?: string; description?: string}>({});
+
+      const validateModifyForm = () => {
+        const errors: {title?: string; description?: string} = {};
+        
+        if (!modifyFormData.title || modifyFormData.title.trim() === '') {
+          errors.title = 'Title is required';
+        }
+        
+        if (!modifyFormData.description || modifyFormData.description.trim() === '') {
+          errors.description = 'Description is required';
+        }
+        
+        setModifyFormErrors(errors);
+        return Object.keys(errors).length === 0;
+      };
 
       const handleModify = async () => {
+        if (!validateModifyForm()) {
+          return;
+        }
+        
         try {
           await axios.put(
             `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/task`,
@@ -116,20 +153,38 @@ const columns: ColumnDef<Task>[] = [
               </DialogHeader>
               <div className='grid gap-4 py-4'>
                 <div className='space-y-2'>
-                  <Label htmlFor='modify-title'>Title</Label>
+                  <Label htmlFor='modify-title'>Title <span className='text-red-500'>*</span></Label>
                   <Input
                     id='modify-title'
                     value={modifyFormData.title || ''}
-                    onChange={(e) => setModifyFormData({ ...modifyFormData, title: e.target.value })}
+                    onChange={(e) => {
+                      setModifyFormData({ ...modifyFormData, title: e.target.value });
+                      if (modifyFormErrors.title) {
+                        setModifyFormErrors({ ...modifyFormErrors, title: undefined });
+                      }
+                    }}
+                    className={modifyFormErrors.title ? 'border-red-500' : ''}
                   />
+                  {modifyFormErrors.title && (
+                    <p className='text-sm text-red-500'>{modifyFormErrors.title}</p>
+                  )}
                 </div>
                 <div className='space-y-2'>
-                  <Label htmlFor='modify-description'>Description</Label>
+                  <Label htmlFor='modify-description'>Description <span className='text-red-500'>*</span></Label>
                   <Textarea
                     id='modify-description'
                     value={modifyFormData.description || ''}
-                    onChange={(e) => setModifyFormData({ ...modifyFormData, description: e.target.value })}
+                    onChange={(e) => {
+                      setModifyFormData({ ...modifyFormData, description: e.target.value });
+                      if (modifyFormErrors.description) {
+                        setModifyFormErrors({ ...modifyFormErrors, description: undefined });
+                      }
+                    }}
+                    className={modifyFormErrors.description ? 'border-red-500' : ''}
                   />
+                  {modifyFormErrors.description && (
+                    <p className='text-sm text-red-500'>{modifyFormErrors.description}</p>
+                  )}
                 </div>
                 <div className='space-y-2'>
                   <Label htmlFor='modify-due-date'>Due Date</Label>
@@ -160,10 +215,19 @@ const columns: ColumnDef<Task>[] = [
                 </div>
               </div>
               <DialogFooter>
-                <Button variant='outline' onClick={() => setModifyDialogOpen(false)}>
+                <Button variant='outline' onClick={() => {
+                  setModifyDialogOpen(false);
+                  setModifyFormData(task);
+                  setModifyFormErrors({});
+                }}>
                   Cancel
                 </Button>
-                <Button onClick={handleModify}>Save Changes</Button>
+                <Button
+                  onClick={handleModify}
+                  disabled={!modifyFormData.title?.trim() || !modifyFormData.description?.trim()}
+                >
+                  Save Changes
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -181,13 +245,171 @@ const fetchTasks = async () => {
   return response.data.tasks || [];
 };
 
+// ConversationSelector component integrated inline
+interface ConversationSelectorProps {
+  value?: string;
+  onValueChange?: (value: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+}
+
+function ConversationSelector({
+  value,
+  onValueChange,
+  placeholder = 'Select a conversation...',
+  disabled = false,
+}: ConversationSelectorProps) {
+  const [open, setOpen] = useState(false);
+  
+  const { data: conversations, error, isLoading } = useConversations();
+  
+  const selectedConversation = useMemo(() => {
+    return conversations?.find((conv) => conv.id === value);
+  }, [conversations, value]);
+
+
+  const handleSelect = (conversationId: string) => {
+    onValueChange?.(conversationId);
+    setOpen(false);
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
+  return (
+    <>
+      <Button
+        variant="outline"
+        role="combobox"
+        aria-expanded={open}
+        aria-label="Select conversation"
+        className={cn(
+          'w-full justify-between',
+          disabled && 'opacity-50 cursor-not-allowed'
+        )}
+        disabled={disabled}
+        onClick={() => setOpen(true)}
+      >
+        {selectedConversation ? (
+          <div className="flex items-center gap-2 truncate">
+            <LuMessageSquare className="h-4 w-4 shrink-0" />
+            <span className="truncate">
+              {selectedConversation.name === '-' ? 'New Conversation (-)' : selectedConversation.name}
+            </span>
+          </div>
+        ) : (
+          <span className="text-muted-foreground">{placeholder}</span>
+        )}
+        <LuChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+      </Button>
+
+      <CommandDialog open={open} onOpenChange={setOpen}>
+        <CommandInput placeholder="Search conversations..." />
+        <CommandList>
+          <CommandEmpty>
+            {isLoading ? (
+              <div className="text-center py-4">
+                <div className="text-sm text-muted-foreground">Loading conversations...</div>
+              </div>
+            ) : error ? (
+              <div className="text-center py-4">
+                <div className="text-sm text-destructive">Error loading conversations</div>
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <div className="text-sm text-muted-foreground">No conversations found</div>
+              </div>
+            )}
+          </CommandEmpty>
+          
+
+          {conversations && conversations.length > 0 && (
+            <CommandGroup heading="Conversations">
+                {conversations
+                  .sort((a, b) => {
+                    // Sort conversations with "-" name first
+                    if (a.name === '-' && b.name !== '-') return -1;
+                    if (a.name !== '-' && b.name === '-') return 1;
+                    // For other conversations, maintain original order
+                    return 0;
+                  })
+                  .map((conversation) => (
+                  <CommandItem
+                    key={conversation.id}
+                    value={conversation.id}
+                    onSelect={() => handleSelect(conversation.id)}
+                    className="cursor-pointer"
+                  >
+                    <LuCheck
+                      className={cn(
+                        'mr-2 h-4 w-4',
+                        value === conversation.id ? 'opacity-100' : 'opacity-0'
+                      )}
+                    />
+                    <div className="flex flex-col gap-1 min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <LuMessageSquare className="h-4 w-4 shrink-0" />
+                        <span className="font-medium truncate">
+                          {conversation.name === '-' ? 'New Conversation (-)' : conversation.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <LuCalendar className="h-3 w-3" />
+                          <span>{formatDate(conversation.createdAt)}</span>
+                        </div>
+                        {conversation.attachmentCount > 0 && (
+                          <span>{conversation.attachmentCount} attachment{conversation.attachmentCount !== 1 ? 's' : ''}</span>
+                        )}
+                      </div>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+          )}
+        </CommandList>
+      </CommandDialog>
+
+    </>
+  );
+}
+
 export default function TasksPage() {
   const { data: tasks, error, isLoading } = useSWR('/v1/tasks', fetchTasks);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [isReoccurring, setIsReoccurring] = useState(false);
   const [createFormData, setCreateFormData] = useState<Partial<Task>>({});
+  const [createFormErrors, setCreateFormErrors] = useState<{title?: string; description?: string}>({});
+
+  const validateCreateForm = () => {
+    const errors: {title?: string; description?: string} = {};
+    
+    if (!createFormData.title || createFormData.title.trim() === '') {
+      errors.title = 'Title is required';
+    }
+    
+    if (!createFormData.description || createFormData.description.trim() === '') {
+      errors.description = 'Description is required';
+    }
+    
+    setCreateFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleCreate = async () => {
+    if (!validateCreateForm()) {
+      return;
+    }
+    
     try {
       const endpoint = isReoccurring ? '/v1/reoccurring_task' : '/v1/task';
       const payload = isReoccurring
@@ -246,28 +468,45 @@ export default function TasksPage() {
               </DialogHeader>
               <div className='grid gap-4 py-4'>
                 <div className='space-y-2'>
-                  <Label htmlFor='create-title'>Title</Label>
+                  <Label htmlFor='create-title'>Title <span className='text-red-500'>*</span></Label>
                   <Input
                     id='create-title'
                     value={createFormData.title || ''}
-                    onChange={(e) => setCreateFormData({ ...createFormData, title: e.target.value })}
+                    onChange={(e) => {
+                      setCreateFormData({ ...createFormData, title: e.target.value });
+                      if (createFormErrors.title) {
+                        setCreateFormErrors({ ...createFormErrors, title: undefined });
+                      }
+                    }}
+                    className={createFormErrors.title ? 'border-red-500' : ''}
                   />
+                  {createFormErrors.title && (
+                    <p className='text-sm text-red-500'>{createFormErrors.title}</p>
+                  )}
                 </div>
                 <div className='space-y-2'>
-                  <Label htmlFor='create-description'>Description</Label>
+                  <Label htmlFor='create-description'>Description <span className='text-red-500'>*</span></Label>
                   <Textarea
                     id='create-description'
                     value={createFormData.description || ''}
-                    onChange={(e) => setCreateFormData({ ...createFormData, description: e.target.value })}
+                    onChange={(e) => {
+                      setCreateFormData({ ...createFormData, description: e.target.value });
+                      if (createFormErrors.description) {
+                        setCreateFormErrors({ ...createFormErrors, description: undefined });
+                      }
+                    }}
+                    className={createFormErrors.description ? 'border-red-500' : ''}
                   />
+                  {createFormErrors.description && (
+                    <p className='text-sm text-red-500'>{createFormErrors.description}</p>
+                  )}
                 </div>
                 <div className='space-y-2'>
-                  <Label htmlFor='create-conversation-id'>Conversation ID (Optional)</Label>
-                  <Input
-                    id='create-conversation-id'
+                  <Label htmlFor='create-conversation-id'>Conversation (Optional)</Label>
+                  <ConversationSelector
                     value={createFormData.conversation_id || ''}
-                    onChange={(e) => setCreateFormData({ ...createFormData, conversation_id: e.target.value })}
-                    placeholder='e.g., 6cece1db-e42b-4255-8346-2554847a1d5b'
+                    onValueChange={(value) => setCreateFormData({ ...createFormData, conversation_id: value })}
+                    placeholder='Select or create a conversation...'
                   />
                 </div>
                 <div className='flex items-center space-x-2'>
@@ -349,10 +588,20 @@ export default function TasksPage() {
                 )}
               </div>
               <DialogFooter>
-                <Button variant='outline' onClick={() => setCreateDialogOpen(false)}>
+                <Button variant='outline' onClick={() => {
+                  setCreateDialogOpen(false);
+                  setCreateFormData({});
+                  setCreateFormErrors({});
+                  setIsReoccurring(false);
+                }}>
                   Cancel
                 </Button>
-                <Button onClick={handleCreate}>Create Task</Button>
+                <Button
+                  onClick={handleCreate}
+                  disabled={!createFormData.title?.trim() || !createFormData.description?.trim()}
+                >
+                  Create Task
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
