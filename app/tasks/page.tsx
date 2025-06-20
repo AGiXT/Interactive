@@ -260,16 +260,30 @@ function ConversationSelector({
   disabled = false,
 }: ConversationSelectorProps) {
   const [open, setOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   
   const { data: conversations, error, isLoading } = useConversations();
   
+  const hyphenConversation = useMemo(() => {
+    return conversations?.find((conv) => conv.name === '-');
+  }, [conversations]);
+  
   const selectedConversation = useMemo(() => {
+    if (value === '-') {
+      // If value is "-", return a dummy object for "Create New Conversation"
+      return { id: '-', name: 'Create New Conversation', createdAt: new Date().toISOString(), attachmentCount: 0 };
+    }
     return conversations?.find((conv) => conv.id === value);
   }, [conversations, value]);
 
-
   const handleSelect = (conversationId: string) => {
     onValueChange?.(conversationId);
+    setOpen(false);
+  };
+
+  const handleNewConversation = async () => {
+    // Always set conversation_id to "-" for new conversations
+    onValueChange?.('-');
     setOpen(false);
   };
 
@@ -303,7 +317,7 @@ function ConversationSelector({
           <div className="flex items-center gap-2 truncate">
             <LuMessageSquare className="h-4 w-4 shrink-0" />
             <span className="truncate">
-              {selectedConversation.name === '-' ? 'New Conversation (-)' : selectedConversation.name}
+              {selectedConversation.name}
             </span>
           </div>
         ) : (
@@ -332,50 +346,68 @@ function ConversationSelector({
           </CommandEmpty>
           
 
-          {conversations && conversations.length > 0 && (
-            <CommandGroup heading="Conversations">
-                {conversations
-                  .sort((a, b) => {
-                    // Sort conversations with "-" name first
-                    if (a.name === '-' && b.name !== '-') return -1;
-                    if (a.name !== '-' && b.name === '-') return 1;
-                    // For other conversations, maintain original order
-                    return 0;
-                  })
-                  .map((conversation) => (
-                  <CommandItem
-                    key={conversation.id}
-                    value={conversation.id}
-                    onSelect={() => handleSelect(conversation.id)}
-                    className="cursor-pointer"
-                  >
-                    <LuCheck
-                      className={cn(
-                        'mr-2 h-4 w-4',
-                        value === conversation.id ? 'opacity-100' : 'opacity-0'
-                      )}
-                    />
-                    <div className="flex flex-col gap-1 min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <LuMessageSquare className="h-4 w-4 shrink-0" />
-                        <span className="font-medium truncate">
-                          {conversation.name === '-' ? 'New Conversation (-)' : conversation.name}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <LuCalendar className="h-3 w-3" />
-                          <span>{formatDate(conversation.createdAt)}</span>
-                        </div>
-                        {conversation.attachmentCount > 0 && (
-                          <span>{conversation.attachmentCount} attachment{conversation.attachmentCount !== 1 ? 's' : ''}</span>
-                        )}
-                      </div>
+          <CommandGroup heading="Conversations">
+            {/* Always show Create New Conversation option at the top */}
+            <CommandItem
+              key="create-new-conversation"
+              value="create-new"
+              onSelect={handleNewConversation}
+              className="cursor-pointer"
+            >
+              <LuCheck
+                className={cn(
+                  'mr-2 h-4 w-4',
+                  value === '-' ? 'opacity-100' : 'opacity-0'
+                )}
+              />
+              <div className="flex flex-col gap-1 min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <LuMessageSquare className="h-4 w-4 shrink-0" />
+                  <span className="font-medium truncate">Create New Conversation</span>
+                </div>
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <span>Create new conversation</span>
+                </div>
+              </div>
+            </CommandItem>
+
+            {/* Show existing conversations, filter out any with name "-" since we handle them above */}
+            {conversations && conversations.length > 0 &&
+              conversations
+                .filter((conversation) => conversation.name !== '-')
+                .map((conversation) => (
+                <CommandItem
+                  key={conversation.id}
+                  value={conversation.id}
+                  onSelect={() => handleSelect(conversation.id)}
+                  className="cursor-pointer"
+                >
+                  <LuCheck
+                    className={cn(
+                      'mr-2 h-4 w-4',
+                      value === conversation.id ? 'opacity-100' : 'opacity-0'
+                    )}
+                  />
+                  <div className="flex flex-col gap-1 min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <LuMessageSquare className="h-4 w-4 shrink-0" />
+                      <span className="font-medium truncate">
+                        {conversation.name}
+                      </span>
                     </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-          )}
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <LuCalendar className="h-3 w-3" />
+                        <span>{formatDate(conversation.createdAt)}</span>
+                      </div>
+                      {conversation.attachmentCount > 0 && (
+                        <span>{conversation.attachmentCount} attachment{conversation.attachmentCount !== 1 ? 's' : ''}</span>
+                      )}
+                    </div>
+                  </div>
+                </CommandItem>
+              ))}
+          </CommandGroup>
         </CommandList>
       </CommandDialog>
 
