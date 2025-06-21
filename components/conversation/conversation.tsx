@@ -7,26 +7,15 @@ import { getCookie } from 'cookies-next';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { Paperclip, Pencil, Plus, Check, Download, Trash2 } from 'lucide-react';
-
 import { useConversationWebSocket } from '@/hooks/useConversationWebSocketStable';
 import { InteractiveConfigContext, Overrides } from '@/components/interactive/InteractiveConfigContext';
 import { useCompany } from '@/components/interactive/useUser';
 import { useConversations } from '@/components/interactive/useConversation';
 import { toast } from '@/components/layout/toast';
-
-interface ConversationMessage {
-  id: string;
-  role: string;
-  message: string;
-  timestamp: string;
-  children: ConversationMessage[];
-}
-
 import { Activity as ChatActivity } from '@/components/conversation/activity';
 import Message from '@/components/conversation/Message/Message';
 import { SidebarContent } from '@/components/layout/SidebarContentManager';
 import { ChatBar } from '@/components/conversation/input/chat-input';
-
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +29,13 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 
+interface ConversationMessage {
+  id: string;
+  role: string;
+  message: string;
+  timestamp: string;
+  children: ConversationMessage[];
+}
 export type UIProps = {
   showSelectorsCSV?: string;
   enableFileUpload?: boolean;
@@ -398,7 +394,41 @@ export function ChatLog({
                           | 'execution'
                           | 'diagram')
                   }
-                  nextTimestamp={conversation[index + 1]?.timestamp}
+                  nextTimestamp={(() => {
+                    // If this activity has children, use the last child's timestamp as the activity end time
+                    if (chatItem.children && chatItem.children.length > 0) {
+                      const lastChild = chatItem.children[chatItem.children.length - 1];
+                      return lastChild.timestamp;
+                    }
+                    
+                    // For activities without children, look for the next activity or message
+                    // that has a timestamp very close to this activity (likely part of the same response)
+                    for (let i = index + 1; i < conversation.length; i++) {
+                      const nextItem = conversation[i];
+                      const nextMessageType = nextItem.message.split(' ')[0];
+                      
+                      // If it's an assistant message that comes shortly after the activity,
+                      // this is likely when the activity completed
+                      if (
+                        nextItem.role === 'assistant' &&
+                        !validTypes.some((x) => nextMessageType.includes(x)) &&
+                        !nextItem.message.startsWith('[SUBACTIVITY]')
+                      ) {
+                        const timeDiff = new Date(nextItem.timestamp).getTime() - new Date(chatItem.timestamp).getTime();
+                        // If the next message is within 30 seconds, it's likely the completion of this activity
+                        if (timeDiff <= 30000) {
+                          return nextItem.timestamp;
+                        }
+                      }
+                      
+                      // If it's a different activity group (different base timestamp), use its timestamp
+                      if (validTypes.some((x) => nextMessageType.includes(x)) && nextItem.timestamp !== chatItem.timestamp) {
+                        return nextItem.timestamp;
+                      }
+                    }
+                    // No next timestamp found, this activity is still running
+                    return undefined;
+                  })()}
                   message={messageBody}
                   timestamp={chatItem.timestamp}
                   alternateBackground={alternateBackground}
