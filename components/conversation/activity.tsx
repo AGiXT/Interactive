@@ -1,7 +1,7 @@
 'use client';
 
 import { LuRefreshCw as AutorenewOutlined, LuInfo as Info, LuPencil as Pencil } from 'react-icons/lu';
-import React, { ReactNode, useEffect, useMemo, useState } from 'react';
+import React, { ReactNode, useMemo } from 'react';
 import dayjs from 'dayjs';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
@@ -161,18 +161,7 @@ export function Activity({
   // const [dots, setDots] = useState<string>('');
   const title = useMemo(() => message.split('\n')[0].replace(/:$/, ''), [message]).trim();
   const body = useMemo(() => message.split('\n').slice(1).join('\n'), [message]).trim();
-  const [currentTime, setCurrentTime] = useState(dayjs().format('YYYY-MM-DDTHH:mm:ssZ'));
   const rootStyles = 'p-2.5 overflow-hidden flex gap-2';
-
-  useEffect(() => {
-    if (!nextTimestamp && activityType !== 'info') {
-      const interval = setInterval(() => {
-        // setDots((dots) => (dots.length < 2 ? dots + '.' : ''));
-        setCurrentTime(dayjs().format('YYYY-MM-DDTHH:mm:ssZ'));
-      }, 500);
-      return () => clearInterval(interval);
-    }
-  }, [nextTimestamp, activityType]);
 
   const rootChildren = (
     <Tooltip>
@@ -189,17 +178,8 @@ export function Activity({
                   ) : (
                     severities[activityType].icon
                   )}
-                  {activityType !== 'info' && (
-                    <div className='whitespace-nowrap'>
-                      {getTimeDifference(
-                        timestamp,
-                        // For duration display, prefer the last child timestamp if we have children,
-                        // regardless of whether we have a nextTimestamp (which might be much later due to user delay)
-                        children && children.length > 0
-                          ? children[children.length - 1].timestamp
-                          : nextTimestamp || currentTime,
-                      )}
-                    </div>
+                  {activityType !== 'info' && nextTimestamp && (
+                    <div className='whitespace-nowrap'>{getTimeDifference(timestamp, nextTimestamp)}</div>
                   )}
                   <div className={`mx-1 w-1 h-4 border-l-2`} />
                 </div>
@@ -221,17 +201,8 @@ export function Activity({
               ) : (
                 severities[activityType].icon
               )}
-              {activityType !== 'info' && (
-                <div className='whitespace-nowrap'>
-                  {getTimeDifference(
-                    timestamp,
-                    // For duration display, prefer the last child timestamp if we have children,
-                    // regardless of whether we have a nextTimestamp (which might be much later due to user delay)
-                    children && children.length > 0
-                      ? children[children.length - 1].timestamp
-                      : nextTimestamp || currentTime,
-                  )}
-                </div>
+              {activityType !== 'info' && nextTimestamp && (
+                <div className='whitespace-nowrap'>{getTimeDifference(timestamp, nextTimestamp)}</div>
               )}
               <div className={`mx-1 w-1 h-4 border-l-2`} />
             </div>
@@ -281,9 +252,23 @@ export function Activity({
                 if (index < children.length - 1) {
                   return children[index + 1].timestamp;
                 }
-                // If this is the last child, use the parent's nextTimestamp
-                // which should now be correctly calculated based on when the activity group ends
-                return nextTimestamp;
+                
+                // If this is the last child, we need to provide a reasonable completion time
+                // Don't let it fall back to currentTime as that creates inflated durations
+                
+                if (nextTimestamp) {
+                  const timeDiff = new Date(nextTimestamp).getTime() - new Date(child.timestamp).getTime();
+                  // If parent's nextTimestamp is reasonable (within 60 seconds), use it
+                  if (timeDiff <= 60000 && timeDiff > 0) {
+                    return nextTimestamp;
+                  }
+                }
+                
+                // For any other case, use a small offset from this child's timestamp
+                // This ensures the subactivity shows a reasonable duration, not an inflated one
+                const childTime = new Date(child.timestamp).getTime();
+                const completionTime = new Date(childTime + 2000); // Add 2 seconds
+                return completionTime.toISOString();
               };
 
               return (

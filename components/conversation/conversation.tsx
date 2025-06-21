@@ -395,24 +395,85 @@ export function ChatLog({
                           | 'diagram')
                   }
                   nextTimestamp={(() => {
-                    // Look for the next message that definitively ends this activity group
+                    // For activities with children, we want to show the duration to when the activity actually completed
+                    // not when the user sent their next message (which could be much later)
+                    
+                    // First, check if there's a message that comes shortly after this activity group
+                    let closeCompletionTime = null;
+                    let foundNextMessage = false;
+                    
                     for (let i = index + 1; i < conversation.length; i++) {
                       const nextItem = conversation[i];
                       const nextMessageType = nextItem.message.split(' ')[0];
                       
-                      // If it's any non-activity, non-subactivity message, the activity is complete
+                      // If it's any non-activity, non-subactivity message
                       if (
                         !validTypes.some((x) => nextMessageType.includes(x)) &&
                         !nextItem.message.startsWith('[SUBACTIVITY]')
                       ) {
-                        return nextItem.timestamp;
+                        foundNextMessage = true;
+                        // Check if this completion message comes reasonably close to the activity
+                        const activityEndTime =
+                          chatItem.children && chatItem.children.length > 0
+                            ? chatItem.children[chatItem.children.length - 1].timestamp
+                            : chatItem.timestamp;
+                        
+                        const timeDiff = new Date(nextItem.timestamp).getTime() - new Date(activityEndTime).getTime();
+                        
+                        // If within 30 seconds, this is likely the actual completion
+                        if (timeDiff <= 30000 && timeDiff >= 0) {
+                          closeCompletionTime = nextItem.timestamp;
+                          break;
+                        }
+                        // If it's much later, this is probably a user delay, not activity completion
+                        else {
+                          // For activities with children, use the last child + small buffer
+                          if (chatItem.children && chatItem.children.length > 0) {
+                            const lastChildTime = new Date(
+                              chatItem.children[chatItem.children.length - 1].timestamp,
+                            ).getTime();
+                            return new Date(lastChildTime + 2000).toISOString(); // Add 2 seconds
+                          }
+                          // For activities without children, this delayed message still ends the activity
+                          return nextItem.timestamp;
+                        }
                       }
                       
-                      // If it's a different activity group (different base timestamp), use its timestamp
+                      // If it's a different activity group, use its timestamp
                       if (validTypes.some((x) => nextMessageType.includes(x)) && nextItem.timestamp !== chatItem.timestamp) {
                         return nextItem.timestamp;
                       }
                     }
+                    
+                    // If we found a close completion time, use it
+                    if (closeCompletionTime) {
+                      return closeCompletionTime;
+                    }
+                    
+                    // If we found a next message but it was too far away, and this activity has children,
+                    // use the last child + buffer as completion time
+                    if (foundNextMessage && chatItem.children && chatItem.children.length > 0) {
+                      const lastChildTime = new Date(
+                        chatItem.children[chatItem.children.length - 1].timestamp,
+                      ).getTime();
+                      return new Date(lastChildTime + 2000).toISOString(); // Add 2 seconds
+                    }
+                    
+                    // If this is the very last activity in the conversation, provide a reasonable completion time
+                    if (index === conversation.length - 1) {
+                      if (chatItem.children && chatItem.children.length > 0) {
+                        // Use the last child + buffer
+                        const lastChildTime = new Date(
+                          chatItem.children[chatItem.children.length - 1].timestamp,
+                        ).getTime();
+                        return new Date(lastChildTime + 2000).toISOString(); // Add 2 seconds
+                      } else {
+                        // For activities without children, add a small buffer to the activity itself
+                        const activityTime = new Date(chatItem.timestamp).getTime();
+                        return new Date(activityTime + 1000).toISOString(); // Add 1 second
+                      }
+                    }
+                    
                     // No next timestamp found, this activity is still running
                     return undefined;
                   })()}
