@@ -4,7 +4,7 @@ import React, { ReactNode, useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
-import { Ban as Error, CircleCheck, TriangleAlert, ChevronRight } from 'lucide-react';
+import { Ban as Error, CircleCheck, TriangleAlert, ChevronRight, Copy, Check } from 'lucide-react';
 import { LuRefreshCw as AutorenewOutlined, LuInfo as Info, LuPencil as Pencil } from 'react-icons/lu';
 import { FaRunning } from 'react-icons/fa';
 import { TfiThought } from 'react-icons/tfi';
@@ -45,6 +45,26 @@ function ModernSubactivity({
   completedSubactivities: number;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
+  // Function to copy text to clipboard
+  const copyToClipboard = async (text: string, index: number) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedIndex(index);
+      setTimeout(() => setCopiedIndex(null), 2000); // Reset after 2 seconds
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
+
+  // Function to clean the message content
+  const getCleanContent = (message: string): string => {
+    // Remove the [SUBACTIVITY] prefix and any bracketed metadata
+    const messageBody = message.substring(message.indexOf(' '));
+    // Remove any remaining [TYPE] brackets at the start
+    return messageBody.replace(/^\[[^\]]+]\s*/, '').trim();
+  };
 
   return (
     <div className='w-full bg-gradient-to-br from-background/60 to-muted/30 border border-border/30 rounded-2xl p-4 backdrop-blur-md shadow-sm my-2'>
@@ -93,7 +113,7 @@ function ModernSubactivity({
               <div
                 key={`${child.timestamp}-${child.message.slice(0, 20)}`}
                 className={cn(
-                  'flex items-start gap-3 opacity-0 animate-slide-in-from-left rounded-xl p-3 transition-all duration-200',
+                  'group flex items-start gap-3 opacity-0 animate-slide-in-from-left rounded-xl p-3 transition-all duration-200 hover:bg-gradient-to-r hover:from-muted/10 hover:to-muted/5',
                   getAnimationDelay(index),
                   isCurrentlyRunning
                     ? 'bg-gradient-to-r from-primary/5 to-primary/10 border-l-2 border-primary/30'
@@ -121,6 +141,25 @@ function ModernSubactivity({
                 <div className='text-xs leading-relaxed text-foreground/85 flex-1'>
                   <MarkdownBlock content={messageBody.trim()} />
                 </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      onClick={() => copyToClipboard(getCleanContent(child.message), index)}
+                      className='opacity-0 group-hover:opacity-100 transition-opacity duration-200 h-6 w-6 p-0 hover:bg-muted/50 rounded-md'
+                    >
+                      {copiedIndex === index ? (
+                        <Check className='w-3 h-3 text-green-600' />
+                      ) : (
+                        <Copy className='w-3 h-3 text-muted-foreground' />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side='top' className='text-xs'>
+                    {copiedIndex === index ? 'Copied!' : 'Copy content'}
+                  </TooltipContent>
+                </Tooltip>
               </div>
             );
           })}
