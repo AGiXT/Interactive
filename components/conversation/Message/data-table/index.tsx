@@ -54,10 +54,10 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
   });
 
   return (
-    <div className='w-full p-2 space-y-2 rounded-md bg-background text-foreground'>
+    <div className='w-full p-2 space-y-2 rounded-md bg-background text-foreground max-w-full'>
       <DataTableToolbar table={table} />
-      <div className='border rounded-md'>
-        <Table>
+      <div className='border rounded-md overflow-x-auto'>
+        <Table className='min-w-full'>
           <TableHeader className='font-bold bg-muted/50 text-foreground'>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>

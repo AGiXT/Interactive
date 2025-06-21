@@ -360,8 +360,11 @@ export function ChatLog({
   }, [conversation]);
 
   return (
-    <div className='flex flex-col-reverse flex-grow overflow-auto bg-background pb-28' style={{ flexBasis: '0px' }}>
-      <div className='flex flex-col h-min'>
+    <div
+      className='flex flex-col-reverse flex-grow overflow-y-auto overflow-x-hidden bg-background pb-28'
+      style={{ flexBasis: '0px' }}
+    >
+      <div className='flex flex-col h-min min-w-0'>
         {conversation && conversation.length > 0 ? (
           conversation
             .filter((chatItem) => {
