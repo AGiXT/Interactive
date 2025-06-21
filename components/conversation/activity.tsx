@@ -116,13 +116,13 @@ export const severities = {
   },
 };
 
-export function getTimeDifference(timestamp1, timestamp2) {
+export function getTimeDifference(timestamp1: string | Date, timestamp2: string | Date) {
   // Convert timestamps to Date objects
   const date1 = new Date(timestamp1);
   const date2 = new Date(timestamp2);
 
   // Calculate the difference in milliseconds
-  const diffInMs = Math.abs(date1 - date2);
+  const diffInMs = Math.abs(date1.getTime() - date2.getTime());
 
   // Convert milliseconds to seconds
   const diffInSeconds = Math.floor(diffInMs / 1000);
@@ -142,7 +142,7 @@ export type ActivityProps = {
   message: string;
   alternateBackground?: string;
   timestamp: string;
-  nextTimestamp: string;
+  nextTimestamp?: string;
   children?: any[];
 };
 
@@ -254,38 +254,50 @@ export function Activity({
           </AccordionTrigger>
           <AccordionContent className='pl-4 border-b-0 bg-muted/30 border-l-2 border-l-primary/20 ml-2'>
             {children?.map((child, index) => {
-            const messageType = child.message.split(' ')[0];
-            const messageBody = child.message.substring(child.message.indexOf(' '));
-            return (
-              <Activity
-                key={child.timestamp + '-' + messageBody}
-                activityType={
-                  messageType.startsWith('[SUBACTIVITY]') && !messageType.split('[')[3]
-                    ? 'success'
-                    : (messageType
-                        .split('[')
-                        [messageType.startsWith('[SUBACTIVITY]') ? 3 : 2].split(']')[0]
-                        .toLowerCase() as
-                        | 'error'
-                        | 'info'
-                        | 'success'
-                        | 'warn'
-                        | 'thought'
-                        | 'reflection'
-                        | 'execution'
-                        | 'diagram')
+              const messageType = child.message.split(' ')[0];
+              const messageBody = child.message.substring(child.message.indexOf(' '));
+
+              // Calculate proper nextTimestamp for child activities
+              const getChildNextTimestamp = () => {
+                // If there's a next child, use its timestamp
+                if (index < children.length - 1) {
+                  return children[index + 1].timestamp;
                 }
-                message={messageBody}
-                nextTimestamp={index === children.length - 1 ? nextTimestamp : children[index + 1].timestamp}
-                timestamp={child.timestamp}
-                alternateBackground={alternateBackground}
-                children={child.children}
-              />
-            );
-          })}
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
+                // If this is the last child, use the parent's nextTimestamp
+                // which should now be correctly calculated based on when the activity group ends
+                return nextTimestamp;
+              };
+
+              return (
+                <Activity
+                  key={child.timestamp + '-' + messageBody}
+                  activityType={
+                    messageType.startsWith('[SUBACTIVITY]') && !messageType.split('[')[3]
+                      ? 'success'
+                      : (messageType
+                          .split('[')
+                          [messageType.startsWith('[SUBACTIVITY]') ? 3 : 2].split(']')[0]
+                          .toLowerCase() as
+                          | 'error'
+                          | 'info'
+                          | 'success'
+                          | 'warn'
+                          | 'thought'
+                          | 'reflection'
+                          | 'execution'
+                          | 'diagram')
+                  }
+                  message={messageBody}
+                  nextTimestamp={getChildNextTimestamp()}
+                  timestamp={child.timestamp}
+                  alternateBackground={alternateBackground}
+                  children={child.children}
+                />
+              );
+            })}
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 }
