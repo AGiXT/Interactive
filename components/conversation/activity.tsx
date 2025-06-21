@@ -1,7 +1,7 @@
 'use client';
 
 import { LuRefreshCw as AutorenewOutlined, LuInfo as Info, LuPencil as Pencil } from 'react-icons/lu';
-import React, { ReactNode, useMemo } from 'react';
+import React, { ReactNode, useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
@@ -161,7 +161,18 @@ export function Activity({
   // const [dots, setDots] = useState<string>('');
   const title = useMemo(() => message.split('\n')[0].replace(/:$/, ''), [message]).trim();
   const body = useMemo(() => message.split('\n').slice(1).join('\n'), [message]).trim();
+  const [currentTime, setCurrentTime] = useState(new Date().toISOString());
   const rootStyles = 'p-2.5 overflow-hidden flex gap-2';
+
+  // Update current time every second for live timer when activity is still running
+  useEffect(() => {
+    if (!nextTimestamp && activityType !== 'info') {
+      const interval = setInterval(() => {
+        setCurrentTime(new Date().toISOString());
+      }, 1000); // Update every 1000ms (1 second)
+      return () => clearInterval(interval);
+    }
+  }, [nextTimestamp, activityType]);
 
   const rootChildren = (
     <Tooltip>
@@ -178,8 +189,8 @@ export function Activity({
                   ) : (
                     severities[activityType].icon
                   )}
-                  {activityType !== 'info' && nextTimestamp && (
-                    <div className='whitespace-nowrap'>{getTimeDifference(timestamp, nextTimestamp)}</div>
+                  {activityType !== 'info' && (
+                    <div className='whitespace-nowrap'>{getTimeDifference(timestamp, nextTimestamp || currentTime)}</div>
                   )}
                   <div className={`mx-1 w-1 h-4 border-l-2`} />
                 </div>
@@ -201,8 +212,8 @@ export function Activity({
               ) : (
                 severities[activityType].icon
               )}
-              {activityType !== 'info' && nextTimestamp && (
-                <div className='whitespace-nowrap'>{getTimeDifference(timestamp, nextTimestamp)}</div>
+              {activityType !== 'info' && (
+                <div className='whitespace-nowrap'>{getTimeDifference(timestamp, nextTimestamp || currentTime)}</div>
               )}
               <div className={`mx-1 w-1 h-4 border-l-2`} />
             </div>

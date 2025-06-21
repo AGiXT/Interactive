@@ -395,24 +395,24 @@ export function ChatLog({
                           | 'diagram')
                   }
                   nextTimestamp={(() => {
-                    // For activities with children, we want to show the duration to when the activity actually completed
-                    // not when the user sent their next message (which could be much later)
+                    // For activities with children (subactivities), the main activity should show 
+                    // a live timer until the entire activity group is complete, not just until 
+                    // the first subactivity arrives.
                     
-                    // First, check if there's a message that comes shortly after this activity group
-                    let closeCompletionTime = null;
-                    let foundNextMessage = false;
+                    // If this activity has children, we should only mark it complete when we find
+                    // a non-activity, non-subactivity message that comes after the last child
                     
-                    for (let i = index + 1; i < conversation.length; i++) {
-                      const nextItem = conversation[i];
+                    // CRITICAL FIX: Use filtered conversation for iteration since index is from filtered array
+                    const filteredConversation = conversation.filter(item => !item.message.startsWith('[SUBACTIVITY]'));
+                    
+                    for (let i = index + 1; i < filteredConversation.length; i++) {
+                      const nextItem = filteredConversation[i];
                       const nextMessageType = nextItem.message.split(' ')[0];
                       
-                      // If it's any non-activity, non-subactivity message
-                      if (
-                        !validTypes.some((x) => nextMessageType.includes(x)) &&
-                        !nextItem.message.startsWith('[SUBACTIVITY]')
-                      ) {
-                        foundNextMessage = true;
-                        // Check if this completion message comes reasonably close to the activity
+                      // If it's any non-activity message (user messages, system messages, etc.)
+                      if (!validTypes.some((x) => nextMessageType.includes(x))) {
+                        // This message marks the end of the activity group
+                        // Check if this completion message comes reasonably close to the activity end
                         const activityEndTime =
                           chatItem.children && chatItem.children.length > 0
                             ? chatItem.children[chatItem.children.length - 1].timestamp
@@ -422,20 +422,11 @@ export function ChatLog({
                         
                         // If within 30 seconds, this is likely the actual completion
                         if (timeDiff <= 30000 && timeDiff >= 0) {
-                          closeCompletionTime = nextItem.timestamp;
-                          break;
-                        }
-                        // If it's much later, this is probably a user delay, not activity completion
-                        else {
-                          // For activities with children, use the last child + small buffer
-                          if (chatItem.children && chatItem.children.length > 0) {
-                            const lastChildTime = new Date(
-                              chatItem.children[chatItem.children.length - 1].timestamp,
-                            ).getTime();
-                            return new Date(lastChildTime + 2000).toISOString(); // Add 2 seconds
-                          }
-                          // For activities without children, this delayed message still ends the activity
                           return nextItem.timestamp;
+                        }
+                        // If it's much later, keep the activity live (don't create synthetic timestamps)
+                        else {
+                          return undefined; // Keep showing live timer
                         }
                       }
                       
@@ -445,36 +436,7 @@ export function ChatLog({
                       }
                     }
                     
-                    // If we found a close completion time, use it
-                    if (closeCompletionTime) {
-                      return closeCompletionTime;
-                    }
-                    
-                    // If we found a next message but it was too far away, and this activity has children,
-                    // use the last child + buffer as completion time
-                    if (foundNextMessage && chatItem.children && chatItem.children.length > 0) {
-                      const lastChildTime = new Date(
-                        chatItem.children[chatItem.children.length - 1].timestamp,
-                      ).getTime();
-                      return new Date(lastChildTime + 2000).toISOString(); // Add 2 seconds
-                    }
-                    
-                    // If this is the very last activity in the conversation, provide a reasonable completion time
-                    if (index === conversation.length - 1) {
-                      if (chatItem.children && chatItem.children.length > 0) {
-                        // Use the last child + buffer
-                        const lastChildTime = new Date(
-                          chatItem.children[chatItem.children.length - 1].timestamp,
-                        ).getTime();
-                        return new Date(lastChildTime + 2000).toISOString(); // Add 2 seconds
-                      } else {
-                        // For activities without children, add a small buffer to the activity itself
-                        const activityTime = new Date(chatItem.timestamp).getTime();
-                        return new Date(activityTime + 1000).toISOString(); // Add 1 second
-                      }
-                    }
-                    
-                    // No next timestamp found, this activity is still running
+                    // No completion found - this activity is still running (show live timer)
                     return undefined;
                   })()}
                   message={messageBody}
