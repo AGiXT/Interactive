@@ -1911,27 +1911,33 @@ class FrontEndTest:
             "Look at this response - the AI didn't just guess, it actually used the data analysis capability we enabled to systematically count the letters and provide an accurate answer."
         )
 
-        # Click "Completed activities" to see what commands were executed
-        # Try multiple selectors to find the completed activities section
+        # Click "Show subactivities" to see what commands were executed
+        # Try multiple selectors to find the subactivities toggle button
         activities_selectors = [
-            'text="Completed activities"',
-            'text="Completed activities."',
-            ':text("Completed activities")',
-            ':text("completed activities")',
-            '[data-testid="completed-activities"]',
-            'button:has-text("Completed")',
-            'div:has-text("Completed activities")',
-            'span:has-text("Completed activities")',
-            # Look for dropdown arrows near the text
-            'text="Completed activities" + *',
-            '*:has-text("Completed activities") >> xpath=following-sibling::*[1]',
+            'button:has-text("Show") >> :has-text("subactivities")',
+            'button:has-text("subactivities")',
+            'button >> text=/Show.*subactivities/',
+            'button >> text=/Show.*activities/',
+            'text="Show"',
+            'button:has-text("Show")',
+            ':text("Show") >> button',
+            ':text("subactivities") >> button',
+            'span:has-text("Show") >> xpath=..',
+            # Look for the button with subactivities text
+            'text="Show" + *:has-text("subactivities")',
+            '*:has-text("Show") >> *:has-text("subactivities")',
+            # More specific patterns for the new button
+            'button:has-text("Show") >> text="subactivities"',
+            # Try to find by the specific button structure
+            '[role="button"]:has-text("Show")',
+            'button[class*="ghost"]:has-text("Show")',
         ]
 
         activities_clicked = False
         for selector in activities_selectors:
             try:
                 await self.test_action(
-                    f"Click on completed activities section using selector: {selector}",
+                    f"Click on show subactivities button using selector: {selector}",
                     lambda s=selector: self.page.wait_for_selector(
                         s, state="visible", timeout=10000
                     ),
@@ -1946,7 +1952,7 @@ class FrontEndTest:
         if not activities_clicked:
             # Try a more general approach - look for any expandable element
             await self.test_action(
-                "We'll try to find and expand the completed activities section to see exactly what commands were executed behind the scenes.",
+                "We'll try to find and expand the subactivities section to see exactly what commands were executed behind the scenes.",
                 lambda: self.page.wait_for_selector(
                     "button, div[role='button'], [aria-expanded]",
                     state="visible",
@@ -1954,11 +1960,12 @@ class FrontEndTest:
                 ),
                 lambda: self.page.evaluate(
                     """() => {
-                    // Look for elements containing "completed" or "activities" text
-                    const elements = Array.from(document.querySelectorAll('*'));
+                    // Look for elements containing "show" and "subactivities" text
+                    const elements = Array.from(document.querySelectorAll('button, *[role="button"]'));
                     for (const el of elements) {
                         const text = el.textContent?.toLowerCase() || '';
-                        if (text.includes('completed') && text.includes('activities')) {
+                        if ((text.includes('show') && text.includes('subactivities')) || 
+                            (text.includes('show') && text.includes('activities'))) {
                             el.click();
                             return true;
                         }
@@ -1969,10 +1976,10 @@ class FrontEndTest:
             )
 
         await self.take_screenshot(
-            "Now we can see the 'Completed activities' section which shows us exactly what commands the AI executed to analyze our question."
+            "Now we can see the expanded subactivities section which shows us exactly what commands the AI executed to analyze our question."
         )
 
-        # Scroll down to see more of the completed activities
+        # Scroll down to see more of the subactivities
         await self.test_action(
             "We'll scroll down to see more details about the specific commands that were executed during the data analysis process.",
             lambda: self.page.evaluate("window.scrollBy(0, window.innerHeight * 0.5)"),
