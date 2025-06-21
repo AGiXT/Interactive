@@ -395,30 +395,17 @@ export function ChatLog({
                           | 'diagram')
                   }
                   nextTimestamp={(() => {
-                    // If this activity has children, use the last child's timestamp as the activity end time
-                    if (chatItem.children && chatItem.children.length > 0) {
-                      const lastChild = chatItem.children[chatItem.children.length - 1];
-                      return lastChild.timestamp;
-                    }
-                    
-                    // For activities without children, look for the next activity or message
-                    // that has a timestamp very close to this activity (likely part of the same response)
+                    // Look for the next message that definitively ends this activity group
                     for (let i = index + 1; i < conversation.length; i++) {
                       const nextItem = conversation[i];
                       const nextMessageType = nextItem.message.split(' ')[0];
                       
-                      // If it's an assistant message that comes shortly after the activity,
-                      // this is likely when the activity completed
+                      // If it's any non-activity, non-subactivity message, the activity is complete
                       if (
-                        nextItem.role === 'assistant' &&
                         !validTypes.some((x) => nextMessageType.includes(x)) &&
                         !nextItem.message.startsWith('[SUBACTIVITY]')
                       ) {
-                        const timeDiff = new Date(nextItem.timestamp).getTime() - new Date(chatItem.timestamp).getTime();
-                        // If the next message is within 30 seconds, it's likely the completion of this activity
-                        if (timeDiff <= 30000) {
-                          return nextItem.timestamp;
-                        }
+                        return nextItem.timestamp;
                       }
                       
                       // If it's a different activity group (different base timestamp), use its timestamp
