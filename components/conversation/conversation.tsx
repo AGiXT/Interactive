@@ -398,7 +398,16 @@ export function ChatLog({
                           | 'execution'
                           | 'diagram')
                   }
-                  nextTimestamp={conversation[index + 1]?.timestamp}
+                  nextTimestamp={
+                    (() => {
+                      for (let i = index + 1; i < conversation.length; i++) {
+                        if (!conversation[i].message.startsWith('[SUBACTIVITY]')) {
+                          return conversation[i].timestamp;
+                        }
+                      }
+                      return '';
+                    })()
+                  }
                   message={messageBody}
                   timestamp={chatItem.timestamp}
                   alternateBackground={alternateBackground}
