@@ -1,20 +1,201 @@
 'use client';
 
-import { LuRefreshCw as AutorenewOutlined, LuInfo as Info, LuPencil as Pencil } from 'react-icons/lu';
 import React, { ReactNode, useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
+import { Ban as Error, CircleCheck, TriangleAlert, ChevronRight, Copy, Check } from 'lucide-react';
+import { LuRefreshCw as AutorenewOutlined, LuInfo as Info, LuPencil as Pencil } from 'react-icons/lu';
+import { FaRunning } from 'react-icons/fa';
+import { TfiThought } from 'react-icons/tfi';
+import { GiMirrorMirror } from 'react-icons/gi';
 import MarkdownBlock from '@/components/conversation/Message/MarkdownBlock';
 import formatDate from '@/components/conversation/Message/formatDate';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { FaRunning } from 'react-icons/fa';
-import { Ban as Error, CircleCheck, TriangleAlert } from 'lucide-react';
-import { TfiThought } from 'react-icons/tfi';
-import { GiMirrorMirror } from 'react-icons/gi';
-import { ClientIcon } from '@/components/ui/client-icon';
+
+// Type definitions
+interface ActivityChild {
+  id?: string;
+  message: string;
+  timestamp: string;
+  nextTimestamp?: string;
+  children?: ActivityChild[];
+}
+
+type ActivityType = 'error' | 'info' | 'success' | 'warn' | 'thought' | 'reflection' | 'execution' | 'diagram';
+
+// Constants
+const BORDER_INFO = 'border-info';
+
+// Modern Activity Component for Subactivities
+function ModernSubactivity({
+  activityChildren,
+  isRunning,
+  parentTitle,
+  totalSubactivities,
+  completedSubactivities,
+}: {
+  activityChildren: ActivityChild[];
+  isRunning: boolean;
+  parentTitle: string;
+  totalSubactivities: number;
+  completedSubactivities: number;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
+  // Function to copy text to clipboard
+  const copyToClipboard = async (text: string, index: number) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedIndex(index);
+      setTimeout(() => setCopiedIndex(null), 2000); // Reset after 2 seconds
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
+
+  // Function to clean the message content
+  const getCleanContent = (message: string): string => {
+    // Remove the [SUBACTIVITY] prefix and any bracketed metadata
+    const messageBody = message.substring(message.indexOf(' '));
+    // Remove any remaining [TYPE] brackets at the start
+    return messageBody.replace(/^\[[^\]]+]\s*/, '').trim();
+  };
+
+  return (
+    <div className='w-full bg-gradient-to-br from-background/60 to-muted/30 border border-border/30 rounded-2xl p-4 backdrop-blur-md shadow-sm my-2'>
+      {/* Header */}
+      <div className='flex items-center gap-3 mb-4 opacity-100 animate-fade-in'>
+        <div className='flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20'>
+          {isRunning ? (
+            <div className='w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin' />
+          ) : (
+            <CircleCheck className='w-4 h-4 text-primary' />
+          )}
+        </div>
+        <div className='flex flex-col flex-1'>
+          <div className='text-sm font-medium text-foreground/90'>{parentTitle}</div>
+          <div className='text-xs text-muted-foreground/80 flex items-center gap-1.5'>
+            <span className='bg-primary/10 text-primary/90 px-2 py-0.5 rounded-full text-xs font-medium'>
+              {completedSubactivities}/{totalSubactivities}
+            </span>
+            <span className='text-muted-foreground/50'>•</span>
+            <span>{activityChildren.length} steps</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Status Items - Only show when expanded */}
+      {isExpanded && (
+        <div className='space-y-3'>
+          {activityChildren.map((child, index) => {
+            const messageBody = child.message.substring(child.message.indexOf(' '));
+            // Better completion detection: check if it has nextTimestamp OR if we're not on the last running item
+            const isCompleted = Boolean(child.nextTimestamp) || !isRunning || index < activityChildren.length - 1;
+            const isCurrentlyRunning = !isCompleted && isRunning;
+            
+            const getAnimationDelay = (idx: number) => {
+              const delays = [
+                'animation-delay-100',
+                'animation-delay-200',
+                'animation-delay-300',
+                'animation-delay-400',
+                'animation-delay-500',
+              ];
+              return delays[Math.min(idx, delays.length - 1)];
+            };
+
+            return (
+              <div
+                key={`${child.timestamp}-${child.message.slice(0, 20)}`}
+                className={cn(
+                  'group flex items-start gap-3 opacity-0 animate-slide-in-from-left rounded-xl p-3 transition-all duration-200 hover:bg-gradient-to-r hover:from-muted/10 hover:to-muted/5',
+                  getAnimationDelay(index),
+                  isCurrentlyRunning
+                    ? 'bg-gradient-to-r from-primary/5 to-primary/10 border-l-2 border-primary/30'
+                    : 'bg-gradient-to-r from-muted/20 to-muted/10 border-l-2 border-muted-foreground/20',
+                )}
+              >
+                <div
+                  className={cn(
+                    'w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm transition-all duration-200',
+                    isCompleted
+                      ? 'bg-gradient-to-br from-primary/20 to-primary/30 border border-primary/40 shadow-primary/20'
+                      : isCurrentlyRunning
+                        ? 'bg-gradient-to-br from-primary/20 to-primary/30 border border-primary/40 shadow-primary/20'
+                        : 'bg-gradient-to-br from-muted/30 to-muted/40 border border-muted-foreground/30',
+                  )}
+                >
+                  {isCompleted ? (
+                    <span className='text-primary font-semibold text-xs'>✓</span>
+                  ) : isCurrentlyRunning ? (
+                    <div className='w-2.5 h-2.5 border-2 border-primary/50 border-t-primary rounded-full animate-spin' />
+                  ) : (
+                    <div className='w-2 h-2 rounded-full bg-muted-foreground/50' />
+                  )}
+                </div>
+                <div className='text-xs leading-relaxed text-foreground/85 flex-1'>
+                  <MarkdownBlock content={messageBody.trim()} />
+                </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      onClick={() => copyToClipboard(getCleanContent(child.message), index)}
+                      className='opacity-0 group-hover:opacity-100 transition-opacity duration-200 h-6 w-6 p-0 hover:bg-muted/50 rounded-md'
+                    >
+                      {copiedIndex === index ? (
+                        <Check className='w-3 h-3 text-green-600' />
+                      ) : (
+                        <Copy className='w-3 h-3 text-muted-foreground' />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side='top' className='text-xs'>
+                    {copiedIndex === index ? 'Copied!' : 'Copy content'}
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Current Task (for running activities) */}
+      {isRunning && !isExpanded && (
+        <div className='mt-4 p-3 bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl border border-primary/20 shadow-sm'>
+          <div className='text-xs text-primary/80 mb-1 font-medium'>Current focus:</div>
+          <div className='text-xs text-foreground/80 italic flex items-center gap-1'>
+            <span>Processing next step</span>
+            <div className='flex space-x-0.5'>
+              <div className='w-1 h-1 bg-primary/60 rounded-full animate-bounce' />
+              <div className='w-1 h-1 bg-primary/60 rounded-full animate-bounce' style={{ animationDelay: '0.1s' }} />
+              <div className='w-1 h-1 bg-primary/60 rounded-full animate-bounce' style={{ animationDelay: '0.2s' }} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toggle Button */}
+      <Button
+        variant='ghost'
+        size='sm'
+        onClick={() => setIsExpanded(!isExpanded)}
+        className='mt-3 text-muted-foreground/70 text-xs flex items-center gap-1.5 h-8 px-3 hover:text-foreground hover:bg-muted/50 transition-all duration-200 rounded-xl border border-transparent hover:border-border/50'
+      >
+        <ChevronRight className={cn('w-3 h-3 transition-transform duration-200', isExpanded && 'rotate-90')} />
+        <span className='font-medium'>
+          {isExpanded ? 'Hide subactivities' : `Show ${activityChildren.length} subactivities`}
+        </span>
+      </Button>
+    </div>
+  );
+}
 
 export const severities = {
   error: {
@@ -40,7 +221,7 @@ export const severities = {
       </Tooltip>
     ),
     text: 'text-info',
-    border: 'border-info',
+    border: BORDER_INFO,
   },
   success: {
     icon: (
@@ -76,7 +257,7 @@ export const severities = {
       </Tooltip>
     ),
     text: 'text-info',
-    border: 'border-info',
+    border: BORDER_INFO,
   },
   reflection: {
     icon: (
@@ -88,7 +269,7 @@ export const severities = {
       </Tooltip>
     ),
     text: 'text-info',
-    border: 'border-info',
+    border: BORDER_INFO,
   },
   execution: {
     icon: (
@@ -100,7 +281,7 @@ export const severities = {
       </Tooltip>
     ),
     text: 'text-info',
-    border: 'border-info',
+    border: BORDER_INFO,
   },
   diagram: {
     icon: (
@@ -112,7 +293,7 @@ export const severities = {
       </Tooltip>
     ),
     text: 'text-info',
-    border: 'border-info',
+    border: BORDER_INFO,
   },
 };
 
@@ -138,26 +319,18 @@ export function getTimeDifference(timestamp1: string | Date, timestamp2: string 
 }
 
 export type ActivityProps = {
-  activityType: 'error' | 'info' | 'success' | 'warn' | 'thought' | 'reflection' | 'execution' | 'diagram';
+  activityType: ActivityType;
   message: string;
-  alternateBackground?: string;
   timestamp: string;
   nextTimestamp?: string;
-  children?: any[];
+  children?: ActivityChild[];
 };
 
 // Extend dayjs with plugins
 dayjs.extend(timezone);
 dayjs.extend(utc);
 
-export function Activity({
-  message,
-  activityType,
-  alternateBackground = 'primary',
-  timestamp,
-  nextTimestamp,
-  children,
-}: ActivityProps): ReactNode {
+export function Activity({ message, activityType, timestamp, nextTimestamp, children }: ActivityProps): ReactNode {
   // const [dots, setDots] = useState<string>('');
   const title = useMemo(() => message.split('\n')[0].replace(/:$/, ''), [message]).trim();
   const body = useMemo(() => message.split('\n').slice(1).join('\n'), [message]).trim();
@@ -185,9 +358,9 @@ export function Activity({
               >
                 <div className='flex items-center justify-between gap-2 m-w-40'>
                   {activityType !== 'info' && !nextTimestamp ? (
-                    <ClientIcon icon={AutorenewOutlined} className='animate-spin text-primary' />
+                    <AutorenewOutlined className='animate-spin text-primary' />
                   ) : (
-                    severities[activityType].icon
+                    severities[activityType as keyof typeof severities].icon
                   )}
                   {activityType !== 'info' && (
                     <div className='whitespace-nowrap'>{getTimeDifference(timestamp, nextTimestamp || currentTime)}</div>
@@ -208,9 +381,9 @@ export function Activity({
           >
             <div className='flex items-center justify-between gap-2 m-w-40'>
               {activityType !== 'info' && !nextTimestamp ? (
-                <ClientIcon icon={AutorenewOutlined} className='animate-spin text-primary' />
+                <AutorenewOutlined className='animate-spin text-primary' />
               ) : (
-                severities[activityType].icon
+                severities[activityType as keyof typeof severities].icon
               )}
               {activityType !== 'info' && (
                 <div className='whitespace-nowrap'>{getTimeDifference(timestamp, nextTimestamp || currentTime)}</div>
@@ -230,7 +403,7 @@ export function Activity({
 
   if (!children || children.length <= 0) return rootChildren;
 
-  console.log('🔍 Activity with children rendering accordion:', {
+  console.log('🔍 Activity with children rendering modern style:', {
     activityMessage: message.substring(0, 50) + '...',
     childrenCount: children.length,
     childrenData: children.map((child) => ({
@@ -240,78 +413,18 @@ export function Activity({
     })),
   });
 
+  // Calculate completion status
+  const completedSubactivities = nextTimestamp
+    ? children.length
+    : Math.max(0, children.filter((child) => child.nextTimestamp).length);
+
   return (
-    <div className={`w-full border-t border-border ${alternateBackground === 'primary' ? 'bg-primary/10' : ''}`}>
-      <Accordion type='single'>
-        <AccordionItem value='item-1' className='border-b-0'>
-          <AccordionTrigger
-            className={cn(
-              rootStyles,
-              'w-full flex justify-start items-center px-0 py-2.5 border-b border-border hover:no-underline',
-            )}
-          >
-            {rootChildren}
-          </AccordionTrigger>
-          <AccordionContent className='pl-4 border-b-0 bg-muted/30 border-l-2 border-l-primary/20 ml-2'>
-            {children?.map((child, index) => {
-              const messageType = child.message.split(' ')[0];
-              const messageBody = child.message.substring(child.message.indexOf(' '));
-
-              // Calculate proper nextTimestamp for child activities
-              const getChildNextTimestamp = () => {
-                // If there's a next child, use its timestamp
-                if (index < children.length - 1) {
-                  return children[index + 1].timestamp;
-                }
-                
-                // If this is the last child, we need to provide a reasonable completion time
-                // Don't let it fall back to currentTime as that creates inflated durations
-                
-                if (nextTimestamp) {
-                  const timeDiff = new Date(nextTimestamp).getTime() - new Date(child.timestamp).getTime();
-                  // If parent's nextTimestamp is reasonable (within 60 seconds), use it
-                  if (timeDiff <= 60000 && timeDiff > 0) {
-                    return nextTimestamp;
-                  }
-                }
-                
-                // For any other case, use a small offset from this child's timestamp
-                // This ensures the subactivity shows a reasonable duration, not an inflated one
-                const childTime = new Date(child.timestamp).getTime();
-                const completionTime = new Date(childTime + 2000); // Add 2 seconds
-                return completionTime.toISOString();
-              };
-
-              return (
-                <Activity
-                  key={child.timestamp + '-' + messageBody}
-                  activityType={
-                    messageType.startsWith('[SUBACTIVITY]') && !messageType.split('[')[3]
-                      ? 'success'
-                      : (messageType
-                          .split('[')
-                          [messageType.startsWith('[SUBACTIVITY]') ? 3 : 2].split(']')[0]
-                          .toLowerCase() as
-                          | 'error'
-                          | 'info'
-                          | 'success'
-                          | 'warn'
-                          | 'thought'
-                          | 'reflection'
-                          | 'execution'
-                          | 'diagram')
-                  }
-                  message={messageBody}
-                  nextTimestamp={getChildNextTimestamp()}
-                  timestamp={child.timestamp}
-                  alternateBackground={alternateBackground}
-                  children={child.children}
-                />
-              );
-            })}
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-    </div>
+    <ModernSubactivity
+      activityChildren={children}
+      isRunning={!nextTimestamp}
+      parentTitle={title}
+      totalSubactivities={children.length}
+      completedSubactivities={completedSubactivities}
+    />
   );
 }
