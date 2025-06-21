@@ -205,7 +205,7 @@ export default function CodeBlock({
     <Collapsible
       open={isOpen}
       onOpenChange={setIsOpen}
-      className={`my-2 overflow-hidden border rounded-lg bg-card transition-all duration-300 ease-in-out ${isOpen ? 'w-full' : 'inline-block'}`}
+      className={`my-2 overflow-hidden border rounded-lg bg-card transition-all duration-300 ease-in-out max-w-full ${isOpen ? 'w-full' : 'inline-block'}`}
     >
       <div className='relative flex items-center justify-between pr-4 border-b-2 border-border'>
         <CollapsibleTrigger className='p-2 hover:bg-muted'>
@@ -248,7 +248,7 @@ export default function CodeBlock({
         )}
 
         <TabPanel value={tab} index={hasCustomRenderer ? 1 : 0}>
-          <div className='code-container bg-card p-4' ref={codeBlockRef}>
+          <div className='code-container bg-card p-4 overflow-x-auto max-w-full' ref={codeBlockRef}>
             {languageKey in fileExtensions ? (
               <SyntaxHighlighter
                 {...props}

@@ -93,7 +93,12 @@ export default function Message({ chatItem, lastUserMessage, setLoading }: Messa
   const isUserMsgJustText = checkUserMsgJustText(chatItem);
 
   return (
-    <div className={cn('m-3 overflow-hidden flex flex-col gap-2 min-w-48', isUserMsgJustText && 'max-w-[60%] self-end')}>
+    <div
+      className={cn(
+        'm-3 overflow-hidden flex flex-col gap-2 min-w-0 max-w-full',
+        isUserMsgJustText && 'max-w-[60%] self-end',
+      )}
+    >
       {audios && audios.sources.length > 0 ? (
         <>
           {audios.message?.trim() && (
@@ -111,8 +116,8 @@ export default function Message({ chatItem, lastUserMessage, setLoading }: Messa
         <div
           className={
             chatItem.role === 'USER'
-              ? 'chat-log-message-user bg-primary rounded-3xl py-1 rounded-br-none px-5 text-primary-foreground'
-              : 'chat-log-message-ai p-0 pt-2 text-foreground'
+              ? 'chat-log-message-user bg-primary rounded-3xl py-1 rounded-br-none px-5 text-primary-foreground overflow-hidden'
+              : 'chat-log-message-ai p-0 pt-2 text-foreground overflow-hidden'
           }
         >
           <MarkdownBlock content={formattedMessage} chatItem={chatItem} setLoading={setLoading} />

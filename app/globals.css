@@ -159,6 +159,13 @@ img[src=""],img[src="#"] {
 .katex-display {
   @apply my-4 overflow-x-auto;
   max-width: 100%;
+  box-sizing: border-box;
+}
+
+.katex {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .dark .katex {
@@ -167,4 +174,39 @@ img[src=""],img[src="#"] {
 
 .dark .katex-html {
   color: var(--foreground);
+}
+
+/* Prevent horizontal overflow for all content */
+.code-container, 
+.data-table,
+.markdown-content,
+pre,
+code {
+  max-width: 100%;
+  box-sizing: border-box;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Ensure tables are responsive */
+table {
+  max-width: 100%;
+  overflow-x: auto;
+  display: block;
+  white-space: nowrap;
+}
+
+/* For very long words or URLs */
+.message-content {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/* Prevent pre elements from causing overflow */
+pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-x: auto;
+  max-width: 100%;
 }

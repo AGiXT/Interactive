@@ -65,7 +65,7 @@ export default function MarkdownBlock({ content, chatItem, setLoading }: Markdow
   }
   try {
     return (
-      <>
+      <div className='message-content'>
         {textToMarkdown(content.toString()).map((segment, index) => {
           if (segment.type === undefined) {
             return (
@@ -110,7 +110,7 @@ export default function MarkdownBlock({ content, chatItem, setLoading }: Markdow
                   table() {
                     const { columns, rows } = parseMarkdownTable(segment.content);
                     return (
-                      <div className='w-full'>
+                      <div className='w-full overflow-x-auto'>
                         <DataTable columns={createColumns(columns)} data={rows} />
                       </div>
                     );
@@ -144,7 +144,7 @@ export default function MarkdownBlock({ content, chatItem, setLoading }: Markdow
             );
           }
         })}
-      </>
+      </div>
     );
   } catch (e) {
     console.error(e);
