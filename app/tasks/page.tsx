@@ -378,9 +378,10 @@ function ConversationSelector({
                 .map((conversation) => (
                 <CommandItem
                   key={conversation.id}
-                  value={conversation.id}
+                  value={conversation.name}
                   onSelect={() => handleSelect(conversation.id)}
                   className="cursor-pointer"
+                  data-search={conversation.name}
                 >
                   <LuCheck
                     className={cn(
