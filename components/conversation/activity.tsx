@@ -190,7 +190,16 @@ export function Activity({
                     severities[activityType].icon
                   )}
                   {activityType !== 'info' && (
-                    <div className='whitespace-nowrap'>{getTimeDifference(timestamp, nextTimestamp || currentTime)}</div>
+                    <div className='whitespace-nowrap'>
+                      {getTimeDifference(
+                        timestamp,
+                        // For duration display, prefer the last child timestamp if we have children,
+                        // regardless of whether we have a nextTimestamp (which might be much later due to user delay)
+                        children && children.length > 0
+                          ? children[children.length - 1].timestamp
+                          : nextTimestamp || currentTime,
+                      )}
+                    </div>
                   )}
                   <div className={`mx-1 w-1 h-4 border-l-2`} />
                 </div>
@@ -213,7 +222,16 @@ export function Activity({
                 severities[activityType].icon
               )}
               {activityType !== 'info' && (
-                <div className='whitespace-nowrap'>{getTimeDifference(timestamp, nextTimestamp || currentTime)}</div>
+                <div className='whitespace-nowrap'>
+                  {getTimeDifference(
+                    timestamp,
+                    // For duration display, prefer the last child timestamp if we have children,
+                    // regardless of whether we have a nextTimestamp (which might be much later due to user delay)
+                    children && children.length > 0
+                      ? children[children.length - 1].timestamp
+                      : nextTimestamp || currentTime,
+                  )}
+                </div>
               )}
               <div className={`mx-1 w-1 h-4 border-l-2`} />
             </div>
