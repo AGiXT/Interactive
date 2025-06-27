@@ -71,6 +71,10 @@ export default function AgentSettings() {
   // Provider settings state
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [error, setError] = useState<ErrorState>(null);
+  
+  // Edit provider state
+  const [editingProvider, setEditingProvider] = useState<string | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   // Wallet state
   const [walletData, setWalletData] = useState<WalletKeys | null>(null);
@@ -91,6 +95,9 @@ export default function AgentSettings() {
       };
     }
 
+    console.log('Agent settings:', agentData.agent.settings);
+    console.log('All providers:', providerData.map(p => ({ name: p.name, settings: p.settings?.map(s => s.name) })));
+
     const connected = providerData.filter((provider) => {
       // Skip providers without settings
       if (!provider.settings?.length) return false;
@@ -103,15 +110,28 @@ export default function AgentSettings() {
         return isSensitive && agentData.agent?.settings.some((s) => s.name === setting.name);
       });
 
+      console.log(`Provider ${provider.name}:`, {
+        hasSettings: !!provider.settings?.length,
+        relevantSettings: relevantSettings.map(s => s.name),
+        relevantCount: relevantSettings.length
+      });
+
       // If no relevant settings found, provider is not connected
       if (relevantSettings.length === 0) return false;
 
       // Check if ALL relevant settings are HIDDEN
-      return relevantSettings.every((setting) => {
+      const isConnected = relevantSettings.every((setting) => {
         const agentSetting = agentData.agent?.settings.find((s) => s.name === setting.name);
-        return agentSetting && agentSetting.value === 'HIDDEN';
+        const isHidden = agentSetting && agentSetting.value === 'HIDDEN';
+        console.log(`  Setting ${setting.name}: agent value = "${agentSetting?.value}", is hidden = ${isHidden}`);
+        return isHidden;
       });
+
+      console.log(`Provider ${provider.name} is connected:`, isConnected);
+      return isConnected;
     });
+
+    console.log('Connected providers:', connected.map(p => p.name));
 
     return {
       connected,
@@ -133,11 +153,20 @@ export default function AgentSettings() {
   const handleSaveSettings = async (extensionName: string, settings: Record<string, string>) => {
     try {
       setError(null);
+      
+      // Filter out HIDDEN and empty values
+      const filteredSettings = Object.entries(settings).reduce((acc, [key, value]) => {
+        if (value && value !== 'HIDDEN' && value.trim() !== '') {
+          acc[key] = value;
+        }
+        return acc;
+      }, {} as Record<string, string>);
+      
       const response = await axios.put<{ status: number; data: any }>(
         `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/agent/${agent_name}`,
         {
           agent_name: agent_name,
-          settings: settings,
+          settings: filteredSettings,
         } as ExtensionSettings,
         {
           headers: {
@@ -150,14 +179,25 @@ export default function AgentSettings() {
       if (response.status === 200) {
         setError({
           type: 'success',
-          message: 'Extension connected successfully!',
+          message: 'Extension updated successfully!',
         });
-        window.location.reload();
+        setEditingProvider(null);
+        setIsEditDialogOpen(false);
+        
+        // Show toast notification for success
+        const isEditing = editingProvider !== null;
+        toast({
+          title: 'Success',
+          description: `${extensionName} ${isEditing ? 'updated' : 'connected'} successfully!`,
+        });
+        
+        // Just refresh the data, don't reload the whole page
+        mutateAgent();
       }
     } catch (error: any) {
       setError({
         type: 'error',
-        message: error.response?.data?.detail || error.message || 'Failed to connect extension',
+        message: error.response?.data?.detail || error.message || 'Failed to update extension',
       });
     }
     mutateAgent();
@@ -165,19 +205,42 @@ export default function AgentSettings() {
 
   // Handler for disconnecting provider
   const handleDisconnect = async (name: string) => {
-    const extension = providerData?.find((ext) => ext.name === name);
-    if (!extension) return;
-    
-    const emptySettings = extension.settings
-      .filter((setting) => {
-        return ['API_KEY', 'SECRET', 'PASSWORD', 'TOKEN'].some((keyword) =>
-          setting.name.replaceAll('TOKENS', '').includes(keyword),
-        );
-      })
-      .reduce((acc, setting) => {
-        return { ...acc, [setting.name]: '' };
-      }, {});
-    await handleSaveSettings(extension.name, emptySettings);
+    try {
+      setError(null);
+      
+      console.log('Disconnecting provider:', name);
+      console.log('Using agent name:', agent_name);
+      console.log('Full URL:', `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/agent/${agent_name}/provider/${name}`);
+      
+      const response = await axios.delete(
+        `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/agent/${agent_name}/provider/${name}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: getCookie('jwt'),
+          },
+        },
+      );
+
+      console.log('Disconnect response:', response);
+
+      if (response.status === 200) {
+        toast({
+          title: 'Success',
+          description: `${name} disconnected successfully!`,
+        });
+        // Just refresh the data, don't reload the whole page
+        mutateAgent();
+      }
+    } catch (error: any) {
+      console.error('Failed to disconnect provider:', error);
+      console.error('Error response:', error.response);
+      toast({
+        title: 'Error',
+        description: error.response?.data?.detail || error.response?.data?.message || 'Failed to disconnect provider. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   // Agent creation handler
@@ -612,15 +675,85 @@ export default function AgentSettings() {
                       <p className='text-sm text-muted-foreground'>Connected</p>
                     </div>
                   </div>
-                  <Button
-                    variant='outline'
-                    size={isMobile ? 'sm' : 'default'}
-                    className={cn('gap-2', isMobile ? 'px-2' : '')}
-                    onClick={() => handleDisconnect(provider.name)}
-                  >
-                    <Unlink className='w-4 h-4' />
-                    {!isMobile && 'Disconnect'}
-                  </Button>
+                  <div className='flex gap-2'>
+                    <Dialog open={isEditDialogOpen && editingProvider === provider.name} onOpenChange={setIsEditDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant='outline'
+                          size={isMobile ? 'sm' : 'default'}
+                          className={cn('gap-2', isMobile ? 'px-2' : '')}
+                          onClick={() => {
+                            setEditingProvider(provider.name);
+                            setIsEditDialogOpen(true);
+                            // Initialize settings with current agent settings values, showing HIDDEN for protected values
+                            const currentSettings = provider.settings.reduce((acc: Record<string, string>, setting) => {
+                              const agentSetting = agentData?.agent?.settings.find((s) => s.name === setting.name);
+                              acc[setting.name] = agentSetting?.value || setting.value as string;
+                              return acc;
+                            }, {});
+                            setSettings(currentSettings);
+                          }}
+                        >
+                          <LuPencil className='w-4 h-4' />
+                          {!isMobile && 'Edit'}
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className={cn('sm:max-w-[425px]', isMobile ? 'w-[90%] p-4' : '')}>
+                        <DialogHeader>
+                          <DialogTitle>Edit {provider.name}</DialogTitle>
+                          <DialogDescription>
+                            Update the credentials for this service. Leave fields as "HIDDEN" to keep existing values, or clear them to remove the setting.
+                          </DialogDescription>
+                        </DialogHeader>
+
+                        <div className='grid gap-4 py-4'>
+                          {provider.settings.map((prov) => (
+                            <div key={prov.name} className='grid gap-2'>
+                              <Label htmlFor={`edit-${prov.name}`}>{prov.name}</Label>
+                              <Input
+                                id={`edit-${prov.name}`}
+                                type={
+                                  prov.name.toLowerCase().includes('key') || prov.name.toLowerCase().includes('password')
+                                    ? 'password'
+                                    : 'text'
+                                }
+                                value={settings[prov.name] || ''}
+                                onChange={(e) =>
+                                  setSettings((prev) => ({
+                                    ...prev,
+                                    [prov.name]: e.target.value,
+                                  }))
+                                }
+                                placeholder={settings[prov.name] === 'HIDDEN' ? 'Leave as HIDDEN to keep current value' : `Enter ${prov.name.toLowerCase()}`}
+                              />
+                            </div>
+                          ))}
+                        </div>
+
+                        <DialogFooter>
+                          <DialogClose asChild>
+                            <Button variant='outline' onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+                          </DialogClose>
+                          <Button onClick={() => handleSaveSettings(provider.name, settings)}>Update Provider</Button>
+                        </DialogFooter>
+
+                        {error && editingProvider === provider.name && (
+                          <Alert variant={error.type === 'success' ? 'default' : 'destructive'}>
+                            <AlertDescription>{error.message}</AlertDescription>
+                          </Alert>
+                        )}
+                      </DialogContent>
+                    </Dialog>
+                    <Button
+                      variant='outline'
+                      size={isMobile ? 'sm' : 'default'}
+                      className={cn('gap-2', isMobile ? 'px-2' : '')}
+                      onClick={() => handleDisconnect(provider.name)}
+                    >
+                      <Unlink className='w-4 h-4' />
+                      {!isMobile && 'Disconnect'}
+                    </Button>
+                  </div>
                 </div>
                 <div className='text-sm text-muted-foreground'>
                   <MarkdownBlock content={provider.description} />
@@ -696,10 +829,13 @@ export default function AgentSettings() {
                       </div>
 
                       <DialogFooter>
+                        <DialogClose asChild>
+                          <Button variant='outline'>Cancel</Button>
+                        </DialogClose>
                         <Button onClick={() => handleSaveSettings(provider.name, settings)}>Connect Provider</Button>
                       </DialogFooter>
 
-                      {error && (
+                      {error && !editingProvider && (
                         <Alert variant={error.type === 'success' ? 'default' : 'destructive'}>
                           <AlertDescription>{error.message}</AlertDescription>
                         </Alert>
