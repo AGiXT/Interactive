@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import MarkdownBlock from '@/components/conversation/Message/MarkdownBlock';
-import { useCompany } from '@/components/interactive/useUser';
+import { useCompany, CompanyWithExtensions } from '@/components/interactive/useUser';
 import { Input } from '@/components/ui/input';
 import { SidebarPage } from '@/components/layout/SidebarPage';
 import { useToast } from '@/components/layout/toast';

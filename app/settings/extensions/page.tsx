@@ -4,7 +4,7 @@ import axios from 'axios';
 import { getCookie } from 'cookies-next';
 import { useSearchParams } from 'next/navigation';
 import { useAgent } from '@/components/interactive/useAgent';
-import { useCompany } from '@/components/interactive/useUser';
+import { useCompany, CompanyWithExtensions } from '@/components/interactive/useUser';
 import { useEffect, useState } from 'react';
 import OAuth2Login from 'react-simple-oauth2-login';
 import { providers as oAuth2Providers, loadProviders as loadOAuthProviders } from '@/components/auth/OAuth';
