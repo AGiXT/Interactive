@@ -24,6 +24,11 @@ export const CompanySchema = z.object({
 
 export type Company = z.infer<typeof CompanySchema>;
 
+// Extended Company type that includes dynamically loaded extensions
+export type CompanyWithExtensions = Company & {
+  extensions?: any[];
+};
+
 export function useCompanies(): SWRResponse<Company[]> {
   const userHook = useUser();
   const { data: user } = userHook;
@@ -36,12 +41,12 @@ export function useCompanies(): SWRResponse<Company[]> {
   return swrHook;
 }
 
-export function useCompany(id?: string): SWRResponse<Company | null> {
+export function useCompany(id?: string): SWRResponse<CompanyWithExtensions | null> {
   const companiesHook = useCompanies();
   const { data: companies } = companiesHook;
-  const swrHook = useSWR<Company | null>(
+  const swrHook = useSWR<CompanyWithExtensions | null>(
     [`/company?id=${id}`, companies, getCookie('jwt')],
-    async (): Promise<Company | null> => {
+    async (): Promise<CompanyWithExtensions | null> => {
       if (!getCookie('jwt')) return null;
       try {
         if (id) {
@@ -52,7 +57,8 @@ export function useCompany(id?: string): SWRResponse<Company | null> {
             companies?.find((c) => (agentName ? c.agents.some((a) => a.name === agentName) : c.primary)) || null;
           if (!targetCompany) return null;
           setCookie('agixt-company', targetCompany.id);
-          targetCompany.extensions = (
+          const extendedCompany = targetCompany as CompanyWithExtensions;
+          extendedCompany.extensions = (
             await axios.get(
               `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/companies/${targetCompany.id}/extensions`,
 
@@ -63,7 +69,7 @@ export function useCompany(id?: string): SWRResponse<Company | null> {
               },
             )
           ).data.extensions;
-          return targetCompany;
+          return extendedCompany;
         }
       } catch (error) {
         console.error('Error fetching company:', error);

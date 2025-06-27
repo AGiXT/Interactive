@@ -28,6 +28,7 @@ export function useAgents(): SWRResponse<Agent[]> {
         company.agents.map((agent) => ({
           ...agent,
           companyName: company.name,
+          settings: [], // Add empty settings array to match Agent type
         })),
       ) || [],
     { fallbackData: [] },
@@ -45,6 +46,7 @@ export function useAgent(
   agent: Agent | null;
   commands: string[];
   settings: any[];
+  extensions: any[];
 }> {
   const getDefaultAgent = () => {
     const primaryCompany = companies.find((c) => c.primary);
@@ -67,18 +69,18 @@ export function useAgent(
   if (!searchName && companies?.length) {
     foundEarly = getDefaultAgent();
   }
-  const swrHook = useSWR<{ agent: Agent | null; commands: string[]; settings: any[] }>(
+  const swrHook = useSWR<{ agent: Agent | null; commands: string[]; settings: any[]; extensions: any[] }>(
     [`/agent?name=${searchName}`, companies, withSettings],
-    async (): Promise<{ agent: Agent | null; commands: string[]; settings: any[] }> => {
+    async (): Promise<{ agent: Agent | null; commands: string[]; settings: any[]; extensions: any[] }> => {
       try {
         if (withSettings) {
           const client = createGraphQLClient();
           const query = AgentSchema.toGQL('query', 'GetAgent', { name: searchName });
           const response = await client.request<{ agent: Agent }>(query, { name: searchName });
           const agent = AgentSchema.parse(response.agent);
-          return { agent, commands: [], settings: [] };
+          return { agent, commands: [], settings: [], extensions: [] };
         } else {
-          const toReturn = { agent: foundEarly, commands: [], settings: [] };
+          const toReturn = { agent: foundEarly, commands: [], settings: [], extensions: [] };
           if (companies?.length && !toReturn.agent) {
             for (const company of companies) {
               const agent = company.agents.find((a) => a.name === searchName);
@@ -91,7 +93,7 @@ export function useAgent(
             toReturn.agent = getDefaultAgent();
           }
           if (toReturn.agent) {
-            toReturn.settings = (
+            toReturn.extensions = (
               await axios.get(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/agent/${toReturn.agent.name}/extensions`, {
                 headers: {
                   Authorization: getCookie('jwt'),
@@ -105,10 +107,10 @@ export function useAgent(
         }
       } catch (error) {
         console.error('Error fetching agent:', error);
-        return { agent: null, commands: [], settings: [] };
+        return { agent: null, commands: [], settings: [], extensions: [] };
       }
     },
-    { fallbackData: { agent: null, commands: [], settings: [] } },
+    { fallbackData: { agent: null, commands: [], settings: [], extensions: [] } },
   );
   const originalMutate = swrHook.mutate;
   swrHook.mutate = chainMutations(companiesHook, originalMutate);
