@@ -73,7 +73,7 @@ export default function AgentSettings() {
   const [error, setError] = useState<ErrorState>(null);
 
   // Wallet state
-  const [walletData, setWalletData] = useState({} as WalletKeys);
+  const [walletData, setWalletData] = useState<WalletKeys | null>(null);
   const [isWalletRevealed, setIsWalletRevealed] = useState(false);
   const [isLoadingWallet, setIsLoadingWallet] = useState(false);
   const [solanaWalletAddress, setSolanaWalletAddress] = useState<string | null>(null);
@@ -84,7 +84,7 @@ export default function AgentSettings() {
   // Memoized providers list - computed once when data changes
   const providers = useMemo(() => {
     // Return empty arrays if no data
-    if (!agentData?.settings || !providerData?.length) {
+    if (!agentData?.agent?.settings || !providerData?.length) {
       return {
         connected: [],
         available: [],
@@ -100,7 +100,7 @@ export default function AgentSettings() {
         const isSensitive = ['KEY', 'SECRET', 'PASSWORD'].some((keyword) => setting.name.includes(keyword));
 
         // Only include if it exists in agent settings
-        return isSensitive && agentData.settings.some((s) => s.name === setting.name);
+        return isSensitive && agentData.agent?.settings.some((s) => s.name === setting.name);
       });
 
       // If no relevant settings found, provider is not connected
@@ -108,7 +108,7 @@ export default function AgentSettings() {
 
       // Check if ALL relevant settings are HIDDEN
       return relevantSettings.every((setting) => {
-        const agentSetting = agentData.settings.find((s) => s.name === setting.name);
+        const agentSetting = agentData.agent?.settings.find((s) => s.name === setting.name);
         return agentSetting && agentSetting.value === 'HIDDEN';
       });
     });
@@ -121,8 +121,8 @@ export default function AgentSettings() {
 
   // Find wallet address in agent settings
   useEffect(() => {
-    if (agentData?.settings) {
-      const setting = agentData.settings.find((s) => s.name === 'SOLANA_WALLET_ADDRESS');
+    if (agentData?.agent?.settings) {
+      const setting = agentData.agent.settings.find((s) => s.name === 'SOLANA_WALLET_ADDRESS');
       if (setting) {
         setSolanaWalletAddress(setting.value);
       }
@@ -166,6 +166,8 @@ export default function AgentSettings() {
   // Handler for disconnecting provider
   const handleDisconnect = async (name: string) => {
     const extension = providerData?.find((ext) => ext.name === name);
+    if (!extension) return;
+    
     const emptySettings = extension.settings
       .filter((setting) => {
         return ['API_KEY', 'SECRET', 'PASSWORD', 'TOKEN'].some((keyword) =>
@@ -202,7 +204,7 @@ export default function AgentSettings() {
   // Agent deletion handler
   const handleDelete = async () => {
     try {
-      await context.agixt.deleteAgent(agentData?.name || '');
+      await context.agixt.deleteAgent(agentData?.agent?.name || '');
       mutateCompany();
       mutateAgent();
       router.push(pathname);
@@ -214,11 +216,11 @@ export default function AgentSettings() {
   // Agent export handler
   const handleExport = async () => {
     try {
-      const agentConfig = await context.agixt.getAgentConfig(agentData?.name || '');
+      const agentConfig = await context.agixt.getAgentConfig(agentData?.agent?.name || '');
       const element = document.createElement('a');
       const file = new Blob([JSON.stringify(agentConfig)], { type: 'application/json' });
       element.href = URL.createObjectURL(file);
-      element.download = `${agentData?.name}.json`;
+      element.download = `${agentData?.agent?.name}.json`;
       document.body.appendChild(element);
       element.click();
       document.body.removeChild(element);
@@ -230,7 +232,7 @@ export default function AgentSettings() {
   // Agent rename handler
   const handleSaveEdit = async () => {
     try {
-      await context.agixt.renameAgent(agentData?.name || '', editName);
+      await context.agixt.renameAgent(agentData?.agent?.name || '', editName);
       setCookie('agixt-agent', editName, {
         domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
       });
@@ -240,28 +242,90 @@ export default function AgentSettings() {
     }
   };
 
+  // Company agent rename handler
+  const handleSaveCompanyEdit = async () => {
+    try {
+      const response = await axios.patch(
+        `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/agent/${agentData?.agent?.name}`,
+        {
+          new_name: editName,
+          company_id: agentData?.agent?.companyId,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: getCookie('jwt'),
+          },
+        }
+      );
+      
+      if (response.status === 200) {
+        setCookie('agixt-agent', editName, {
+          domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
+        });
+        mutateAgent();
+        mutateCompany();
+        toast({
+          title: 'Success',
+          description: `Agent renamed to "${editName}" successfully`,
+        });
+      }
+    } catch (error: any) {
+      console.error('Failed to rename company agent:', error);
+      console.error('Error response:', error.response?.data);
+      toast({
+        title: 'Error',
+        description: error.response?.data?.detail || 'Failed to rename agent. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   // Get agent wallet handler
   const getAgentWallet = async () => {
     try {
-      const response = await axios.get(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/api/agent/${agentData?.name}/wallet`, {
+      const serverUrl = process.env.NEXT_PUBLIC_AGIXT_SERVER;
+      const agentName = agentData?.agent?.name;
+      const jwt = getCookie('jwt');
+      
+      console.log('Fetching wallet for agent:', agentName);
+      console.log('Server URL:', serverUrl);
+      console.log('JWT exists:', !!jwt);
+      
+      const response = await axios.get(`${serverUrl}/api/agent/${agentName}/wallet`, {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: getCookie('jwt'),
+          Authorization: jwt,
         },
       });
+      console.log('Wallet response:', response.data);
       return response.data as WalletKeys;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to get agent wallet:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      toast({
+        title: 'Error',
+        description: error.response?.data?.detail || 'Failed to retrieve wallet data. Please try again.',
+        variant: 'destructive',
+      });
+      throw error;
     }
   };
 
   // Reveal wallet handler
   const handleRevealWallet = async () => {
-    if (walletData) {
-      setIsWalletRevealed(!isWalletRevealed);
+    if (walletData && isWalletRevealed) {
+      setIsWalletRevealed(false);
       return;
     }
 
+    if (walletData && !isWalletRevealed) {
+      setIsWalletRevealed(true);
+      return;
+    }
+
+    // Need to fetch wallet data
     setIsLoadingWallet(true);
     try {
       const data = await getAgentWallet();
@@ -281,7 +345,7 @@ export default function AgentSettings() {
           <Card className='w-full shadow-lg'>
             <CardHeader className='pb-2'>
               <div className='flex justify-between items-center'>
-                <CardTitle className='text-xl font-bold'>{agentData?.name}</CardTitle>
+                <CardTitle className='text-xl font-bold'>{agentData?.agent?.name}</CardTitle>
               </div>
               <p className='text-muted-foreground'>{companyData?.name}</p>
             </CardHeader>
@@ -289,13 +353,13 @@ export default function AgentSettings() {
             <CardContent className='space-y-2 pb-2'>
               <div className='grid grid-cols-[auto_1fr] gap-x-2 text-sm'>
                 <span className='font-medium text-muted-foreground'>Agent ID:</span>
-                <span className='truncate' title={agentData?.id}>
-                  {agentData?.id}
+                <span className='truncate' title={agentData?.agent?.id}>
+                  {agentData?.agent?.id}
                 </span>
 
                 <span className='font-medium text-muted-foreground'>Company ID:</span>
-                <span className='truncate' title={agentData?.companyId}>
-                  {agentData?.companyId}
+                <span className='truncate' title={agentData?.agent?.companyId}>
+                  {agentData?.agent?.companyId}
                 </span>
                 {solanaWalletAddress && (
                   <>
@@ -354,7 +418,7 @@ export default function AgentSettings() {
                                 </code>
                               </div>
                             </div>
-                            <Alert variant='warning' className='mt-2'>
+                            <Alert variant='default' className='mt-2'>
                               <AlertDescription>
                                 Keep these details secure. Never share your private key or passphrase with anyone.
                               </AlertDescription>
@@ -376,7 +440,12 @@ export default function AgentSettings() {
 
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button variant='outline' size='sm' className='flex items-center'>
+                  <Button 
+                    variant='outline' 
+                    size='sm' 
+                    className='flex items-center'
+                    onClick={() => setEditName(agentData?.agent?.name || '')}
+                  >
                     <LuPencil className='h-4 w-4 mr-1' />
                     Edit
                   </Button>
@@ -447,7 +516,83 @@ export default function AgentSettings() {
           </Dialog>
         </div>
       ) : (
-        <></>
+        <div className='flex items-center justify-center p-4'>
+          <Card className='w-full shadow-lg'>
+            <CardHeader className='pb-2'>
+              <div className='flex justify-between items-center'>
+                <CardTitle className='text-xl font-bold'>{agentData?.agent?.name}</CardTitle>
+              </div>
+              <p className='text-muted-foreground'>{companyData?.name} (Company Agent)</p>
+            </CardHeader>
+
+            <CardContent className='space-y-2 pb-2'>
+              <div className='grid grid-cols-[auto_1fr] gap-x-2 text-sm'>
+                <span className='font-medium text-muted-foreground'>Agent ID:</span>
+                <span className='truncate' title={agentData?.agent?.id}>
+                  {agentData?.agent?.id}
+                </span>
+
+                <span className='font-medium text-muted-foreground'>Company ID:</span>
+                <span className='truncate' title={agentData?.agent?.companyId}>
+                  {agentData?.agent?.companyId}
+                </span>
+              </div>
+            </CardContent>
+
+            <CardFooter className={cn('pt-2', isMobile ? 'flex-wrap gap-2 justify-center' : 'flex justify-end gap-2')}>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button 
+                    variant='outline' 
+                    size='sm' 
+                    className='flex items-center'
+                    onClick={() => setEditName(agentData?.agent?.name || '')}
+                  >
+                    <LuPencil className='h-4 w-4 mr-1' />
+                    Rename
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Rename Company Agent</DialogTitle>
+                  </DialogHeader>
+                  <div className='py-4'>
+                    <Label htmlFor='company-agent-name'>Agent Name</Label>
+                    <Input 
+                      id='company-agent-name' 
+                      value={editName} 
+                      onChange={(e) => setEditName(e.target.value)} 
+                      className='mt-1'
+                      placeholder={agentData?.agent?.name || 'Enter new name'}
+                    />
+                  </div>
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button variant='outline' className={isMobile ? 'w-full' : ''}>
+                        Cancel
+                      </Button>
+                    </DialogClose>
+                    <DialogClose asChild>
+                      <Button onClick={handleSaveCompanyEdit} className={isMobile ? 'w-full' : ''}>
+                        Save
+                      </Button>
+                    </DialogClose>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <Button variant='outline' size='sm' className='flex items-center' onClick={handleExport}>
+                <LuDownload className='h-4 w-4 mr-1' />
+                Export
+              </Button>
+
+              <Button variant='destructive' size='sm' className='flex items-center' onClick={handleDelete}>
+                <LuTrash2 className='h-4 w-4 mr-1' />
+                Delete
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
       )}
 
       {/* Providers section */}
@@ -506,8 +651,8 @@ export default function AgentSettings() {
                         onClick={() => {
                           // Initialize settings with the default values from provider.settings
                           setSettings(
-                            provider.settings.reduce((acc, setting) => {
-                              acc[setting.name] = setting.value;
+                            provider.settings.reduce((acc: Record<string, string>, setting) => {
+                              acc[setting.name] = setting.value as string;
                               return acc;
                             }, {}),
                           );
@@ -536,7 +681,7 @@ export default function AgentSettings() {
                                   ? 'password'
                                   : 'text'
                               }
-                              defaultValue={prov.value}
+                              defaultValue={prov.value as string}
                               value={settings[prov.name]}
                               onChange={(e) =>
                                 setSettings((prev) => ({
