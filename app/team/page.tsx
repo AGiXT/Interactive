@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 import { ColumnDef } from '@tanstack/react-table';
 import { Check, Mail, MoreHorizontal, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import useSWR from 'swr';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -63,7 +63,7 @@ interface Invitation {
 
 function useInvitations(company_id?: string) {
   const state = useContext(InteractiveConfigContext);
-  return useSWR<string[]>(
+  return useSWR<Invitation[]>(
     company_id ? `/invitations/${company_id}` : '/invitations',
     async () => await state.agixt.getInvitations(company_id),
     {
@@ -71,37 +71,49 @@ function useInvitations(company_id?: string) {
     },
   );
 }
+
 function useActiveCompany() {
   const state = useContext(InteractiveConfigContext);
   const { data: companyData } = useCompany();
   return useSWR<any>(
     [`/companies`, companyData?.id ?? null],
     async () => {
+      if (!companyData?.id) return null;
+      
       const companies = await state.agixt.getCompanies();
       const user = await axios.get(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user`, {
         headers: {
           Authorization: getCookie('jwt'),
         },
       });
-      const target = companies.filter((company) => company.id === companyData.id)[0];
-      target.my_role = user.data.companies.filter((company) => company.id === companyData.id)[0].role_id;
+      const target = companies.filter((company: any) => company.id === companyData.id)[0];
+      if (target) {
+        target.my_role = user.data.companies.filter((company: any) => company.id === companyData.id)[0]?.role_id;
+      }
       return target;
     },
     {
-      fallbackData: [],
+      fallbackData: null,
     },
   );
 }
+
 export const TeamUsers = () => {
   const [email, setEmail] = useState('');
   const [roleId, setRoleId] = useState('3');
-  const [renaming, setRenaming] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [newParent, setNewParent] = useState('');
-  const [newName, setNewName] = useState('');
-  const { data: invitationsData, mutate: mutateInvitations } = useInvitations();
+  const [mounted, setMounted] = useState(false);
   const { data: activeCompany, mutate } = useActiveCompany();
+  const { data: invitationsData, mutate: mutateInvitations } = useInvitations(activeCompany?.id);
   const [responseMessage, setResponseMessage] = useState('');
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <div>Loading...</div>;
+  }
+
   const users_columns: ColumnDef<User>[] = [
     {
       id: 'select',
@@ -123,6 +135,8 @@ export const TeamUsers = () => {
       ),
       enableSorting: false,
       enableHiding: false,
+      size: 50,
+      minSize: 50,
     },
     {
       accessorKey: 'first_name',
@@ -130,20 +144,23 @@ export const TeamUsers = () => {
       cell: ({ row }) => {
         return (
           <div className='flex space-x-2'>
-            <span className='max-w-[500px] truncate font-medium'>{row.getValue('first_name')}</span>
+            <span className='truncate font-medium'>{row.getValue('first_name')}</span>
           </div>
         );
       },
       meta: {
         headerName: 'First Name',
       },
+      size: 150,
+      minSize: 120,
+      maxSize: 200,
     },
     {
       accessorKey: 'last_name',
       header: ({ column }) => <DataTableColumnHeader column={column} title='Last Name' />,
       cell: ({ row }) => {
         return (
-          <div className='flex w-[100px] items-center'>
+          <div className='flex items-center'>
             <span>{row.getValue('last_name')}</span>
           </div>
         );
@@ -154,6 +171,9 @@ export const TeamUsers = () => {
       meta: {
         headerName: 'Last Name',
       },
+      size: 150,
+      minSize: 120,
+      maxSize: 200,
     },
     {
       accessorKey: 'email',
@@ -168,16 +188,19 @@ export const TeamUsers = () => {
       meta: {
         headerName: 'Email',
       },
+      minSize: 200,
+      size: 400,
+      maxSize: 600,
     },
     {
       accessorKey: 'role',
       header: ({ column }) => <DataTableColumnHeader column={column} title='Role' />,
       cell: ({ row }) => {
-        const role = row.getValue('role');
+        const role = row.getValue('role') as string;
         return (
           <div className='flex items-center'>
             <Badge variant='outline' className='capitalize'>
-              {role.replace('_', ' ')}
+              {role?.replace('_', ' ')}
             </Badge>
           </div>
         );
@@ -185,6 +208,9 @@ export const TeamUsers = () => {
       meta: {
         headerName: 'Role',
       },
+      size: 120,
+      minSize: 100,
+      maxSize: 150,
     },
     {
       id: 'actions',
@@ -194,166 +220,143 @@ export const TeamUsers = () => {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant='ghost' className='flex h-8 w-8 p-0 data-[state=open]:bg-muted'>
+              <button className='flex h-8 w-8 p-0 items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground'>
                 <MoreHorizontal className='w-4 h-4' />
                 <span className='sr-only'>Open menu</span>
-              </Button>
+              </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align='end' className='w-[160px]'>
               <DropdownMenuLabel>User Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {/* <DropdownMenuItem onClick={(e) => e.preventDefault()} className='p-0'>
-                <Button variant='ghost' className='justify-start w-full'>
-                  Edit User
-                </Button>
-              </DropdownMenuItem> */}
               <DropdownMenuItem onSelect={() => router.push(`/users/${row.original.id}`)}>View Details</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={(e) => {
                   const data = {
-                      role_id: 3,
-                      company_id: activeCompany?.id,
-                      user_id: row.original.id
-                    }
-                  axios.put(
-                    `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user/role`,
-                    data,
-                    {
+                    role_id: 3,
+                    company_id: activeCompany?.id,
+                    user_id: row.original.id,
+                  };
+                  axios
+                    .put(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user/role`, data, {
                       headers: {
                         Authorization: getCookie('jwt'),
                         'Content-Type': 'application/json',
-                        },
                       },
-                    ).then((response)=>{
-                    mutate();
-                    setResponseMessage('User Role updated successfully!');
                     })
-                  }
-                }
-                className='p-0'
-              >
-                <Button 
-                  variant='ghost' 
-                  className='justify-start w-full text-white-600 hover:text-blue-600 text-left whitespace-normal break-words px-2'
-                >
-                  Change Role To User
-                </Button>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={(e) => {
-                  const data = {
-                      role_id: 2,
-                      company_id: activeCompany?.id,
-                      user_id: row.original.id
-                    }
-                  axios.put(
-                    `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user/role`,
-                    data,
-                    {
-                      headers: {
-                        Authorization: getCookie('jwt'),
-                        'Content-Type': 'application/json',
-                        },
-                      },
-                    ).then((response)=>{
-                    mutate();
-                    setResponseMessage('User Role updated successfully!');
+                    .then((response) => {
+                      mutate();
+                      setResponseMessage('User Role updated successfully!');
                     })
-                  }
-                }
-                className='p-0'
-              >
-                <Button 
-                  variant='ghost' 
-                  className='justify-start w-full text-white-600 hover:text-blue-600 text-left whitespace-normal break-words px-2'
-                >
-                  Change Role To Company Admin
-                </Button>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={(e) => {
-                  const data = {
-                      role_id: 1,
-                      company_id: activeCompany?.id,
-                      user_id: row.original.id
-                    }
-                  axios.put(
-                    `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user/role`,
-                    data,
-                    {
-                      headers: {
-                        Authorization: getCookie('jwt'),
-                        'Content-Type': 'application/json',
-                        },
-                      },
-                    ).then((response)=>{
-                    mutate();
-                    setResponseMessage('User Role updated successfully!');
-                    })
-                  }
-                }
-                className='p-0'
-              >
-                <Button 
-                  variant='ghost' 
-                  className='justify-start w-full text-white-600 hover:text-blue-600 text-left whitespace-normal break-words px-2'
-                >
-                  Change Role To Tenant Admin
-                </Button>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={(e) => {
-                  const data = {
-                      role_id: 4,
-                      company_id: activeCompany?.id,
-                      user_id: row.original.id
-                    }
-                  axios.put(
-                    `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user/role`,
-                    data,
-                    {
-                      headers: {
-                        Authorization: getCookie('jwt'),
-                        'Content-Type': 'application/json',
-                        },
-                      },
-                    ).then((response)=>{
-                    mutate();
-                    setResponseMessage('User Role updated successfully!');
-                    })
-                  }
-                }
-                className='p-0'
-              >
-                <Button 
-                  variant='ghost' 
-                  className='justify-start w-full text-white-600 hover:text-blue-600 text-left whitespace-normal break-words px-2'
-                >
-                  Change Role To Child
-                </Button>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={(e) => {
-                  axios.delete(
-                    `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/companies/${activeCompany?.id}/users/${row.original.id}`,
-                    {
-                      headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: getCookie('jwt'),
-                      },
-                    },
-                  );
+                    .catch((error: any) => {
+                      setResponseMessage(error.response?.data?.detail || 'Failed to update user role');
+                    });
                 }}
-                className='p-0'
               >
-                <Button variant='ghost' className='justify-start w-full text-red-600 hover:text-red-600'>
-                  Delete User
-                </Button>
+                Change Role To User
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={(e) => {
+                  const data = {
+                    role_id: 2,
+                    company_id: activeCompany?.id,
+                    user_id: row.original.id,
+                  };
+                  axios
+                    .put(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user/role`, data, {
+                      headers: {
+                        Authorization: getCookie('jwt'),
+                        'Content-Type': 'application/json',
+                      },
+                    })
+                    .then((response) => {
+                      mutate();
+                      setResponseMessage('User Role updated successfully!');
+                    })
+                    .catch((error: any) => {
+                      setResponseMessage(error.response?.data?.detail || 'Failed to update user role');
+                    });
+                }}
+              >
+                Change Role To Company Admin
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={(e) => {
+                  const data = {
+                    role_id: 1,
+                    company_id: activeCompany?.id,
+                    user_id: row.original.id,
+                  };
+                  axios
+                    .put(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user/role`, data, {
+                      headers: {
+                        Authorization: getCookie('jwt'),
+                        'Content-Type': 'application/json',
+                      },
+                    })
+                    .then((response) => {
+                      mutate();
+                      setResponseMessage('User Role updated successfully!');
+                    })
+                    .catch((error: any) => {
+                      setResponseMessage(error.response?.data?.detail || 'Failed to update user role');
+                    });
+                }}
+              >
+                Change Role To Tenant Admin
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={(e) => {
+                  const data = {
+                    role_id: 4,
+                    company_id: activeCompany?.id,
+                    user_id: row.original.id,
+                  };
+                  axios
+                    .put(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/user/role`, data, {
+                      headers: {
+                        Authorization: getCookie('jwt'),
+                        'Content-Type': 'application/json',
+                      },
+                    })
+                    .then((response) => {
+                      mutate();
+                      setResponseMessage('User Role updated successfully!');
+                    })
+                    .catch((error: any) => {
+                      setResponseMessage(error.response?.data?.detail || 'Failed to update user role');
+                    });
+                }}
+              >
+                Change Role To Child
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className='text-destructive'
+                onClick={(e) => {
+                  axios
+                    .delete(
+                      `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/companies/${activeCompany?.id}/users/${row.original.id}`,
+                      {
+                        headers: {
+                          'Content-Type': 'application/json',
+                          Authorization: getCookie('jwt'),
+                        },
+                      },
+                    )
+                    .then(() => {
+                      mutate();
+                      setResponseMessage('User deleted successfully!');
+                    })
+                    .catch((error: any) => {
+                      setResponseMessage(error.response?.data?.detail || 'Failed to delete user');
+                    });
+                }}
+              >
+                Delete User
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -364,8 +367,11 @@ export const TeamUsers = () => {
       meta: {
         headerName: 'Actions',
       },
+      size: 80,
+      minSize: 80,
     },
   ];
+
   const invitations_columns: ColumnDef<Invitation>[] = [
     {
       id: 'select',
@@ -387,6 +393,8 @@ export const TeamUsers = () => {
       ),
       enableSorting: false,
       enableHiding: false,
+      size: 50,
+      minSize: 50,
     },
     {
       accessorKey: 'email',
@@ -402,6 +410,9 @@ export const TeamUsers = () => {
       meta: {
         headerName: 'Email',
       },
+      minSize: 200,
+      size: 400,
+      maxSize: 600,
     },
     {
       accessorKey: 'role_id',
@@ -413,7 +424,7 @@ export const TeamUsers = () => {
           3: 'User',
         };
         return (
-          <div className='flex w-[100px] items-center'>
+          <div className='flex items-center'>
             <span>{roleMap[row.getValue('role_id') as keyof typeof roleMap]}</span>
           </div>
         );
@@ -424,6 +435,9 @@ export const TeamUsers = () => {
       meta: {
         headerName: 'Role',
       },
+      size: 120,
+      minSize: 100,
+      maxSize: 150,
     },
     {
       accessorKey: 'is_accepted',
@@ -431,7 +445,7 @@ export const TeamUsers = () => {
       cell: ({ row }) => {
         const isAccepted = row.getValue('is_accepted');
         return (
-          <div className='flex w-[100px] items-center'>
+          <div className='flex items-center'>
             <Badge variant={isAccepted ? 'default' : 'secondary'}>
               {isAccepted ? <Check className='w-3 h-3 mr-1' /> : <X className='w-3 h-3 mr-1' />}
               {isAccepted ? 'Accepted' : 'Pending'}
@@ -442,6 +456,9 @@ export const TeamUsers = () => {
       meta: {
         headerName: 'Status',
       },
+      size: 100,
+      minSize: 80,
+      maxSize: 120,
     },
     {
       accessorKey: 'created_at',
@@ -462,6 +479,9 @@ export const TeamUsers = () => {
       meta: {
         headerName: 'Sent Date',
       },
+      size: 120,
+      minSize: 100,
+      maxSize: 150,
     },
     {
       id: 'actions',
@@ -470,16 +490,16 @@ export const TeamUsers = () => {
 
         const copyInviteLink = (link: string) => {
           navigator.clipboard.writeText(link);
-          // You might want to add a toast notification here
+          setResponseMessage('Invite link copied to clipboard!');
         };
 
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant='ghost' className='flex h-8 w-8 p-0 data-[state=open]:bg-muted'>
+              <button className='flex h-8 w-8 p-0 items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground'>
                 <MoreHorizontal className='w-4 h-4' />
                 <span className='sr-only'>Open menu</span>
-              </Button>
+              </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align='end' className='w-[160px]'>
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
@@ -494,12 +514,17 @@ export const TeamUsers = () => {
               <DropdownMenuItem
                 className='text-destructive'
                 onClick={async () => {
-                  await axios.delete(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/invitation/${row.original.id}`, {
-                    headers: {
-                      Authorization: getCookie('jwt'),
-                    },
-                  });
-                  mutateInvitations();
+                  try {
+                    await axios.delete(`${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/invitation/${row.original.id}`, {
+                      headers: {
+                        Authorization: getCookie('jwt'),
+                      },
+                    });
+                    mutateInvitations();
+                    setResponseMessage('Invitation cancelled successfully!');
+                  } catch (error: any) {
+                    setResponseMessage(error.response?.data?.detail || 'Failed to cancel invitation');
+                  }
                 }}
               >
                 Cancel Invitation
@@ -513,50 +538,12 @@ export const TeamUsers = () => {
       meta: {
         headerName: 'Actions',
       },
+      size: 80,
+      minSize: 80,
     },
   ];
-  const handleConfirm = async () => {
-    if (renaming) {
-      try {
-        const companyId = activeCompany?.id;
-        await axios.put(
-          `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/companies/${companyId}`,
-          { name: newName },
-          {
-            headers: {
-              Authorization: getCookie('jwt'),
-              'Content-Type': 'application/json',
-            },
-          },
-        );
-        setRenaming(false);
-        mutate();
-        setResponseMessage('Company name updated successfully!');
-      } catch (error) {
-        setResponseMessage(error.response?.data?.detail || 'Failed to update company name');
-      }
-    } else {
-      try {
-        const newResponse = await axios.post(
-          `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/companies`,
-          { name: newName, agent_name: newName + ' Agent', ...(newParent ? { parent_company_id: newParent } : {}) },
-          {
-            headers: {
-              Authorization: getCookie('jwt'),
-              'Content-Type': 'application/json',
-            },
-          },
-        );
-        mutate();
-        setResponseMessage('Company created successfully!');
-      } catch (error) {
-        setResponseMessage(error.response?.data?.detail || 'Failed to create company');
-      }
-      setCreating(false);
-    }
-  };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
       setResponseMessage('Please enter an email to invite.');
@@ -588,53 +575,83 @@ export const TeamUsers = () => {
         }
         setEmail('');
       }
-    } catch (error) {
+    } catch (error: any) {
       setResponseMessage(error.response?.data?.detail || 'Failed to send invitation');
     }
   };
+
   return (
     <div className='space-y-6'>
-      <h4 className='text-md font-medium'>{activeCompany?.name} Current Users</h4>
-      <DataTable data={activeCompany?.users || []} columns={users_columns} />
-      <form onSubmit={handleSubmit} className='space-y-4'>
-        <h4 className='text-md font-medium'>Invite Users to {activeCompany?.name}</h4>
-        <div className='space-y-2'>
-          <Label htmlFor='email'>Email Address</Label>
-          <Input
-            id='email'
-            type='email'
-            placeholder='user@example.com'
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className='w-full'
-          />
+      <div>
+        <h4 className='text-md font-medium mb-3'>{activeCompany?.name} Current Users</h4>
+        <div className='w-full'>
+          <div className='rounded-md border'>
+            <DataTable data={activeCompany?.users || []} columns={users_columns} />
+          </div>
         </div>
+      </div>
+      
+      <div className='border-t pt-6'>
+        <form onSubmit={handleSubmit} className='space-y-4'>
+          <h4 className='text-md font-medium'>Invite Users to {activeCompany?.name}</h4>
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+            <div className='space-y-2'>
+              <Label htmlFor='email'>Email Address</Label>
+              <Input
+                id='email'
+                type='email'
+                placeholder='user@example.com'
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
 
-        <div className='space-y-2'>
-          <Label htmlFor='role'>Role</Label>
-          <Select value={roleId} onValueChange={setRoleId}>
-            <SelectTrigger className='w-full'>
-              <SelectValue placeholder='Select a role' />
-            </SelectTrigger>
-            <SelectContent>
-              {ROLES.map((role) => (
-                <SelectItem key={role.id} value={role.id.toString()}>
-                  {role.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <div className='space-y-2'>
+              <Label htmlFor='role'>Role</Label>
+              <Select value={roleId} onValueChange={setRoleId}>
+                <SelectTrigger>
+                  <SelectValue placeholder='Select a role' />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLES.map((role) => (
+                    <SelectItem key={role.id} value={role.id.toString()}>
+                      {role.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <Button type='submit' disabled={!email}>
+            Send Invitation
+          </Button>
+        </form>
+      </div>
+      
+      {invitationsData && invitationsData.length > 0 && (
+        <div className='border-t pt-6'>
+          <h4 className='text-md font-medium mb-3'>Pending Invitations</h4>
+          <div className='w-full'>
+            <div className='rounded-md border'>
+              <DataTable data={invitationsData} columns={invitations_columns} />
+            </div>
+          </div>
         </div>
-
-        <Button type='submit' className='w-full' disabled={!email}>
-          Send Invitation
-        </Button>
-      </form>
-      {invitationsData.length > 0 && (
-        <>
-          <h4 className='text-md font-medium'>Pending Invitations</h4>
-          <DataTable data={invitationsData || []} columns={invitations_columns} />
-        </>
+      )}
+      
+      {responseMessage && (
+        <div className='p-3 bg-muted rounded-md'>
+          <p className='text-sm'>{responseMessage}</p>
+          <Button 
+            variant='ghost' 
+            size='sm' 
+            onClick={() => setResponseMessage('')}
+            className='mt-2'
+          >
+            Dismiss
+          </Button>
+        </div>
       )}
     </div>
   );
@@ -647,9 +664,19 @@ export default function TeamPage() {
   const [creating, setCreating] = useState(false);
   const [newParent, setNewParent] = useState('');
   const [newName, setNewName] = useState('');
+  const [mounted, setMounted] = useState(false);
   const { data: companyData } = useCompanies();
   const { data: activeCompany, mutate } = useCompany();
   const [responseMessage, setResponseMessage] = useState('');
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <div>Loading...</div>;
+  }
+
   const handleConfirm = async () => {
     if (renaming) {
       try {
@@ -666,7 +693,7 @@ export default function TeamPage() {
         setRenaming(false);
         mutate();
         setResponseMessage('Company name updated successfully!');
-      } catch (error) {
+      } catch (error: any) {
         setResponseMessage(error.response?.data?.detail || 'Failed to update company name');
       }
     } else {
@@ -683,138 +710,114 @@ export default function TeamPage() {
         );
         mutate();
         setResponseMessage('Company created successfully!');
-      } catch (error) {
+      } catch (error: any) {
         setResponseMessage(error.response?.data?.detail || 'Failed to create company');
       }
       setCreating(false);
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!email) {
-      setResponseMessage('Please enter an email to invite.');
-      return;
-    }
-    try {
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_AGIXT_SERVER}/v1/invitations`,
-        {
-          email: email,
-          role_id: parseInt(roleId),
-          company_id: companyData?.id,
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: getCookie('jwt'),
-          },
-        },
-      );
-
-      if (response.status === 200) {
-        if (response.data?.id) {
-          setResponseMessage(
-            `Invitation sent successfully! The invite link is ${process.env.NEXT_PUBLIC_APP_URI}/?invitation_id=${response.data.id}&email=${email}`,
-          );
-        } else {
-          setResponseMessage('Invitation sent successfully!');
-        }
-        setEmail('');
-      }
-    } catch (error) {
-      setResponseMessage(error.response?.data?.detail || 'Failed to send invitation');
-    }
-  };
-
   return (
     <SidebarPage title='Team Management'>
-      <div className='overflow-x-auto px-4'>
-        <div className='space-y-6'>
-          <div className='flex items-center justify-start'>
-            {renaming || creating ? (
-              <>
-                <Input
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  className='w-64'
-                  placeholder='Enter new name'
-                />
-                {creating && (
-                  <Select value={newParent} onValueChange={(value) => setNewParent(value)}>
-                    <SelectTrigger className='w-64'>
-                      <SelectValue placeholder='(Optional) Select a Parent Company' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectLabel>Parent Company</SelectLabel>
-                        <SelectItem value='-'>[NONE]</SelectItem>
-                        {companyData?.map((child: any) => (
-                          <SelectItem key={child.id} value={child.id}>
-                            {child.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                )}
-              </>
-            ) : (
-              <h3 className='text-lg font-medium'>{activeCompany?.name}</h3>
-            )}
+      <div className='px-6 py-4 space-y-6'>
+        <div className='flex items-center justify-start gap-2'>
+          {renaming || creating ? (
+            <>
+              <Input
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                className='w-64'
+                placeholder='Enter new name'
+              />
+              {creating && (
+                <Select value={newParent} onValueChange={(value) => setNewParent(value)}>
+                  <SelectTrigger className='w-64'>
+                    <SelectValue placeholder='(Optional) Select a Parent Company' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Parent Company</SelectLabel>
+                      <SelectItem value='-'>[NONE]</SelectItem>
+                      {companyData?.map((child: any) => (
+                        <SelectItem key={child.id} value={child.id}>
+                          {child.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              )}
+            </>
+          ) : (
+            <h3 className='text-lg font-medium'>{activeCompany?.name}</h3>
+          )}
 
-            <TooltipProvider>
-              <div className='flex gap-2'>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={() => {
-                        if (renaming) {
-                          handleConfirm();
-                        } else {
-                          setRenaming(true);
-                          setNewName(activeCompany?.name);
-                        }
-                      }}
-                      disabled={creating}
-                      size='icon'
-                      variant='ghost'
-                    >
-                      {renaming ? <LuCheck className='h-4 w-4' /> : <LuPencil className='h-4 w-4' />}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{renaming ? 'Confirm rename' : 'Rename'}</p>
-                  </TooltipContent>
-                </Tooltip>
+          <TooltipProvider>
+            <div className='flex gap-2'>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={() => {
+                      if (renaming) {
+                        handleConfirm();
+                      } else {
+                        setRenaming(true);
+                        setNewName(activeCompany?.name || '');
+                      }
+                    }}
+                    disabled={creating}
+                    size='icon'
+                    variant='ghost'
+                  >
+                    {renaming ? <LuCheck className='h-4 w-4' /> : <LuPencil className='h-4 w-4' />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{renaming ? 'Confirm rename' : 'Rename'}</p>
+                </TooltipContent>
+              </Tooltip>
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={() => {
-                        if (creating) {
-                          handleConfirm();
-                        } else {
-                          setCreating(true);
-                          setNewName('');
-                        }
-                      }}
-                      disabled={renaming}
-                      size='icon'
-                      variant='ghost'
-                    >
-                      {creating ? <LuCheck className='h-4 w-4' /> : <LuPlus className='h-4 w-4' />}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{creating ? 'Confirm create' : 'Create new'}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            </TooltipProvider>
-          </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={() => {
+                      if (creating) {
+                        handleConfirm();
+                      } else {
+                        setCreating(true);
+                        setNewName('');
+                      }
+                    }}
+                    disabled={renaming}
+                    size='icon'
+                    variant='ghost'
+                  >
+                    {creating ? <LuCheck className='h-4 w-4' /> : <LuPlus className='h-4 w-4' />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{creating ? 'Confirm create' : 'Create new'}</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
         </div>
+        
         <TeamUsers />
+        
+        {responseMessage && (
+          <div className='p-3 bg-muted rounded-md'>
+            <p className='text-sm'>{responseMessage}</p>
+            <Button 
+              variant='ghost' 
+              size='sm' 
+              onClick={() => setResponseMessage('')}
+              className='mt-2'
+            >
+              Dismiss
+            </Button>
+          </div>
+        )}
       </div>
     </SidebarPage>
   );
