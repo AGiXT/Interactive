@@ -5,9 +5,8 @@ import SyntaxHighlighter from 'react-syntax-highlighter';
 import { a11yDark, a11yLight } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import { Copy, Download } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import 'katex/dist/katex.min.css';
-import Latex from 'react-latex-next';
 import { useTheme } from '@/components/layout/themes';
+import LaTeX from '@/components/conversation/Message/Markdown/LaTeX';
 import MarkdownBlock from '@/components/conversation/Message/MarkdownBlock';
 import { DataTable } from '@/components/conversation/Message/data-table';
 import { createColumns } from '@/components/conversation/Message/data-table/data-table-columns';
@@ -127,7 +126,7 @@ const languageRenders: Record<string, (content: string, setLoading?: (loading: b
   sequence: (content: string) => <Mermaid chart={`sequenceDiagram\n${content}`} />,
   flow: (content: string) => <Mermaid chart={`flowchart TD\n${content}`} />,
   mermaid: (content: string) => <Mermaid chart={content} />,
-  latex: (content: string) => <Latex>{content}</Latex>,
+  latex: (content: string) => <LaTeX display>{content}</LaTeX>,
 };
 
 export type CodeBlockProps = {
