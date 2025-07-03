@@ -141,11 +141,16 @@ const processComplexLatex = (content: string): string => {
   processed = processed.replace(/\\date\{([^}]*)\}/g, '*Date: $1*\n\n');
   processed = processed.replace(/\\maketitle/g, '');
   
-  // Handle sections - process but remove commands
-  processed = processed.replace(/\\section\{([^}]*)\}/g, '## $1\n\n');
-  processed = processed.replace(/\\subsection\{([^}]*)\}/g, '### $1\n\n');
-  processed = processed.replace(/\\subsubsection\{([^}]*)\}/g, '#### $1\n\n');
-  processed = processed.replace(/\\paragraph\{([^}]*)\}/g, '**$1**\n\n');
+  // Handle sections - process both starred and unstarred variants
+  processed = processed.replace(/\\section\*?\{([^}]*)\}/g, '## $1\n\n');
+  processed = processed.replace(/\\subsection\*?\{([^}]*)\}/g, '### $1\n\n');
+  processed = processed.replace(/\\subsubsection\*?\{([^}]*)\}/g, '#### $1\n\n');
+  processed = processed.replace(/\\paragraph\*?\{([^}]*)\}/g, '**$1**\n\n');
+  processed = processed.replace(/\\subparagraph\*?\{([^}]*)\}/g, '**$1**\n\n');
+  
+  // Handle chapter if present
+  processed = processed.replace(/\\chapter\*?\{([^}]*)\}/g, '# $1\n\n');
+  processed = processed.replace(/\\part\*?\{([^}]*)\}/g, '# $1\n\n');
   
   // Handle inparaitem (inline lists) - create seamless inline flow
   processed = processed.replace(/\\begin\{inparaitem\}([\s\S]*?)\\end\{inparaitem\}/g, (match, content) => {
@@ -183,6 +188,23 @@ const processComplexLatex = (content: string): string => {
   processed = processed.replace(/\\textbf\{([^}]*)\}/g, '**$1**');
   processed = processed.replace(/\\textit\{([^}]*)\}/g, '*$1*');
   processed = processed.replace(/\\emph\{([^}]*)\}/g, '*$1*');
+  processed = processed.replace(/\\underline\{([^}]*)\}/g, '<u>$1</u>');
+  processed = processed.replace(/\\texttt\{([^}]*)\}/g, '`$1`');
+  processed = processed.replace(/\\textsc\{([^}]*)\}/g, '<span style="font-variant: small-caps;">$1</span>');
+  
+  // Handle font size commands
+  processed = processed.replace(/\\large\{([^}]*)\}/g, '<span style="font-size: 1.2em;">$1</span>');
+  processed = processed.replace(/\\Large\{([^}]*)\}/g, '<span style="font-size: 1.44em;">$1</span>');
+  processed = processed.replace(/\\LARGE\{([^}]*)\}/g, '<span style="font-size: 1.73em;">$1</span>');
+  processed = processed.replace(/\\huge\{([^}]*)\}/g, '<span style="font-size: 2.07em;">$1</span>');
+  processed = processed.replace(/\\Huge\{([^}]*)\}/g, '<span style="font-size: 2.49em;">$1</span>');
+  processed = processed.replace(/\\small\{([^}]*)\}/g, '<span style="font-size: 0.83em;">$1</span>');
+  processed = processed.replace(/\\footnotesize\{([^}]*)\}/g, '<span style="font-size: 0.69em;">$1</span>');
+  processed = processed.replace(/\\tiny\{([^}]*)\}/g, '<span style="font-size: 0.58em;">$1</span>');
+  
+  // Handle simple font commands without braces
+  processed = processed.replace(/\\large\s+([^\\\s][^\\]*?)(?=\\|\n|$)/g, '<span style="font-size: 1.2em;">$1</span>');
+  processed = processed.replace(/\\Large\s+([^\\\s][^\\]*?)(?=\\|\n|$)/g, '<span style="font-size: 1.44em;">$1</span>');
   
   // Handle bullet symbols and inline formatting
   processed = processed.replace(/\\textbullet\{\}/g, '•');
@@ -201,9 +223,27 @@ const processComplexLatex = (content: string): string => {
   processed = processed.replace(/([•·◦])\s*,/g, '$1,'); // Remove space before commas after bullets
   processed = processed.replace(/([•·◦])\s+/g, '$1 '); // Ensure single space after bullets
   
+  // Handle paragraph breaks and spacing commands
+  processed = processed.replace(/\\par\b/g, '\n\n'); // \par creates paragraph break
+  processed = processed.replace(/\\noindent\b/g, ''); // Remove \noindent
+  processed = processed.replace(/\\indent\b/g, ''); // Remove \indent
+  processed = processed.replace(/\\medskip\b/g, '\n\n'); // Medium vertical space
+  processed = processed.replace(/\\bigskip\b/g, '\n\n'); // Big vertical space
+  processed = processed.replace(/\\smallskip\b/g, '\n'); // Small vertical space
+  processed = processed.replace(/\\vspace\{[^}]*\}/g, '\n'); // Vertical space
+  processed = processed.replace(/\\hspace\{[^}]*\}/g, ' '); // Horizontal space
+  
+  // Handle line breaks properly
+  processed = processed.replace(/\\\\/g, '\n'); // Handle line breaks
+  processed = processed.replace(/\\newline\b/g, '\n'); // Handle \newline
+  processed = processed.replace(/\\linebreak\b/g, '\n'); // Handle \linebreak
+  
   // Remove any remaining LaTeX commands that weren't processed
   processed = processed.replace(/\\[a-zA-Z]+\*?(\[[^\]]*\])?(\{[^}]*\})?/g, '');
-  processed = processed.replace(/\\\\/g, '\n'); // Handle line breaks
+  
+  // Improve paragraph separation - ensure proper double line breaks
+  processed = processed.replace(/\n\s*\n/g, '\n\n'); // Normalize paragraph breaks
+  processed = processed.replace(/([.!?])\s*\n\s*([A-Z])/g, '$1\n\n$2'); // Add paragraph break after sentences followed by capital letters
   
   // Clean up whitespace and artifacts
   processed = processed.replace(/\n\s*\n\s*\n/g, '\n\n'); // Remove excessive line breaks
@@ -222,8 +262,11 @@ const isComplexLatexDocument = (content: string): boolean => {
     content.includes('\\begin{itemize}') ||
     content.includes('\\begin{enumerate}') ||
     content.includes('\\begin{inparaitem}') ||
+    content.includes('\\begin{compactitem}') ||
     /\\usepackage\{[^}]*paralist[^}]*\}/.test(content) ||
-    /\\section\{|\\subsection\{|\\title\{|\\author\{/.test(content)
+    /\\section\*?\{|\\subsection\*?\{|\\chapter\*?\{|\\title\{|\\author\{/.test(content) ||
+    /\\textbf\{|\\textit\{|\\emph\{|\\textbullet|\\bullet/.test(content) ||
+    /\\par\b|\\noindent\b|\\medskip\b|\\bigskip\b/.test(content)
   );
 };
 
