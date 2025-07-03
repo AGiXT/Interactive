@@ -42,13 +42,70 @@ function splitUnEscaped(text: string, delimiter: string) {
 function processLaTeX(text: string): Segment[] {
   let processed: Segment[] = [{ content: text }];
   
-  // First process display math ($$) to avoid conflicts with inline math
+  // First process display math with \[ ... \] delimiters
+  processed = reprocess(processed, (content: string) => splitUnEscaped(content, '\\['), 'latex-display');
+  processed = reprocess(processed, (content: string) => splitUnEscaped(content, '\\]'), 'latex-display');
+  
+  // Then process display math ($$) to avoid conflicts with inline math
   processed = reprocess(processed, (content: string) => splitUnEscaped(content, '$$'), 'latex-display', true);
+  
+  // Process inline math with \( ... \) delimiters
+  processed = reprocess(processed, (content: string) => splitUnEscaped(content, '\\('), 'latex');
+  processed = reprocess(processed, (content: string) => splitUnEscaped(content, '\\)'), 'latex');
   
   // Then process inline math ($)
   processed = reprocess(processed, (content: string) => splitUnEscaped(content, '$'), 'latex');
   
+  // Process LaTeX environments (like itemize, enumerate, etc.)
+  processed = processLaTeXEnvironments(processed);
+  
   return processed;
+}
+
+// Function to detect and process LaTeX environments
+function processLaTeXEnvironments(segments: Segment[]): Segment[] {
+  return segments.map(segment => {
+    if (segment.type === undefined) {
+      // Look for LaTeX environments
+      const envPattern = /\\begin\{([^}]+)\}[\s\S]*?\\end\{\1\}/g;
+      const content = segment.content;
+      const matches = Array.from(content.matchAll(envPattern));
+      
+      if (matches.length > 0) {
+        const result: Segment[] = [];
+        let lastIndex = 0;
+        
+        matches.forEach(match => {
+          // Add text before the environment
+          if (match.index! > lastIndex) {
+            const beforeText = content.slice(lastIndex, match.index);
+            if (beforeText.trim()) {
+              result.push({ content: beforeText });
+            }
+          }
+          
+          // Add the environment as display LaTeX
+          result.push({
+            type: 'latex-display',
+            content: match[0]
+          });
+          
+          lastIndex = match.index! + match[0].length;
+        });
+        
+        // Add remaining text after the last environment
+        if (lastIndex < content.length) {
+          const afterText = content.slice(lastIndex);
+          if (afterText.trim()) {
+            result.push({ content: afterText });
+          }
+        }
+        
+        return result;
+      }
+    }
+    return [segment];
+  }).flat();
 }
 
 export default function textToMarkdown(text: string) {
