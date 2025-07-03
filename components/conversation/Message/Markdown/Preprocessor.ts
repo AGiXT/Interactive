@@ -66,17 +66,38 @@ function processLaTeX(text: string): Segment[] {
 function processLaTeXEnvironments(segments: Segment[]): Segment[] {
   return segments.map(segment => {
     if (segment.type === undefined) {
-      // Look for LaTeX environments
-      const envPattern = /\\begin\{([^}]+)\}[\s\S]*?\\end\{\1\}/g;
       const content = segment.content;
-      const matches = Array.from(content.matchAll(envPattern));
       
-      if (matches.length > 0) {
+      // Look for LaTeX environments (itemize, enumerate, document, etc.)
+      const envPattern = /\\begin\{([^}]+)\}[\s\S]*?\\end\{\1\}/g;
+      
+      // Look for LaTeX document structure
+      const docPattern = /\\documentclass[\s\S]*?(?=\\begin\{document\}|$)|\\begin\{document\}[\s\S]*?\\end\{document\}/g;
+      
+      // Combine patterns to find all LaTeX structures
+      const allMatches: Array<{ match: RegExpMatchArray; type: 'env' | 'doc' }> = [];
+      
+      // Find environment matches
+      let envMatch;
+      while ((envMatch = envPattern.exec(content)) !== null) {
+        allMatches.push({ match: envMatch, type: 'env' });
+      }
+      
+      // Find document structure matches
+      let docMatch;
+      while ((docMatch = docPattern.exec(content)) !== null) {
+        allMatches.push({ match: docMatch, type: 'doc' });
+      }
+      
+      if (allMatches.length > 0) {
+        // Sort matches by position
+        allMatches.sort((a, b) => a.match.index! - b.match.index!);
+        
         const result: Segment[] = [];
         let lastIndex = 0;
         
-        matches.forEach(match => {
-          // Add text before the environment
+        allMatches.forEach(({ match }) => {
+          // Add text before the LaTeX structure
           if (match.index! > lastIndex) {
             const beforeText = content.slice(lastIndex, match.index);
             if (beforeText.trim()) {
@@ -84,7 +105,7 @@ function processLaTeXEnvironments(segments: Segment[]): Segment[] {
             }
           }
           
-          // Add the environment as display LaTeX
+          // Add the LaTeX structure as display LaTeX
           result.push({
             type: 'latex-display',
             content: match[0]
@@ -93,7 +114,7 @@ function processLaTeXEnvironments(segments: Segment[]): Segment[] {
           lastIndex = match.index! + match[0].length;
         });
         
-        // Add remaining text after the last environment
+        // Add remaining text after the last LaTeX structure
         if (lastIndex < content.length) {
           const afterText = content.slice(lastIndex);
           if (afterText.trim()) {
