@@ -185,11 +185,11 @@ const processComplexLatex = (content: string): string => {
   processed = processNestedLists(processed);
   
   // Handle text formatting - process but remove commands
-  processed = processed.replace(/\\textbf\{([^}]*)\}/g, '**$1**');
-  processed = processed.replace(/\\textit\{([^}]*)\}/g, '*$1*');
-  processed = processed.replace(/\\emph\{([^}]*)\}/g, '*$1*');
+  processed = processed.replace(/\\textbf\{([^}]*)\}/g, '<strong>$1</strong>');
+  processed = processed.replace(/\\textit\{([^}]*)\}/g, '<em>$1</em>');
+  processed = processed.replace(/\\emph\{([^}]*)\}/g, '<em>$1</em>');
   processed = processed.replace(/\\underline\{([^}]*)\}/g, '<u>$1</u>');
-  processed = processed.replace(/\\texttt\{([^}]*)\}/g, '`$1`');
+  processed = processed.replace(/\\texttt\{([^}]*)\}/g, '<code>$1</code>');
   processed = processed.replace(/\\textsc\{([^}]*)\}/g, '<span style="font-variant: small-caps;">$1</span>');
   
   // Handle font size commands
@@ -289,8 +289,11 @@ export default function LaTeX({ children, display = false }: LaTeXProps) {
         </MathJaxContext>
       );
     } else {
-      // Check if content contains HTML (lists)
-      const hasHTML = processedContent.includes('<ul') || processedContent.includes('<ol');
+      // Check if content contains HTML (lists or formatting tags)
+      const hasHTML = processedContent.includes('<ul') || processedContent.includes('<ol') ||
+                      processedContent.includes('<strong') || processedContent.includes('<em') ||
+                      processedContent.includes('<u') || processedContent.includes('<code') ||
+                      processedContent.includes('<span');
       
       if (hasHTML) {
         // Render as HTML with LaTeX styling
