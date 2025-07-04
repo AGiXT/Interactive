@@ -2,6 +2,106 @@
 @tailwind components;
 @tailwind utilities;
 
+/* LaTeX-style list formatting */
+.latex-content .latex-itemize {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+  list-style: none;
+}
+
+.latex-content .latex-itemize > li {
+  margin: 0.2em 0;
+  position: relative;
+}
+
+.latex-content .latex-itemize > li:before {
+  content: "•";
+  position: absolute;
+  left: -1.2em;
+  font-weight: bold;
+  color: currentColor;
+}
+
+.latex-content .latex-enumerate {
+  margin: 0.5em 0;
+  padding-left: 1.8em;
+  list-style: none;
+  counter-reset: latex-counter;
+}
+
+.latex-content .latex-enumerate > li {
+  margin: 0.2em 0;
+  position: relative;
+  counter-increment: latex-counter;
+}
+
+.latex-content .latex-enumerate > li:before {
+  content: counter(latex-counter) ".";
+  position: absolute;
+  left: -1.5em;
+  font-weight: normal;
+  color: currentColor;
+}
+
+.latex-content .latex-itemize .latex-itemize,
+.latex-content .latex-enumerate .latex-enumerate,
+.latex-content .latex-itemize .latex-enumerate,
+.latex-content .latex-enumerate .latex-itemize {
+  margin: 0.25em 0;
+}
+
+.latex-content .latex-itemize .latex-itemize > li:before {
+  content: "◦";
+}
+
+.latex-content .latex-itemize .latex-itemize .latex-itemize > li:before {
+  content: "▪";
+}
+
+/* Inline list and bullet formatting */
+.latex-content {
+  line-height: 1.6;
+}
+
+.latex-content .inline-list {
+  display: inline;
+  margin: 0;
+  padding: 0;
+}
+
+.latex-content .inline-list-item {
+  display: inline;
+  margin: 0;
+  padding: 0;
+}
+
+/* Better bullet and symbol spacing */
+.latex-content {
+  /* Ensure proper spacing around bullet symbols */
+}
+
+.latex-content .latex-itemize li,
+.latex-content .latex-enumerate li {
+  line-height: 1.5;
+  margin: 0.3em 0;
+}
+
+/* Handle inline bullet symbols */
+.latex-content .inline-bullet {
+  margin: 0 0.25em;
+  font-weight: bold;
+}
+
+/* Improve text flow for inline lists */
+.latex-content p {
+  margin: 0.5em 0;
+  line-height: 1.6;
+}
+
+.latex-content .inline-separator {
+  margin: 0 0.1em;
+}
+
 @layer base {
   :root {
     color-scheme: light;
