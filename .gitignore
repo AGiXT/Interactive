@@ -21,6 +21,7 @@ tests/test_screenshots
 # misc
 .DS_Store
 *.pem
+.npmrc
 
 # debug
 npm-debug.log*

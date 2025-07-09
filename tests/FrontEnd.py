@@ -1916,8 +1916,8 @@ class FrontEndTest:
         activities_selectors = [
             'button:has-text("Show") >> :has-text("subactivities")',
             'button:has-text("subactivities")',
-            'button >> text=/Show.*subactivities/',
-            'button >> text=/Show.*activities/',
+            "button >> text=/Show.*subactivities/",
+            "button >> text=/Show.*activities/",
             'text="Show"',
             'button:has-text("Show")',
             ':text("Show") >> button',
@@ -2008,6 +2008,283 @@ class FrontEndTest:
                 )
             raise e
 
+    async def handle_tasks_demo(self):
+        """Handle tasks page demo scenario"""
+        # Start at chat screen first for consistent navigation
+        await self.navigate_to_chat_first(
+            "Let's explore the task management capabilities. This is where you can create, organize, and manage various tasks for your 'A G I X T' agent."
+        )
+
+        # Navigate to tasks page
+        await self.test_action(
+            "We'll navigate to the tasks page where you can create and manage different types of tasks and workflows.",
+            lambda: self.page.goto(f"{self.base_uri}/tasks"),
+        )
+
+        # Wait for tasks page to load
+        await self.test_action(
+            "The tasks page is loading with all available task management options.",
+            lambda: asyncio.sleep(3),
+        )
+
+        await self.take_screenshot(
+            "Here's the tasks management interface where you can create and organize different types of tasks for your AI agent."
+        )
+
+        # Look for task creation buttons or interface elements
+        try:
+            # Check for any task creation buttons
+            task_buttons = await self.page.locator("button").all()
+            if task_buttons:
+                await self.test_action(
+                    "We can see various task management options and buttons available for creating new tasks.",
+                    lambda: self.page.wait_for_selector(
+                        "button", state="visible", timeout=5000
+                    ),
+                )
+
+                # Try to click the first available task-related button
+                await self.test_action(
+                    "Let's explore the task creation interface by clicking on an available option.",
+                    lambda: self.page.click("button:first-child"),
+                )
+
+                await self.take_screenshot(
+                    "The task creation interface shows the available options for setting up automated tasks and workflows."
+                )
+        except Exception as e:
+            logging.info(f"No specific task creation buttons found: {e}")
+
+        # Check for any forms or input fields related to task management
+        try:
+            # Look for any input fields that might be related to task creation
+            inputs = await self.page.locator("input").all()
+            if inputs:
+                await self.test_action(
+                    "We can see input fields where you can define task parameters and configurations.",
+                    lambda: self.page.wait_for_selector(
+                        "input", state="visible", timeout=5000
+                    ),
+                )
+        except Exception as e:
+            logging.info(f"No task input fields found: {e}")
+
+        await self.take_screenshot(
+            "This completes our tasks management demo. You can see how this interface allows you to create and manage various automated tasks and workflows."
+        )
+
+    async def run_tasks_test(self, email, mfa_token):
+        """Run tasks test and create video"""
+        try:
+            # User is already logged in from shared session
+            await self.handle_tasks_demo()
+            video_path = self.create_video_report(video_name="tasks_demo")
+            logging.info(f"Tasks test complete. Video report created at {video_path}")
+        except Exception as e:
+            logging.error(f"Tasks test failed: {e}")
+            if not os.path.exists(os.path.join(os.getcwd(), "tests", "tasks_demo.mp4")):
+                self.create_video_report(
+                    video_name="tasks_demo", test_status="❌ **TEST FAILURE**"
+                )
+            raise e
+
+    async def handle_chains_demo(self):
+        """Handle chains configuration demo scenario"""
+        # Start at chat screen first for consistent navigation
+        await self.navigate_to_chat_first(
+            "Let's explore the chains configuration feature. This is where you can create complex multi-step workflows and processes for your 'A G I X T' agent."
+        )
+
+        # Navigate to Agent Management
+        await self.test_action(
+            "We'll start by navigating to Agent Management to access the chains configuration options.",
+            lambda: self.page.click('span:has-text("Agent Management")'),
+        )
+
+        await self.take_screenshot(
+            "The Agent Management menu is open, showing various configuration options including chains."
+        )
+
+        # Navigate to Chains from the dropdown
+        await self.test_action(
+            "Now we'll click on 'Chains' to access the workflow configuration interface.",
+            lambda: self.page.click('a:has-text("Chains")'),
+        )
+
+        # Wait for the chains page to load
+        await self.test_action(
+            "The chains page is loading with all available workflow configuration options.",
+            lambda: asyncio.sleep(3),
+        )
+
+        await self.take_screenshot(
+            "Here's the chains configuration interface where you can create and manage multi-step workflows and processes."
+        )
+
+        # Look for chain creation or management elements
+        try:
+            # Check for any chain creation buttons
+            chain_buttons = await self.page.locator("button").all()
+            if chain_buttons:
+                await self.test_action(
+                    "We can see various chain management options and buttons available for creating new workflows.",
+                    lambda: self.page.wait_for_selector(
+                        "button", state="visible", timeout=5000
+                    ),
+                )
+
+                # Try to interact with available chain management elements
+                await self.test_action(
+                    "Let's explore the chain creation interface by examining the available workflow options.",
+                    lambda: asyncio.sleep(2),
+                )
+
+                await self.take_screenshot(
+                    "The chain creation interface shows the available options for setting up complex multi-step workflows."
+                )
+        except Exception as e:
+            logging.info(f"No specific chain creation buttons found: {e}")
+
+        # Check for any forms or configuration areas
+        try:
+            # Look for any configuration areas or forms
+            forms = await self.page.locator("form").all()
+            if forms:
+                await self.test_action(
+                    "We can see configuration forms where you can define chain parameters and workflow steps.",
+                    lambda: self.page.wait_for_selector(
+                        "form", state="visible", timeout=5000
+                    ),
+                )
+        except Exception as e:
+            logging.info(f"No chain configuration forms found: {e}")
+
+        await self.take_screenshot(
+            "This completes our chains configuration demo. You can see how this interface allows you to create and manage complex multi-step workflows and automated processes."
+        )
+
+    async def run_chains_test(self, email, mfa_token):
+        """Run chains test and create video"""
+        try:
+            # User is already logged in from shared session
+            await self.handle_chains_demo()
+            video_path = self.create_video_report(video_name="chains_demo")
+            logging.info(f"Chains test complete. Video report created at {video_path}")
+        except Exception as e:
+            logging.error(f"Chains test failed: {e}")
+            if not os.path.exists(
+                os.path.join(os.getcwd(), "tests", "chains_demo.mp4")
+            ):
+                self.create_video_report(
+                    video_name="chains_demo", test_status="❌ **TEST FAILURE**"
+                )
+            raise e
+
+    async def handle_prompts_demo(self):
+        """Handle full prompts management demo scenario"""
+        # Start at chat screen first for consistent navigation
+        await self.navigate_to_chat_first(
+            "Let's explore the comprehensive prompts management system. This is where you can create, edit, and manage custom prompts for your 'A G I X T' agent."
+        )
+
+        # Navigate to Agent Management
+        await self.test_action(
+            "We'll start by navigating to Agent Management to access the prompts configuration options.",
+            lambda: self.page.click('span:has-text("Agent Management")'),
+        )
+
+        await self.take_screenshot(
+            "The Agent Management menu is open, showing various configuration options including prompts management."
+        )
+
+        # Navigate to Prompts from the dropdown
+        await self.test_action(
+            "Now we'll click on 'Prompts' to access the full prompts management interface.",
+            lambda: self.page.click('a:has-text("Prompts")'),
+        )
+
+        # Wait for the prompts page to load
+        await self.test_action(
+            "The prompts page is loading with all available prompt management options.",
+            lambda: asyncio.sleep(3),
+        )
+
+        await self.take_screenshot(
+            "Here's the comprehensive prompts management interface where you can create, edit, and organize custom prompts."
+        )
+
+        # Look for prompt creation or management elements
+        try:
+            # Check for any prompt creation buttons
+            prompt_buttons = await self.page.locator("button").all()
+            if prompt_buttons:
+                await self.test_action(
+                    "We can see various prompt management options and buttons available for creating new prompts.",
+                    lambda: self.page.wait_for_selector(
+                        "button", state="visible", timeout=5000
+                    ),
+                )
+
+                # Try to interact with available prompt management elements
+                await self.test_action(
+                    "Let's explore the prompt creation interface by examining the available options.",
+                    lambda: asyncio.sleep(2),
+                )
+
+                await self.take_screenshot(
+                    "The prompt creation interface shows the available options for setting up custom prompts and templates."
+                )
+        except Exception as e:
+            logging.info(f"No specific prompt creation buttons found: {e}")
+
+        # Check for any text areas or input fields for prompt editing
+        try:
+            # Look for any text areas that might be for prompt editing
+            textareas = await self.page.locator("textarea").all()
+            if textareas:
+                await self.test_action(
+                    "We can see text areas where you can write and edit custom prompts and instructions.",
+                    lambda: self.page.wait_for_selector(
+                        "textarea", state="visible", timeout=5000
+                    ),
+                )
+
+                # Try to interact with the first textarea if available
+                await self.test_action(
+                    "Let's demonstrate how to create a custom prompt by entering some sample text.",
+                    lambda: self.page.fill(
+                        "textarea",
+                        "This is a sample custom prompt for demonstration purposes.",
+                    ),
+                )
+
+                await self.take_screenshot(
+                    "We've entered sample text to show how you can create and edit custom prompts in this interface."
+                )
+        except Exception as e:
+            logging.info(f"No prompt text areas found: {e}")
+
+        await self.take_screenshot(
+            "This completes our comprehensive prompts management demo. You can see how this interface allows you to create, edit, and manage custom prompts and templates for your AI agent."
+        )
+
+    async def run_prompts_test(self, email, mfa_token):
+        """Run expanded prompts test and create video"""
+        try:
+            # User is already logged in from shared session
+            await self.handle_prompts_demo()
+            video_path = self.create_video_report(video_name="prompts_demo")
+            logging.info(f"Prompts test complete. Video report created at {video_path}")
+        except Exception as e:
+            logging.error(f"Prompts test failed: {e}")
+            if not os.path.exists(
+                os.path.join(os.getcwd(), "tests", "prompts_demo.mp4")
+            ):
+                self.create_video_report(
+                    video_name="prompts_demo", test_status="❌ **TEST FAILURE**"
+                )
+            raise e
+
     async def run(self, headless=not is_desktop()):
         """Run all tests: registration in its own browser, then all others in a shared browser"""
         email = None
@@ -2082,6 +2359,24 @@ class FrontEndTest:
 
                 # Team management test
                 await self.run_team_management_test(email, mfa_token)
+
+                # Clear screenshots for next video
+                self.screenshots_with_actions = []
+
+                # Tasks test
+                await self.run_tasks_test(email, mfa_token)
+
+                # Clear screenshots for next video
+                self.screenshots_with_actions = []
+
+                # Chains test
+                await self.run_chains_test(email, mfa_token)
+
+                # Clear screenshots for next video
+                self.screenshots_with_actions = []
+
+                # Prompts test (expanded beyond mandatory context)
+                await self.run_prompts_test(email, mfa_token)
 
                 # Training test
                 # await self.run_training_test(email, mfa_token)
