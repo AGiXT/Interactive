@@ -2127,34 +2127,28 @@ class FrontEndTest:
             "The task creation form has opened where we can define all the parameters for our new task."
         )
 
-        # Fill in task name
-        task_name = "Demo Content Analysis Task"
+        # Fill in task title using the actual ID
+        task_title = "Demo Content Analysis Task"
         await self.test_action(
-            f"First, we'll give our task a descriptive name: '{task_name}'. This helps identify the task's purpose.",
+            f"First, we'll give our task a descriptive title: '{task_title}'. This helps identify the task's purpose.",
             lambda: self.page.wait_for_selector(
-                'input[placeholder*="Task name" i], input[name*="name" i], input#name',
+                "input#create-title",
                 state="visible",
                 timeout=5000,
             ),
-            lambda: self.page.fill(
-                'input[placeholder*="Task name" i], input[name*="name" i], input#name',
-                task_name,
-            ),
+            lambda: self.page.fill("input#create-title", task_title),
         )
 
-        # Fill in task description
-        task_description = "This task analyzes content and provides detailed insights about structure, sentiment, and key topics."
+        # Fill in task description using the actual ID
+        task_description = "This task analyzes content and provides detailed insights about structure, sentiment, and key topics for business decision making."
         await self.test_action(
             "Next, we'll add a detailed description explaining what this task will accomplish.",
             lambda: self.page.wait_for_selector(
-                'textarea[placeholder*="description" i], textarea[name*="description" i], input[placeholder*="description" i]',
+                "textarea#create-description",
                 state="visible",
                 timeout=5000,
             ),
-            lambda: self.page.fill(
-                'textarea[placeholder*="description" i], textarea[name*="description" i], input[placeholder*="description" i]',
-                task_description,
-            ),
+            lambda: self.page.fill("textarea#create-description", task_description),
         )
 
         await self.take_screenshot(
