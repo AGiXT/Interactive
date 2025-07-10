@@ -17,7 +17,7 @@ export const CompanySchema = z.object({
   ),
   id: z.string().uuid(),
   companyId: z.union([z.string().uuid(), z.null()]),
-  name: z.string().min(1),
+  name: z.string().transform((val) => val || 'None'),
   primary: z.boolean(),
   roleId: z.number().int().positive(),
 });
