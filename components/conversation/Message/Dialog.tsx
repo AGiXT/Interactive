@@ -3,7 +3,7 @@
 import React, { MouseEventHandler, useState } from 'react';
 import { IoIosClose } from 'react-icons/io';
 import { Button } from '@/components/ui/button';
-import { Dialog as CnDialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { Dialog as CnDialog, DialogContent, DialogFooter, DialogTitle, VisuallyHidden } from '@/components/ui/dialog';
 
 export type CommonDialogProps = {
   onClose?: () => void;
@@ -53,14 +53,18 @@ const Dialog = React.forwardRef<
       />
       <CnDialog open={dialogOpen}>
         <DialogContent className={className}>
-          <Button onClick={handleClose} variant='ghost' size='icon' className='absolute top-2 right-2'>
-            <IoIosClose />
-          </Button>
-          {title && (
-            <DialogTitle id='dialog-title' className='text-center'>
-              {title}
-            </DialogTitle>
-          )}
+                      <Button onClick={handleClose} variant='ghost' size='icon' className='absolute top-2 right-2'>
+              <IoIosClose />
+            </Button>
+            {title ? (
+              <DialogTitle id='dialog-title' className='text-center'>
+                {title}
+              </DialogTitle>
+            ) : (
+              <VisuallyHidden>
+                <DialogTitle>Dialog</DialogTitle>
+              </VisuallyHidden>
+            )}
           <div className='relative flex items-center justify-center'>
             {typeof content === 'string' ? (
               <p className='text-center' id='dialog-description'>

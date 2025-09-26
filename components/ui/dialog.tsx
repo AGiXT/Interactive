@@ -5,6 +5,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { LuX as X } from 'react-icons/lu';
 
 import { cn } from '@/lib/utils';
+import { VisuallyHidden } from './visually-hidden';
 
 const Dialog = DialogPrimitive.Root;
 
@@ -94,4 +95,5 @@ export {
   DialogFooter,
   DialogTitle,
   DialogDescription,
+  VisuallyHidden,
 };

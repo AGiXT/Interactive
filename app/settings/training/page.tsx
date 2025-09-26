@@ -1,5 +1,6 @@
 'use client';
 import { useCompany } from '@/components/interactive/useUser';
+import { useTrainingData } from '@/components/interactive/useTrainingData';
 import { SidebarPage } from '@/components/layout/SidebarPage';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -168,103 +169,58 @@ export const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({ value, o
 
 export default function Training() {
   const searchParams = useSearchParams();
-  const { data: company } = useCompany();
-  const [userPersona, setUserPersona] = useState<string>('');
-  const [companyPersona, setCompanyPersona] = useState<string>('');
+  const { data: activeCompany } = useCompany();
+  
+  const mode = searchParams.get('mode');
+  const isCompanyMode = mode === 'company';
+  
+  // Use optimized training data hook instead of separate state and API calls
+  const {
+    data: trainingData,
+    error: trainingError,
+    isLoading,
+    updatePersona,
+    refreshSources,
+  } = useTrainingData({
+    isCompanyMode,
+    agentName: getCookie('agixt-agent') || process.env.NEXT_PUBLIC_AGIXT_AGENT || DEFAULT_AGENT,
+    companyId: activeCompany?.id,
+  });
+
   const [uploadingDocument, setUploadingDocument] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [userExternalSources, setUserExternalSources] = useState<string[]>([]);
-  const [companyExternalSources, setCompanyExternalSources] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { data: activeCompany } = useCompany();
 
   // New state for URL learning
   const [learnUrl, setLearnUrl] = useState<string>('');
   const [isLearningUrl, setIsLearningUrl] = useState(false);
   const [urlProgress, setUrlProgress] = useState(0);
 
+  // Local state for editing persona (controlled inputs)
+  const [userPersona, setUserPersona] = useState<string>('');
+  const [companyPersona, setCompanyPersona] = useState<string>('');
+
   const apiKey = getCookie('jwt') || '';
   const apiServer = process.env.NEXT_PUBLIC_AGIXT_SERVER as string;
   const agentName = getCookie('agixt-agent') || process.env.NEXT_PUBLIC_AGIXT_AGENT || DEFAULT_AGENT;
+
+  // Sync training data to local state when loaded
   useEffect(() => {
-    if (activeCompany?.id || searchParams.get('mode') !== 'company') {
-      fetchCompanyData();
+    if (trainingData) {
+      setUserPersona(trainingData.userPersona);
+      setCompanyPersona(trainingData.companyPersona);
     }
-  }, [activeCompany?.id, searchParams.get('mode') !== 'company']);
-
-  const fetchCompanyData = async () => {
-    setLoading(true);
-    try {
-      const url =
-        searchParams.get('mode') === 'company'
-          ? `${apiServer}/api/agent/${agentName}/persona/${activeCompany?.id}`
-          : `${apiServer}/api/agent/${agentName}/persona`;
-
-      const personaResponse = await fetch(url, {
-        headers: { Authorization: apiKey },
-      });
-
-      if (personaResponse.ok) {
-        const personaData = await personaResponse.json();
-        if (searchParams.get('mode') === 'company') {
-          setCompanyPersona(personaData.message === 'None' ? '' : personaData.message || '');
-        } else {
-          setUserPersona(personaData.message === 'None' ? '' : personaData.message || '');
-        }
-      }
-
-      const sourcesUrl =
-        searchParams.get('mode') === 'company'
-          ? `${apiServer}/api/agent/${agentName}/memory/external_sources/${COLLECTION_NUMBER}/${activeCompany?.id}`
-          : `${apiServer}/api/agent/${agentName}/memory/external_sources/${COLLECTION_NUMBER}`;
-
-      const sourcesResponse = await fetch(sourcesUrl, {
-        headers: { Authorization: apiKey },
-      });
-
-      if (sourcesResponse.ok) {
-        const sourcesData = await sourcesResponse.json();
-        const sources = sourcesData['external_sources'] || [];
-        if (searchParams.get('mode') === 'company') {
-          setCompanyExternalSources(Array.isArray(sources) ? sources : []);
-        } else {
-          setUserExternalSources(Array.isArray(sources) ? sources : []);
-        }
-      }
-    } catch (err) {
-      setError('Failed to fetch training data');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [trainingData]);
 
   const handlePersonaUpdate = async () => {
     try {
-      const response = await fetch(
-        searchParams.get('mode') === 'company'
-          ? `${apiServer}/api/agent/${agentName}/persona/${activeCompany?.id}`
-          : `${apiServer}/api/agent/${agentName}/persona`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: apiKey,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            persona: searchParams.get('mode') === 'company' ? companyPersona : userPersona,
-            company_id: searchParams.get('mode') === 'company' ? activeCompany?.id : null,
-            // user: searchParams.get('mode') === 'company',
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to update persona');
-      }
-      setSuccess(`Successfully updated ${searchParams.get('mode') === 'company' ? 'company' : 'user'} mandatory context`);
-      await fetchCompanyData();
+      const persona = isCompanyMode ? companyPersona : userPersona;
+      await updatePersona(persona);
+      
+      // Update hook data optimistically
+      setSuccess(`Successfully updated ${isCompanyMode ? 'company' : 'user'} mandatory context`);
+      setError(null);
     } catch (err) {
       setError('Failed to update persona');
     }
@@ -316,7 +272,7 @@ export default function Training() {
 
       // Reset upload state and re-enable interactions
       await new Promise((resolve) => setTimeout(resolve, 500)); // Short delay for UX
-      await fetchCompanyData(); // Refresh sources
+      await refreshSources(); // Refresh sources
 
       // Reset upload-related states
       setUploadingDocument(false);
@@ -383,7 +339,7 @@ export default function Training() {
 
       // Short delay for UX
       await new Promise((resolve) => setTimeout(resolve, 500));
-      await fetchCompanyData(); // Refresh sources
+      await refreshSources(); // Refresh sources
 
       // Reset URL learning states
       setLearnUrl(''); // Clear the URL input after success
@@ -426,7 +382,7 @@ export default function Training() {
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Refresh the sources list
-      await fetchCompanyData();
+      await refreshSources();
     } catch (error) {
       setError('Failed to delete document');
     }
@@ -439,7 +395,7 @@ export default function Training() {
           <CardHeader>
             <CardTitle className='flex items-center gap-2'>
               <Brain className='w-5 h-5' />
-              {searchParams.get('mode') === 'company' ? (company?.name ?? 'Company') + ' Agent Training' : 'Agent Training'}
+              {isCompanyMode ? (activeCompany?.name ?? 'Company') + ' Agent Training' : 'Agent Training'}
             </CardTitle>
           </CardHeader>
           <CardContent className='space-y-6'>
@@ -583,13 +539,13 @@ export default function Training() {
             {/* Documents List */}
             <div className='space-y-4 border-t pt-6'>
               <h3 className='text-lg font-medium'>Learned Sources</h3>
-              {loading ? (
+              {isLoading ? (
                 <div className='text-center text-muted-foreground'>Loading documents...</div>
-              ) : (searchParams.get('mode') === 'company' ? companyExternalSources : userExternalSources).length === 0 ? (
+              ) : !trainingData || (isCompanyMode ? trainingData.companyExternalSources : trainingData.userExternalSources).length === 0 ? (
                 <div className='text-center text-muted-foreground'>No documents uploaded yet</div>
               ) : (
                 <div className='grid gap-2'>
-                  {(searchParams.get('mode') === 'company' ? companyExternalSources : userExternalSources).map((source) => (
+                  {(isCompanyMode ? trainingData.companyExternalSources : trainingData.userExternalSources).map((source: string) => (
                     <SourceDisplay key={source} source={source} onDelete={handleDeleteDocument} />
                   ))}
                 </div>

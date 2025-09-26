@@ -157,6 +157,15 @@ export function useConversationWebSocket({
           if ((wsEvent.type === 'initial_message' || wsEvent.type === 'message_added') && wsEvent.data) {
             const newMessage = wsEvent.data;
 
+            // Check if this is a conversation rename activity and refresh conversations cache
+            const messageText = newMessage.message || '';
+            if (messageText.includes('[ACTIVITY][INFO] Conversation renamed to')) {
+              // Import and use mutate to refresh conversations cache
+              import('swr').then(({ mutate }) => {
+                mutate('/conversations');
+              });
+            }
+
             setMessages((prevMessages) => {
               // Check if message already exists
               const exists = prevMessages.some((msg) => msg.id === newMessage.id);
