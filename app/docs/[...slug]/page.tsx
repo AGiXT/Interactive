@@ -28,9 +28,7 @@ export default function DocPage({ params }: { params: { slug: string[] } }) {
             </Button>
           </Link>
         </div>
-        <div className='prose dark:prose-invert max-w-none'>
-          <MarkdownBlock content={content} />
-        </div>
+        <MarkdownBlock content={content} />
       </div>
     </SidebarPage>
   );
