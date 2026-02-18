@@ -193,19 +193,22 @@ export const useAuth: MiddlewareHook = async (req) => {
           `${response.status === 401 ? 'Unauthorized' : 'Forbidden'} access, status ${response.status}, detail ${responseJSON.detail}. Clearing JWT and redirecting to auth.`,
         );
       } else if (response.status === 402) {
-        // Payment Required
-        if (!requestedURI.startsWith(`${authWeb}/subscribe`)) {
+        // Payment Required - Only redirect if user doesn't have active credits
+        // Check if user has credits (input_tokens or output_tokens > 0) - if so, they should be considered active
+        const hasActiveCredits =
+          responseJSON.detail?.input_tokens > 0 ||
+          responseJSON.detail?.output_tokens > 0 ||
+          responseJSON.detail?.is_active === true;
+
+        if (!hasActiveCredits && !requestedURI.startsWith(`${authWeb}/subscribe`)) {
+          // Safely access customer_session - it may not always be present
+          const clientSecret = responseJSON.detail?.customer_session?.client_secret;
           toReturn.response = NextResponse.redirect(
-            new URL(
-              `${authWeb}/subscribe${
-                responseJSON.detail.customer_session.client_secret
-                  ? '?customer_session=' + responseJSON.detail.customer_session.client_secret
-                  : ''
-              }`,
-            ),
+            new URL(`${authWeb}/subscribe${clientSecret ? '?customer_session=' + clientSecret : ''}`),
           );
           toReturn.activated = true;
         }
+        // If user has active credits, don't redirect - let them proceed (treat as 200)
       } else if (response.status === 502) {
         const cookieArray = [generateCookieString('href', requestedURI, (86400).toString())];
         toReturn.activated = true;
